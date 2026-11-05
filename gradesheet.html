@@ -2153,7 +2153,7 @@ async function unsqueeze(t) {
 }
 function loadQR() { return window.qrcode ? Promise.resolve() : new Promise((ok, no) => { const s = document.createElement('script'); s.src = window.QR_LOCAL || QR_SRC; s.onload = ok; s.onerror = no; document.head.appendChild(s); }); }
 const isWeb = () => /^https?:$/.test(location.protocol);
-const IPAD_HOME = 'https://disconnekted.github.io/class-tools/gradesheet.html'; // the school's hosted copy (GitHub Pages)
+const IPAD_HOME = 'https://disconnekted.github.io/Class-tools/gradesheet.html'; // the school's hosted copy (GitHub Pages)
 function ipadBase() { return isWeb() ? location.origin + location.pathname : (lsGet('gradesheet.ipadUrl') || IPAD_HOME); }
 let ipadWhich = 'all';
 function ipadModal() {
