@@ -378,6 +378,8 @@ details.panel.fold[open]{gap:10px}
 .menu #backupBar[hidden]{display:none}
 #moreBtn.due::after{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warn);margin-left:6px}
 .morebtn{justify-self:start;font-size:14px;padding:6px 0}
+.nudge{background:var(--due);border-radius:8px;padding:8px 12px;margin:0;font-size:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.stools{font-size:18px;line-height:1;padding:2px 10px;justify-self:start}
 details.panel.fold:not([open]){gap:0}
 .classhead details.fold{flex-basis:100%}
 .dnote:has(.notetog):not(:has(.nlist))>.lab{display:none}
@@ -863,6 +865,7 @@ document.getElementById('whoBtn').addEventListener('click', () => { if (db && di
 
 /* ---------- drawing the page ---------- */
 const cur = () => classes.find(c => c.id === current);
+const toolsOpen = new Set(); // students whose ↑↓ / Left / Delete / Report buttons are showing in Whole sheet
 /* Folded sections start closed; each device remembers what the teacher opened. */
 let UI = null;
 const uiPrefs = () => UI || (UI = lsGet('gradesheet.ui') || {});
@@ -954,7 +957,7 @@ function render() {
           ${thumbHTML('scored')}
           <div class="prevside">
             <div class="seg sendfmt" role="group" aria-label="What to send"><button type="button" data-fmt="pdf" aria-pressed="${sendFmt === 'pdf'}">PDF with scores</button><button type="button" data-fmt="xlsx" aria-pressed="${sendFmt === 'xlsx'}">Excel</button><button type="button" data-fmt="both" aria-pressed="${sendFmt === 'both'}">Both</button></div>
-            <div class="outrow"><button type="button" class="primary" data-act="send-email">✉ Email</button><button type="button" class="primary" data-act="send-slack"># Slack</button><button type="button" data-act="pdf-full">⤓ PDF with scores</button><button type="button" data-act="print-full">🖨 Print</button></div>
+            <div class="outrow"><button type="button" class="primary" data-act="send-email">✉ Email</button><button type="button" class="primary" data-act="send-slack"># Slack</button><button type="button" data-act="pdf-full">⤓ PDF with scores</button><button type="button" data-act="print-full">🖨 Print</button><button type="button" data-act="reports" title="One page per student: scores, averages and notes">📄 Student reports</button></div>
           </div>
         </div>
         <div id="sendOut"></div>
@@ -1010,7 +1013,7 @@ function sheetHTML(c, syl) {
         <td class="stick c-name" rowspan="${c.cats.length}"><input aria-label="English name" data-sf="eng" value="${esc(s.eng)}" style="font:600 16px var(--f-display);width:100%;border:0;background:transparent;padding:0"><input aria-label="Korean name" data-sf="kor" value="${esc(s.kor)}" class="nm-kor" style="width:100%;border:0;background:transparent;padding:0" placeholder="Korean name">
           ${statusText(s) ? `<span class="stag${hasLeft(s) ? ' left' : ''}">${esc(statusText(s))}</span>` : ''}
           <span class="nm-avg">${ov === null ? 'No scores yet' : 'Overall ' + ov + '%'}</span>
-          <span class="nm-tools"><button type="button" class="small ghost" data-act="up" title="Move up" aria-label="Move up">↑</button><button type="button" class="small ghost" data-act="down" title="Move down" aria-label="Move down">↓</button>${leaveTools(c, s)}</span></td>`;
+          ${toolsOpen.has(s.id) || confirmLeave === s.id || confirmDelete === s.id ? `<span class="nm-tools"><button type="button" class="small ghost" data-act="up" title="Move up" aria-label="Move up">↑</button><button type="button" class="small ghost" data-act="down" title="Move down" aria-label="Move down">↓</button><button type="button" class="small" data-act="report" title="One-page report for this student">📄 Report</button>${leaveTools(c, s)}<button type="button" class="small ghost" data-act="stools" aria-label="Hide student options">Done</button></span>` : `<button type="button" class="small ghost stools" data-act="stools" aria-label="Options for ${esc(s.eng || s.kor)}">⋯</button>`}</td>`;
       h += `<td class="stick c-cat">${esc(k.label)}${k.outOf && k.kind === 'score' ? ` <span style="font-weight:400">/${esc(k.outOf)}</span>` : ''}</td>`;
       days.forEach(i => {
         const v = vals[i] || '';
@@ -1118,7 +1121,7 @@ main.addEventListener('change', e => {
   if (t.id === 'fDays') { c.days = t.value; keep(c); render(); return; }
   if (t.id === 'fSem') { c.sem = t.value; relayout(c, `Semester ${t.value}`); return; }
   if (t.id === 'fName' && c.subject && templateOf(c).sheet !== (c.sheet || '')) { relayout(c, `Level ${levelOf(c.name) || '?'}`); return; }
-  if (t.id === 'fStart') { c.start = t.value; keep(c); render(); return; }
+  if (t.id === 'fStart' || t.dataset.setstart !== undefined) { c.start = t.value; delete dayAt[c.id]; keep(c); render(); return; }
   if (t.id === 'fName') { render(); return; }
   const cr = t.closest('.catrow');
   if (cr && t.dataset.k) {
@@ -1153,7 +1156,10 @@ main.addEventListener('click', e => {
   const act = b.dataset.act;
   const r = rowCtx(b);
   const sidOf = () => (b.closest('[data-sid]') || {}).dataset.sid;
-  if (act === 'leave-ask') { confirmLeave = sidOf(); render(); }
+  if (act === 'stools') { const id = sidOf(); if (toolsOpen.has(id)) toolsOpen.delete(id); else toolsOpen.add(id); render(); }
+  else if (act === 'report') { const s = c.students.find(x => x.id === sidOf()); if (s) saveFile(`${s.eng || s.kor} - ${c.name} report.pdf`, reportDoc(c, [s]).output('blob')); }
+  else if (act === 'reports') { if (c.students.length) saveFile(`${c.name} student reports.pdf`, reportDoc(c, c.students).output('blob')); }
+  else if (act === 'leave-ask') { confirmLeave = sidOf(); render(); }
   else if (act === 'leave-no') { confirmLeave = null; confirmDelete = null; render(); }
   else if (act === 'leave-yes') { const s = c.students.find(x => x.id === sidOf()); s.left = +document.getElementById('leaveDay-' + s.id).value; confirmLeave = null; keep(c); render(); }
   else if (act === 'rejoin') { const s = c.students.find(x => x.id === sidOf()); delete s.left; keep(c); render(); }
@@ -1518,6 +1524,12 @@ function pickDay(c) {
   if (dayAt[c.id] !== undefined) return dayAt[c.id];
   const t = todayMD();
   let i = [...Array(NDAYS).keys()].find(i => dateFor(c, i) === t);
+  // No lesson today: the most recent lesson before today (when Day 1 is set)
+  if (i === undefined && c.start) {
+    const st = new Date(c.start + 'T00:00'), now = new Date(); now.setHours(0, 0, 0, 0);
+    const asDate = md => { const [m, d] = String(md).split('/').map(Number); if (!m || !d) return null; const y = st.getFullYear() + (m < st.getMonth() + 1 ? 1 : 0); return new Date(y, m - 1, d); };
+    for (let j = 0; j < NDAYS; j++) { const dt = asDate(dateFor(c, j)); if (dt && dt <= now) i = j; }
+  }
   if (i === undefined) i = [...Array(NDAYS).keys()].find(i => !c.students.some(s => (((c.scores[s.id] || {}).attendance) || [])[i]));
   return dayAt[c.id] = i === undefined ? 0 : i;
 }
@@ -1552,6 +1564,7 @@ function dayHTML(c, syl) {
       <button type="button" class="big" data-day="${i + 1}" ${i < NDAYS - 1 ? '' : 'disabled'} aria-label="Next lesson">›</button>
     </div>
     <div class="daystrip" aria-label="Jump to a lesson">${[...Array(NDAYS).keys()].map(j => `<button type="button" data-day="${j}" class="m${monthOf(j) + 1}${marked(j) ? ' done' : ''}" aria-current="${j === i}">${j + 1}</button>`).join('')}</div>
+    ${!c.start && !c.example ? `<p class="nudge">📅 Set the <b>Day 1 date</b> so this opens on today's lesson: <input type="date" data-setstart aria-label="Day 1 date"></p>` : ''}
     <div class="row"><button type="button" class="primary" data-act="allpresent">✓ Everyone present</button><span class="hint">then tap anyone late or absent</span></div>`;
   if (!c.students.length) return h + '<p class="hint">No students yet. Paste the class list on the left.</p>';
   h += '<div class="cards">';
@@ -1572,7 +1585,7 @@ function dayHTML(c, syl) {
       else h += `<button type="button" class="scorebtn" data-pad="${i}">${v ? esc(v) + (k.outOf && /^\d+(\.\d+)?$/.test(v) ? `<small>/${k.outOf} · ${round(pct(v, k.outOf))}%</small>` : '') : '<small>Tap to score</small>'}</button>`;
       h += '</div>';
     });
-    h += `<div class="dnote"><span class="lab">Notes</span>${noteBoxHTML(c, s.id)}</div>${open ? `<div class="cardfoot">${leaveTools(c, s)}</div>` : ''}<button type="button" class="linkbtn morebtn" data-more aria-expanded="${open}">${open ? 'Less ▴' : `More for ${esc(s.eng || s.kor)}${extra ? ` (${extra})` : ''} ▾`}</button></article>`;
+    h += `<div class="dnote"><span class="lab">Notes</span>${noteBoxHTML(c, s.id)}</div>${open ? `<div class="cardfoot"><button type="button" class="small" data-act="report">📄 Report</button>${leaveTools(c, s)}</div>` : ''}<button type="button" class="linkbtn morebtn" data-more aria-expanded="${open}">${open ? 'Less ▴' : `More for ${esc(s.eng || s.kor)}${extra ? ` (${extra})` : ''} ▾`}</button></article>`;
   });
   h += '</div>';
   if (away.length) h += `<p class="hint">Not in this class on Day ${i + 1}: ${away.map(s => `${esc(s.eng || s.kor)} (${esc(statusText(s))})`).join(', ')}. Use Whole sheet to bring a student back.</p>`;
@@ -1709,6 +1722,15 @@ main.addEventListener('click', e => {
     keep(c); render();
   }
 });
+// Swipe left or right on the cards to change the lesson (iPad).
+let swipe = null;
+main.addEventListener('touchstart', e => { if (view !== 'day' || pad || e.touches.length !== 1 || e.target.closest('input, textarea, select, .daystrip')) { swipe = null; return; } swipe = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() }; }, { passive: true });
+main.addEventListener('touchend', e => {
+  if (!swipe) return; const t = e.changedTouches[0], dx = t.clientX - swipe.x, dy = t.clientY - swipe.y, quick = Date.now() - swipe.t < 600; swipe = null;
+  if (!quick || Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+  const c = cur(); if (!c) return; const i = pickDay(c) + (dx < 0 ? 1 : -1);
+  if (i < 0 || i >= NDAYS) return; dayAt[c.id] = i; render();
+}, { passive: true });
 main.addEventListener('submit', e => {
   const f = e.target.closest('[data-nadd]'); if (!f) return;
   e.preventDefault();
@@ -1741,6 +1763,46 @@ function pdfText(doc, str, x, y, size, opts = {}) {
 }
 function drawTick(doc, cx, cy, s) { doc.setLineWidth(0.35); doc.line(cx - s * 0.5, cy, cx - s * 0.15, cy + s * 0.4); doc.line(cx - s * 0.15, cy + s * 0.4, cx + s * 0.55, cy - s * 0.45); doc.setLineWidth(0.15); }
 
+/* One page per student: every column's marks by day, its average, attendance, and the notes. */
+function reportDoc(c, list) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const subj = SUBJECTS[c.subject], M = 16, W = 178;
+  const shown = { P: 'Here', L: 'Late', A: 'Absent', Y: 'In', N: 'Not in', O: 'O', T: 'Tri', X: 'X' };
+  list.forEach((s, n) => {
+    if (n) doc.addPage();
+    let y = 22;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(24, 35, 58);
+    doc.text(String(s.eng || s.kor || 'Student'), M, y);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(90, 101, 121);
+    doc.text([c.name, subj ? subj.name : '', 'Semester ' + (c.sem || 'B'), c.room ? 'Room ' + c.room : '', c.hr ? 'HR ' + c.hr : ''].filter(Boolean).join('   ·   '), M, y + 7);
+    const ov = overall(c, s);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(29, 95, 158);
+    doc.text(ov === null ? 'No scores yet' : `Overall ${ov}%`, M + W, y, { align: 'right' });
+    if (statusText(s)) { doc.setFontSize(9.5); doc.setTextColor(150, 90, 20); doc.text(statusText(s), M + W, y + 7, { align: 'right' }); }
+    y += 16; doc.setDrawColor(207, 214, 224); doc.line(M, y, M + W, y); y += 8;
+    c.cats.forEach(k => {
+      const vals = ((c.scores[s.id] || {})[k.id] || []);
+      const marks = vals.map((v, i) => v ? `D${i + 1}: ${shown[v] && k.kind !== 'score' ? shown[v] : v}` : '').filter(Boolean);
+      const st = rowStats(c, s, k);
+      if (y > 260) { doc.addPage(); y = 22; }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(24, 35, 58);
+      doc.text(k.label + (k.kind === 'score' && k.outOf ? ` /${k.outOf}` : ''), M, y);
+      doc.text(st ? st.text : '–', M + W, y, { align: 'right' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(70, 80, 100);
+      const lines = doc.splitTextToSize(marks.length ? marks.join('    ') : 'Nothing marked yet', W);
+      doc.text(lines, M, y + 5.5); y += 8 + lines.length * 4.4;
+    });
+    const notes = String(c.notes[s.id] || '').split('\n').map(x => x.trim()).filter(Boolean);
+    if (y > 250) { doc.addPage(); y = 22; }
+    y += 2; doc.line(M, y, M + W, y); y += 8;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(24, 35, 58); doc.text('Notes', M, y); y += 6;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(50, 60, 80);
+    (notes.length ? notes : ['No notes.']).forEach(t => { const l = doc.splitTextToSize(t, W); if (y + l.length * 4.6 > 285) { doc.addPage(); y = 22; } doc.text(l, M, y); y += l.length * 4.6 + 1.5; });
+    doc.setFontSize(8); doc.setTextColor(140, 150, 165); doc.text('Made ' + new Date().toLocaleDateString(), M, 290);
+  });
+  return doc;
+}
 function makePDF(c, full) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -2188,9 +2250,16 @@ document.addEventListener('keydown', e => {
 function backupData() { const all = lsGet(LOCAL_KEY) || { teachers: [], classes: {} }; return { app: 'class-gradesheet', version: 1, saved: new Date().toISOString(), teachers: all.teachers || [], classes: all.classes || {} }; }
 document.getElementById('backupBtn').addEventListener('click', () => {
   if (dirty.size) saveLocal();
-  const d = backupData(), day = d.saved.slice(0, 10);
-  saveFile(`Gradesheet backup ${day}.json`, new Blob([JSON.stringify(d)], { type: 'application/json' }));
-  lsSet('gradesheet.lastBackup', Date.now()); setSync('Backed up ' + day); backupNudge();
+  const d = backupData(), day = d.saved.slice(0, 10), name = `Gradesheet backup ${day}.json`;
+  const blob = new Blob([JSON.stringify(d)], { type: 'application/json' });
+  const done = () => { lsSet('gradesheet.lastBackup', Date.now()); setSync('Backed up ' + day); backupNudge(); };
+  // On iPad, the share sheet saves straight to Files / iCloud Drive (or AirDrop / Mail).
+  let file = null; try { file = new File([blob], name, { type: 'application/json' }); } catch (e) {}
+  if (file && matchMedia('(pointer:coarse)').matches && navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: name }).then(done, err => { if (err && err.name === 'AbortError') return; saveFile(name, blob); done(); });
+    return;
+  }
+  saveFile(name, blob); done();
 });
 document.getElementById('restoreBtn').addEventListener('click', () => document.getElementById('restoreFile').click());
 document.getElementById('restoreFile').addEventListener('change', async e => {
@@ -2387,7 +2456,7 @@ function standaloneMode() {
   setTimeout(backupNudge, 1500); setInterval(backupNudge, 60000);
   const tags = document.querySelector('a[title="Open the Name Tag Generator"]'); if (tags) { tags.href = 'name-tags.html'; tags.removeAttribute('target'); tags.textContent = 'Name tags'; }
   const foot = document.querySelector('.foot');
-  if (foot) foot.textContent = 'Scores are saved in this browser on this device as you type. Tap “Back up” now and then to keep a copy, and use “Restore” to bring your classes to another device.';
+  if (foot) foot.textContent = 'Scores are saved on this device as you type. Now and then use ⋯ More → Back up to keep a copy.';
 }
 
 /* ---------- printing ----------
