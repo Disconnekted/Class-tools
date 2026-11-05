@@ -351,8 +351,38 @@ button.danger{background:var(--bad);border-color:var(--bad);color:var(--sheet)}
 @media (max-width:640px){.ipadgrid{grid-template-columns:minmax(0,1fr)}}
 .linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit}
 body:has(#pad:not([hidden])) #chartFab{display:none}
-@media (pointer:coarse){.chip-btn{padding:9px 13px;font-size:14px}.chips{gap:8px}}
+@media (pointer:coarse){.chip-btn{padding:9px 13px;font-size:14px}.chips{gap:8px}.info{min-width:36px;min-height:36px}}
 #backupBtn.due{border-color:var(--warn);color:var(--warn)}
+/* folded sections */
+details.fold>summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:6px 0;font-size:14px}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::before{content:'▸';color:var(--muted);font-size:12px;transition:transform .15s}
+details.fold[open]>summary::before{transform:rotate(90deg)}
+.fold-t{font-weight:700}
+.fold-edit{color:var(--accent);font-size:13px;font-weight:700}
+details.fold[open] .fold-edit{display:none}
+details.panel.fold>summary{padding:0}
+details.panel.fold>summary .fold-t{font:700 15px var(--f-display);letter-spacing:.03em;text-transform:uppercase}
+details.panel.fold[open]{gap:10px}
+.foldrow{display:grid;gap:2px;border-top:1px solid var(--line);padding-top:6px}
+.foldrow textarea{width:100%;box-sizing:border-box}
+.keyfold>summary{font-size:13px;color:var(--muted)}
+.info{border:0;background:none;padding:0 2px;color:var(--accent);font-size:15px;cursor:pointer;vertical-align:baseline}
+.infotext{background:var(--paper);border-radius:8px;padding:8px 10px}
+.more{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 6px);z-index:45;background:var(--sheet);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(10,18,30,.18);padding:6px;display:grid;gap:4px;min-width:230px}
+.menu[hidden]{display:none}
+.menu>a,.menu>button,.menu #backupBar>button{justify-content:flex-start;width:100%;border:0;background:none}
+.menu>a:hover,.menu button:hover{background:var(--paper)}
+.menu #backupBar{display:grid;gap:4px}
+.menu #backupBar[hidden]{display:none}
+#moreBtn.due::after{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warn);margin-left:6px}
+.morebtn{justify-self:start;font-size:14px;padding:6px 0}
+details.panel.fold:not([open]){gap:0}
+.classhead details.fold{flex-basis:100%}
+.dnote:has(.notetog):not(:has(.nlist))>.lab{display:none}
+.notetog{justify-self:start}
+.scard .line[hidden],.notebox [hidden],.infotext[hidden]{display:none!important}
 @media print{#chartFab,#ipadBox,#chartPanel{display:none!important}}
 </style>
 
@@ -363,10 +393,13 @@ body:has(#pad:not([hidden])) #chartFab{display:none}
     <h1>Class <span>Gradesheet</span></h1>
     <div class="tools">
       <span class="sync" id="sync"></span>
+      <button type="button" id="whoBtn" hidden></button>
+      <div class="more"><button type="button" id="moreBtn" aria-haspopup="true" aria-expanded="false">⋯ More</button>
+      <div class="menu" id="moreMenu" hidden role="menu">
       <a class="btn" href="https://claude.ai/artifact/VJKK8aH25mCsAz8ov76Tky" target="_blank" rel="noopener" title="Open the Name Tag Generator">Name tags ↗</a>
       <button type="button" id="copyTags" title="Copy every class and student so you can paste them into the Name Tag Generator">Copy classes for name tags</button>
-      <button type="button" id="whoBtn" hidden></button>
       <span id="backupBar" hidden><button type="button" id="backupBtn" title="Save every class to a file you keep">⤓ Back up</button><button type="button" id="restoreBtn" title="Load classes from a backup file">⤒ Restore</button><button type="button" id="ipadBtn" title="Move your classes to an iPad with a QR code or link">📱 Send to iPad</button><button type="button" id="recvBtn" title="Scan the code from the computer to get its classes" hidden>📥 Receive from PC</button><input type="file" id="restoreFile" accept=".json,application/json" hidden></span>
+      </div></div>
     </div>
   </header>
 
@@ -374,16 +407,17 @@ body:has(#pad:not([hidden])) #chartFab{display:none}
     <aside class="rail">
       <h2>My classes</h2>
       <div class="clist" id="clist"></div>
-      <div class="panel">
-        <h3>Add students</h3>
-        <p class="hint">Paste what the <b>Copy students</b> bookmark gives you on the TOPIA Attendance page, the same list you paste into the name tag tool, or cells copied from Excel. A class list file works too.</p>
+      <details class="panel fold" data-ui="add" id="addBox">
+        <summary><span class="fold-t">+ Add students</span></summary>
+        <p class="hint">Paste your TOPIA list or Excel cells. <button type="button" class="info" data-info="addhelp" aria-expanded="false">ⓘ</button></p>
+        <p class="hint infotext" id="addhelp" hidden>On the TOPIA Attendance page, tap the <b>Copy students</b> bookmark, then paste here. The same list works in the name tag tool. A class list file works too.</p>
         <div class="drop" id="drop">
           <textarea id="paste" rows="3" placeholder="Paste here (Ctrl+V)"></textarea>
           <div class="row"><button type="button" class="small primary" id="importBtn">Import</button><label class="btn small" style="padding:4px 9px;font-size:12.5px">Choose file<input type="file" id="file" accept=".xlsx,.xls,.csv,.tsv,.txt,.html,.htm" hidden></label></div>
         </div>
         <button type="button" class="small" id="addClass">+ Add a class by hand</button>
-        <p id="importMsg" class="msg" hidden></p>
-      </div>
+      </details>
+      <p id="importMsg" class="msg" hidden></p>
     </aside>
 
     <main class="main" id="main"></main>
@@ -829,6 +863,23 @@ document.getElementById('whoBtn').addEventListener('click', () => { if (db && di
 
 /* ---------- drawing the page ---------- */
 const cur = () => classes.find(c => c.id === current);
+/* Folded sections start closed; each device remembers what the teacher opened. */
+let UI = null;
+const uiPrefs = () => UI || (UI = lsGet('gradesheet.ui') || {});
+const uiOpen = k => !!uiPrefs()[k];
+const openAttr = k => uiOpen(k) ? ' open' : '';
+document.addEventListener('toggle', e => { const k = e.target.dataset && e.target.dataset.ui; if (k && e.target.dataset.auto) { delete e.target.dataset.auto; return; } if (k) { uiPrefs()[k] = e.target.open; lsSet('gradesheet.ui', UI); } }, true);
+// ⓘ buttons show or hide their help text
+document.addEventListener('click', e => { const b = e.target.closest('[data-info]'); if (!b) return; e.preventDefault(); const t = document.getElementById(b.dataset.info); if (t) { t.hidden = !t.hidden; b.setAttribute('aria-expanded', !t.hidden); } });
+// ⋯ More menu
+(() => {
+  const btn = document.getElementById('moreBtn'), menu = document.getElementById('moreMenu');
+  const set = open => { menu.hidden = !open; btn.setAttribute('aria-expanded', open); };
+  btn.addEventListener('click', e => { e.stopPropagation(); set(menu.hidden); });
+  menu.addEventListener('click', e => { if (e.target.closest('button, a') && !e.target.closest('#restoreBtn')) setTimeout(() => set(false), 0); });
+  document.addEventListener('click', e => { if (!menu.hidden && !e.target.closest('.more')) set(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) set(false); });
+})();
 function render() {
   renderList();
   const c = cur();
@@ -837,13 +888,15 @@ function render() {
   const syl = syllabusFor(c);
   const subj = SUBJECTS[c.subject];
   main.innerHTML = `
-  ${c.example ? `<p class="example-flag"><b>Example class.</b> These three students show how the sheet works and are not saved. Paste your class list on the left to start with your own students.</p>` : ''}
+  ${c.example ? `<p class="example-flag"><b>Example class</b> (not saved). Tap <b>+ Add students</b> on the left to start with your own class.</p>` : ''}
   <section class="panel">
     <div class="classhead">
       <div class="title">
         <h2>${esc(c.name)} ${esc(subj ? subj.name : '')} class</h2>
-        <p>${syl ? `Syllabus: ${esc(syl.t)}, ${syl.s === 'AB' ? 'both semesters' : (syl.s || 'B') + ' semester'} (${syl.d.length} days). Highlighted cells are the days a column is due.` : subj ? `No ${c.sem === 'A' ? 'A' : 'B'}-semester syllabus for ${esc(levelOf(c.name) || 'this level')} ${esc(subj.name)}, so no days are highlighted.` : 'Pick the subject to set the columns.'}${subj && subj.suggested ? ' Your old gradesheet had no tab for this subject, so these columns are suggested.' : ''}</p>
       </div>
+      <details class="fold" data-ui="details"${uiOpen('details') || !subj ? ' open' : ''}>
+        <summary><span class="fold-t">${esc([subj ? subj.name : 'No subject yet', 'Sem ' + (c.sem || 'B'), c.days, c.room ? 'Room ' + c.room : ''].filter(Boolean).join(' · '))}</span> <span class="fold-edit">✎ Details</span></summary>
+        <p class="hint">${syl ? `Syllabus: ${esc(syl.t)}, ${syl.s === 'AB' ? 'both semesters' : (syl.s || 'B') + ' semester'} (${syl.d.length} days). Highlighted cells are the days a column is due.` : subj ? `No ${c.sem === 'A' ? 'A' : 'B'}-semester syllabus for ${esc(levelOf(c.name) || 'this level')} ${esc(subj.name)}, so no days are highlighted.` : 'Pick the subject to set the columns.'}${subj && subj.suggested ? ' Your old gradesheet had no tab for this subject, so these columns are suggested.' : ''}</p>
       <div class="fields">
         <label class="f">Class<input type="text" id="fName" value="${esc(c.name)}"></label>
         <label class="f">Subject<select id="fSubject"><option value="">Choose…</option>${SUBJ_ORDER.map(k => `<option value="${k}" ${(pendingSubj[c.id] || c.subject) === k ? 'selected' : ''}>${SUBJECTS[k].name}</option>`).join('')}</select></label>
@@ -853,9 +906,10 @@ function render() {
         <label class="f">HR<input type="text" id="fHr" value="${esc(c.hr)}" placeholder="Homeroom" style="width:110px"></label>
         <label class="f">Room<input type="text" id="fRoom" value="${esc(c.room)}" placeholder="e.g. 203" inputmode="text" style="width:90px"></label>
       </div>
+      </details>
     </div>
     ${pendingSubj[c.id] ? switchHTML(c, pendingSubj[c.id]) : ''}
-    <details class="cols" id="colsBox"${c.openCols ? ' open' : ''}><summary>Columns for this class (${c.cats.map(k => esc(k.label)).join(', ')})</summary>
+    <details class="cols" id="colsBox"${c.openCols ? ' open' : ''}><summary><span class="fold-t">Columns</span> <span class="sumhint">${c.cats.map(k => esc(k.label)).join(' · ')}</span></summary>
       <div class="catrows">${c.cats.map((k, i) => `
         <div class="catrow" data-ci="${i}">
           <input aria-label="Column name" data-k="label" value="${esc(k.label)}">
@@ -864,14 +918,17 @@ function render() {
           <select aria-label="Highlight" data-k="due">${Object.entries(DUE_NAMES).map(([v, n]) => `<option value="${v}" ${k.due === v ? 'selected' : ''}>${n}</option>`).join('')}</select>
           <button type="button" class="small ghost" data-act="delcat" title="Remove this column">Remove</button>
         </div>`).join('')}
-        <div class="row"><button type="button" class="small" data-act="addcat">+ Add a column</button><span class="hint">Tap a score cell to pick the score. Set “out of” to get a button for every score (Participation is out of 5). Attendance and hand-in cells change with a click.</span></div>
+        <div class="row"><button type="button" class="small" data-act="addcat">+ Add a column</button> <button type="button" class="info" data-info="colhelp" aria-expanded="false">ⓘ</button></div>
+        <p class="hint infotext" id="colhelp" hidden>Set “out of” and each score shows as a % with the score chart. Attendance, hand-in and ○△✗ cells change with a tap.</p>
       </div>
     </details>
     <div class="viewbar" role="tablist" aria-label="View"><button type="button" role="tab" data-view="day" aria-selected="${view === 'day'}">Day by day</button><button type="button" role="tab" data-view="sheet" aria-selected="${view === 'sheet'}">Whole sheet</button></div>
-    ${view === 'day' ? dayHTML(c, syl) : `<div class="legend"><span><i style="background:var(--band1)"></i>Month 1 &amp; 3</span><span><i style="background:var(--band2)"></i>Month 2</span><span><i style="background:var(--due)"></i>Due that day (from the syllabus)</span><span>W word test · U unit test · M monthly test · E essay · P presentation/debate</span></div>
+    ${view === 'day' ? dayHTML(c, syl) : `<details class="fold keyfold" data-ui="key"${openAttr('key')}><summary><span class="fold-t">Colour key</span></summary><div class="legend"><span><i style="background:var(--band1)"></i>Month 1 &amp; 3</span><span><i style="background:var(--band2)"></i>Month 2</span><span><i style="background:var(--due)"></i>Due that day (from the syllabus)</span><span>W word test · U unit test · M monthly test · E essay · P presentation/debate</span></div></details>
     <div class="sheetwrap" id="sheetwrap">${sheetHTML(c, syl)}</div>`}
-    ${addStudentHTML(c)}
-    <label class="f">Class notes<textarea id="fClassNotes" rows="3" placeholder="Anything about the class as a whole: books handed back, test dates moved, seating…">${esc(c.classNotes)}</textarea></label>
+    <div class="foldrow">
+    <details class="fold" data-ui="addone"${openAttr('addone')}><summary><span class="fold-t">+ Add a student</span></summary>${addStudentHTML(c)}</details>
+    <details class="fold" data-ui="cnotes"${openAttr('cnotes')}><summary><span class="fold-t">Class notes</span>${c.classNotes ? ` <span class="sumhint">${esc(String(c.classNotes).split('\n')[0].slice(0, 60))}</span>` : ''}</summary><textarea id="fClassNotes" rows="3" aria-label="Class notes" placeholder="Anything about the class as a whole: books handed back, test dates moved, seating…">${esc(c.classNotes)}</textarea></details>
+    </div>
   </section>
   <div class="bottom">
     <details class="panel sendpanel" id="sendBox"${sendOpen ? ' open' : ''}>
@@ -912,6 +969,10 @@ function render() {
 }
 
 function renderList() {
+  // A teacher with no classes yet needs the paste box, so it opens by itself (without remembering that).
+  const ab = document.getElementById('addBox');
+  const none = !!me && classes.every(c => c.example);
+  if (ab && !uiOpen('add') && ab.open !== none && (none || ab.dataset.was)) { ab.dataset.auto = '1'; ab.open = none; if (none) ab.dataset.was = '1'; else delete ab.dataset.was; }
   document.getElementById('clist').innerHTML = classes.map(c => `<button type="button" data-cid="${esc(c.id)}" aria-current="${c.id === current}">
     <span><b>${esc(c.name)}</b><br><small>${esc(SUBJECTS[c.subject] ? SUBJECTS[c.subject].name : 'No subject')}${c.example ? ' · example' : ''}</small></span><small>${c.students.length}</small></button>`).join('');
 }
@@ -991,12 +1052,11 @@ function leaveTools(c, s) {
 function addStudentHTML(c) {
   const gone = c.students.filter(hasLeft).length;
   return `<form class="addstu" data-addstudent>
-    <b>Add a student</b>
     <input id="newEng" placeholder="English name" autocomplete="off" aria-label="English name">
     <input id="newKor" placeholder="Korean name" autocomplete="off" aria-label="Korean name">
     <label class="joins">Joins on <select id="newJoin" aria-label="Joins on">${dayOptions(c.students.length && hasMarks(c) ? pickDay(c) : 0)}</select></label>
     <button type="submit" class="primary">+ Add</button>
-    <span class="hint">${c.students.length - gone} in class${gone ? `, ${gone} left` : ''}. New students from a TOPIA paste are added too. A student who quits keeps their scores: use “Left the class”.</span>
+    <span class="hint">${c.students.length - gone} in class${gone ? `, ${gone} left` : ''}. A student who quits keeps their scores: use “Left the class”.</span>
   </form>`;
 }
 document.getElementById('main').addEventListener('submit', e => {
@@ -1450,7 +1510,7 @@ function flashMsg(t) {
    On an iPad nothing here needs the keyboard: scores come from a tap pad, attendance and hand-ins
    are big buttons, and notes can be added from one-tap phrases. "Day by day" shows one lesson at a
    time as cards, the way a teacher marks during class; "Whole sheet" is the paper layout. */
-let view = matchMedia('(pointer: coarse)').matches ? 'day' : 'sheet';
+let view = 'day';
 const dayAt = {}; // class id -> day index shown in Day by day
 const NOTE_CHIPS = ['Homework missing', 'Book not brought', 'Late', 'Great participation', 'Needs to memorize', 'Talked in class', 'Retest needed', 'Called parents'];
 const todayMD = () => { const d = new Date(); return `${d.getMonth() + 1}/${d.getDate()}`; };
@@ -1467,13 +1527,15 @@ const val = (c, sid, cat, i) => (((c.scores[sid] || {})[cat] || [])[i]) || '';
 const noteWhen = c => view === 'day' ? (dateFor(c, pickDay(c)) || 'Day ' + (pickDay(c) + 1)) : todayMD();
 const noteLines = (c, sid) => String(c.notes[sid] || '').split('\n').map(l => l.trim()).filter(Boolean);
 let undoNote = null; // { sid, text, line }
+const noteOpen = new Set(), moreOpen = new Set(); // students whose note buttons / extra rows are showing
 function noteBoxHTML(c, sid) {
-  const when = noteWhen(c), lines = noteLines(c, sid);
+  const when = noteWhen(c), lines = noteLines(c, sid), open = noteOpen.has(sid) || view !== 'day';
   return `<div class="notebox" data-nsid="${esc(sid)}">
-    <div class="chips" aria-label="Quick notes for ${esc(when)}">${NOTE_CHIPS.map(t => { const on = lines.includes(`${when} ${t}`); return `<button type="button" class="chip-btn" data-chip="${esc(t)}" aria-pressed="${on}">${on ? '✓ ' : '+ '}${esc(t)}</button>`; }).join('')}</div>
+    ${open ? '' : `<button type="button" class="small notetog" data-notetog>+ Note</button>`}
+    <div class="chips"${open ? '' : ' hidden'} aria-label="Quick notes for ${esc(when)}">${NOTE_CHIPS.map(t => { const on = lines.includes(`${when} ${t}`); return `<button type="button" class="chip-btn" data-chip="${esc(t)}" aria-pressed="${on}">${on ? '✓ ' : '+ '}${esc(t)}</button>`; }).join('')}</div>
     ${lines.length ? `<ul class="nlist">${lines.map((l, j) => `<li><span>${esc(l)}</span><button type="button" data-delnote="${j}" aria-label="Delete note: ${esc(l)}">×</button></li>`).join('')}</ul>` : ''}
     ${undoNote && undoNote.sid === sid ? `<p class="nundo">Deleted “${esc(undoNote.line)}” <button type="button" data-undonote>Undo</button></p>` : ''}
-    <form class="nadd" data-nadd><input data-newnote enterkeyhint="done" placeholder="Type or dictate a note" aria-label="New note"><button type="submit">Add</button></form>
+    <form class="nadd" data-nadd${open ? '' : ' hidden'}><input data-newnote enterkeyhint="done" placeholder="Type or dictate a note" aria-label="New note"><button type="submit">Add</button></form>
   </div>`;
 }
 function redrawNotes(c, sid) { document.querySelectorAll(`.notebox[data-nsid="${CSS.escape(sid)}"]`).forEach(b => { b.outerHTML = noteBoxHTML(c, sid); }); }
@@ -1490,23 +1552,27 @@ function dayHTML(c, syl) {
       <button type="button" class="big" data-day="${i + 1}" ${i < NDAYS - 1 ? '' : 'disabled'} aria-label="Next lesson">›</button>
     </div>
     <div class="daystrip" aria-label="Jump to a lesson">${[...Array(NDAYS).keys()].map(j => `<button type="button" data-day="${j}" class="m${monthOf(j) + 1}${marked(j) ? ' done' : ''}" aria-current="${j === i}">${j + 1}</button>`).join('')}</div>
-    <div class="row"><button type="button" class="primary" data-act="allpresent">✓ Everyone present</button><span class="hint">Then tap only the students who are late or absent.</span></div>`;
+    <div class="row"><button type="button" class="primary" data-act="allpresent">✓ Everyone present</button><span class="hint">then tap anyone late or absent</span></div>`;
   if (!c.students.length) return h + '<p class="hint">No students yet. Paste the class list on the left.</p>';
   h += '<div class="cards">';
   const away = c.students.filter(s => !inClass(s, i));
   c.students.filter(s => inClass(s, i)).forEach(s => {
     const ov = overall(c, s);
     h += `<article class="scard" data-sid="${esc(s.id)}"><header><span><b>${esc(s.eng || s.kor)}</b>${s.eng && s.kor ? ` <span class="nm-kor">${esc(s.kor)}</span>` : ''}${s.joined === i ? ' <span class="stag">New today</span>' : ''}</span><span class="nm-avg">${ov === null ? '' : ov + '%'}</span></header>`;
+    // Always showing: attendance, participation, whatever is due today or already marked. The rest sits behind "More".
+    const anyDue = !!syl;
+    const main = k => !anyDue || k.kind === 'att' || /particip/i.test(k.label) || isDue(k, syl, i) || val(c, s.id, k.id, i);
+    const extra = c.cats.filter(k => !main(k)).length, open = moreOpen.has(s.id);
     c.cats.forEach(k => {
       const v = val(c, s.id, k.id, i), due = isDue(k, syl, i);
-      h += `<div class="line${due ? ' due' : ''}" data-cat="${esc(k.id)}"><span class="lab">${esc(k.label)}${due ? ' <em>today</em>' : ''}</span>`;
+      h += `<div class="line${due ? ' due' : ''}" data-cat="${esc(k.id)}"${main(k) || open ? '' : ' hidden'}><span class="lab">${esc(k.label)}${due ? ' <em>today</em>' : ''}</span>`;
       if (k.kind === 'att') h += `<span class="seg">${[['P', '✓ Here'], ['L', 'Late'], ['A', 'Absent']].map(([x, t]) => `<button type="button" class="v-${x}" data-set="${x}" aria-pressed="${v === x}">${t}</button>`).join('')}</span>`;
       else if (k.kind === 'mark') h += `<span class="seg">${[['O', '○ Circle'], ['T', '△ Triangle'], ['X', '✗ X']].map(([x, t]) => `<button type="button" class="v-${x}" data-set="${x}" aria-pressed="${v === x}">${t}</button>`).join('')}</span>`;
       else if (k.kind === 'check') h += `<span class="seg">${[['Y', '✓ In'], ['N', '✗ Not in']].map(([x, t]) => `<button type="button" class="v-${x}" data-set="${x}" aria-pressed="${v === x}">${t}</button>`).join('')}</span>`;
       else h += `<button type="button" class="scorebtn" data-pad="${i}">${v ? esc(v) + (k.outOf && /^\d+(\.\d+)?$/.test(v) ? `<small>/${k.outOf} · ${round(pct(v, k.outOf))}%</small>` : '') : '<small>Tap to score</small>'}</button>`;
       h += '</div>';
     });
-    h += `<div class="dnote"><span class="lab">Notes</span>${noteBoxHTML(c, s.id)}</div><div class="cardfoot">${leaveTools(c, s)}</div></article>`;
+    h += `<div class="dnote"><span class="lab">Notes</span>${noteBoxHTML(c, s.id)}</div>${open ? `<div class="cardfoot">${leaveTools(c, s)}</div>` : ''}<button type="button" class="linkbtn morebtn" data-more aria-expanded="${open}">${open ? 'Less ▴' : `More for ${esc(s.eng || s.kor)}${extra ? ` (${extra})` : ''} ▾`}</button></article>`;
   });
   h += '</div>';
   if (away.length) h += `<p class="hint">Not in this class on Day ${i + 1}: ${away.map(s => `${esc(s.eng || s.kor)} (${esc(statusText(s))})`).join(', ')}. Use Whole sheet to bring a student back.</p>`;
@@ -1614,6 +1680,9 @@ main.addEventListener('click', e => {
     const nv = val(c, card.dataset.sid, cat, i) === sb.dataset.set ? '' : sb.dataset.set;
     setCell(c, card.dataset.sid, cat, i, nv); paint(card.dataset.sid, cat, i); keep(c); return;
   }
+  const mb = e.target.closest('[data-more]');
+  if (mb && card) { const sid = card.dataset.sid; if (moreOpen.has(sid)) moreOpen.delete(sid); else moreOpen.add(sid); render(); return; }
+  if (e.target.closest('[data-notetog]') && card) { noteOpen.add(card.dataset.sid); redrawNotes(c, card.dataset.sid); const inp = card.querySelector('[data-newnote]'); return; }
   const nb = e.target.closest('.notebox');
   if (nb) {
     const sid = nb.dataset.nsid, lines = noteLines(c, sid);
@@ -2306,7 +2375,7 @@ function backupNudge() {
   const last = +lsGet('gradesheet.lastBackup') || 0, days = Math.floor((Date.now() - last) / 864e5);
   const has = classes.some(c => !c.example && c.students.length);
   const due = has && (!last || days >= 7);
-  b.classList.toggle('due', due);
+  b.classList.toggle('due', due); const mb = document.getElementById('moreBtn'); if (mb) mb.classList.toggle('due', due);
   b.title = due ? (last ? `Last backup ${days} days ago: tap to save a copy` : 'No backup yet: tap to save a copy') : 'Save every class to a file you keep';
 }
 function standaloneMode() {
