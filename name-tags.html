@@ -1,0 +1,1843 @@
+<!doctype html>
+<!--
+  Name Tag Generator
+  Made by Joseph McLaren.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Joseph McLaren">
+<title>Name Tag Generator</title>
+<style>
+  :root {
+    --maroon: #7A1701;
+    --cream: #FBEDC5;
+    --slate: #CFD2DF;
+    --navy: #2D3A65;
+    --peach: #E9BFA5;
+    --ink: #222;
+    --muted: #666;
+    --line: #ddd;
+    --panel: #fff;
+    --bg: #f4f1ea;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; font-family: Arial, Helvetica, "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; color: var(--ink); background: var(--bg); }
+  /* The header (with Print) stays at the top while the page scrolls; --hh is its height, kept up to date by fitHeader(). */
+  header { background: var(--maroon); color: var(--cream); padding: 14px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+  html { scroll-padding-top: calc(var(--hh, 62px) + 12px); }
+  header h1 { margin: 0; font-size: 20px; font-family: "Arial Black", Arial, sans-serif; letter-spacing: .5px; }
+  header .spacer { flex: 1; }
+  header .byline { font-size: 11.5px; opacity: .6; margin-left: -8px; align-self: flex-end; padding-bottom: 3px; }
+  .sync { font-size: 12px; opacity: .85; }
+  .sync.error, .sync.readonly, .sync.full { opacity: 1; color: #ffd27a; font-weight: bold; }
+  .who-move { margin-top: 14px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 8px; font-size: 13.5px; }
+  .who-move p { margin: 0 0 8px; }
+  button { font: inherit; font-size: 14px; padding: 7px 14px; border-radius: 6px; border: 1px solid #bbb; background: #fff; cursor: pointer; }
+  button:hover { background: #f2f2f2; }
+  button.primary { background: var(--cream); color: var(--maroon); border-color: var(--cream); font-weight: bold; }
+  button.primary:hover { background: #fff6dc; }
+  button.danger { color: #a00; }
+  button.small { font-size: 12px; padding: 4px 9px; }
+  button:disabled { opacity: .45; cursor: default; }
+  button:disabled:hover { background: #fff; }
+  .wrap { display: grid; grid-template-columns: minmax(320px, 440px) 1fr; gap: 20px; padding: 20px; align-items: start; }
+  @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .panel h2 { margin: 0 0 10px; font-size: 15px; color: var(--maroon); }
+  .panel p.hint { margin: 4px 0 10px; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+  label { font-size: 12.5px; color: #444; display: block; margin: 8px 0 3px; }
+  input[type=text], input[type=number], select, textarea { font: inherit; font-size: 14px; width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; background: #fff; }
+  textarea { resize: vertical; min-height: 90px; line-height: 1.4; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; min-width: 0; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .check { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 8px 0 0; color: #333; }
+  .check input { margin: 0; }
+  .steps { padding-left: 18px; margin: 6px 0 0; }
+  ol.hint { font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .steps li { margin-bottom: 6px; }
+  a.bookmarklet { display: inline-block; margin-top: 4px; padding: 5px 12px; border-radius: 6px; background: var(--maroon); color: var(--cream); font-weight: bold; text-decoration: none; cursor: grab; }
+  .msg { font-size: 13px; margin-top: 8px; padding: 8px 10px; border-radius: 6px; display: none; }
+  .msg.ok { display: block; background: #eef7ee; color: #235b23; }
+  .msg.err { display: block; background: #fbeaea; color: #8a1c1c; }
+  .class-card { border: 1px solid var(--line); border-left: 5px solid var(--maroon); border-radius: 8px; padding: 10px 12px; margin-top: 12px; background: #fffdf8; }
+  .class-card.off { opacity: .55; border-left-color: #aaa; }
+  .class-card .head { display: flex; align-items: center; gap: 8px; }
+  .class-card .head strong { flex: 1; font-size: 14px; }
+  .class-card .count { font-size: 12px; color: var(--muted); }
+  .class-card .inc { display: flex; align-items: center; gap: 4px; margin: 0; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .class-card .inc input { margin: 0; }
+  #classbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-top: 6px; }
+  #classbar b { color: var(--ink); }
+  .class-card select.copies { width: auto; padding: 3px 6px; font-size: 13px; }
+  .class-card .namelist { display: flex; flex-wrap: wrap; gap: 4px; font-size: 13px; }
+  .class-card .namelist span { padding: 2px 8px; border-radius: 10px; background: rgba(0,0,0,.05); }
+  .empty { font-size: 13px; color: var(--muted); padding: 10px 0 2px; }
+  /* The preview floats beside the class list and follows whichever class is being edited. */
+  #preview-area { position: sticky; top: calc(var(--hh, 62px) + 12px); max-height: calc(100vh - var(--hh, 62px) - 24px); overflow: auto; padding-right: 4px; }
+  @media (max-width: 900px) { #preview-area { position: static; max-height: none; } }
+  .class-card.active { border-left-color: #2b7de9; box-shadow: 0 0 0 2px rgba(43,125,233,.25); }
+  .tag.active { box-shadow: 0 0 0 .7mm #2b7de9; z-index: 1; }
+  .tag[data-cid] { cursor: pointer; }
+  .page { position: relative; }
+  #pages.measuring .mid span, #pages.measuring .foot span { flex: none; overflow: visible; }
+  .page svg.crop { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+  .summary { font-size: 13px; color: #444; margin: 0 0 10px; }
+  #pages { transform-origin: top left; }
+  .print-mode { display: flex; gap: 6px; margin: 2px 0 6px; }
+  .print-mode label { flex: 1; margin: 0; border: 2px solid var(--line); border-radius: 8px; padding: 7px 8px; text-align: center; cursor: pointer; font-size: 13px; background: #fff; }
+  .print-mode input { display: none; }
+  .print-mode label:has(input:checked) { border-color: var(--maroon); background: #fff8ea; color: var(--maroon); font-weight: bold; }
+  .picklist { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 10px; margin-top: 8px; padding: 8px; border-radius: 6px; background: #fff8ea; border: 1px solid #f0dfb8; }
+  .picklist label { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; color: #333; cursor: pointer; }
+  .picklist label input { margin: 0; }
+  .picklist select { width: auto; padding: 0 2px; font-size: 12px; margin-left: auto; }
+  .picklist .none { font-size: 12.5px; color: var(--muted); }
+  .dayhead { display: flex; align-items: flex-end; gap: 4px; }
+  .dayhead label { flex: 1; }
+  .dayhead .daychip { font-size: 11px; padding: 1px 6px; margin-bottom: 3px; white-space: nowrap; }
+  .newbar { margin-top: 8px; padding: 6px 8px; border-radius: 6px; background: #e8f1fd; border: 1px solid #bcd5f7; font-size: 12.5px; color: #1d3f73; line-height: 1.45; }
+  .newbar .nb-btns { display: inline-flex; gap: 6px; margin-left: 4px; }
+  .daychip.on { background: var(--maroon) !important; color: var(--cream) !important; border-color: var(--maroon) !important; }
+  .subdot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-left: 5px; vertical-align: -1px; }
+  #legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--muted); margin: 2px 0 8px; }
+  #legend span { display: inline-flex; align-items: center; gap: 4px; }
+  #legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .rombar { margin-top: 8px; padding: 7px 9px; border-radius: 6px; background: #fff6dc; border: 1px solid #f0d58a; font-size: 12.5px; color: #5a3a00; line-height: 1.45; }
+  .rombar .rom-list { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; margin: 6px 0; }
+  .rombar .rom-list input { padding: 3px 6px; font-size: 13px; }
+  .rombar .nb-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .newtag { font-size: 10px; font-weight: bold; color: #fff; background: #2b7de9; border-radius: 3px; padding: 0 4px; }
+  .tag .newmark { position: absolute; top: .8mm; left: .8mm; z-index: 2; background: #2b7de9; color: #fff; font: bold 5.5pt/1.3 Arial, sans-serif; padding: 0 1.1mm; border-radius: .8mm; }
+  .page { color: #222; }
+
+  /* Dark mode (the tool's screen only; the tags and the paper preview stay as they print) */
+  button.icon { width: 32px; height: 32px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: transparent; border-color: rgba(251,237,197,.45); color: var(--cream); }
+  button.icon:hover { background: rgba(255,255,255,.12); }
+  button.icon svg { width: 17px; height: 17px; }
+  button.icon.lang { font-size: 12px; font-weight: bold; letter-spacing: -.02em; }
+  html.dark button.icon { background: transparent; color: var(--cream); border-color: rgba(251,237,197,.35); }
+  html.dark button.icon:hover { background: rgba(255,255,255,.12); }
+  html.dark { --ink: #e8e6e1; --muted: #aaa69d; --line: #3b3934; --panel: #23221f; --bg: #171614; color-scheme: dark; }
+  html.dark header { background: #4d1405; }
+  html.dark button { background: #2d2c28; color: var(--ink); border-color: #4b4944; }
+  html.dark button:hover { background: #38372f; }
+  html.dark button:disabled:hover { background: #2d2c28; }
+  html.dark button.primary { background: var(--cream); color: var(--maroon); border-color: var(--cream); }
+  html.dark button.danger { color: #ff8a80; }
+  html.dark input[type=text], html.dark input[type=number], html.dark select, html.dark textarea { background: #1b1a17; color: var(--ink); border-color: #4b4944; }
+  html.dark label, html.dark .check, html.dark .summary, html.dark .picklist label { color: #d2cec5; }
+  html.dark .panel h2 { color: #f2b8a6; }
+  html.dark a { color: #8fb8ff; }
+  html.dark a.bookmarklet { color: var(--cream); }
+  html.dark .class-card { background: #282622; }
+  html.dark .class-card.active { box-shadow: 0 0 0 2px rgba(110,165,255,.45); }
+  html.dark .style-pick label, html.dark .print-mode label { background: #2d2c28; }
+  html.dark .style-pick label:has(input:checked), html.dark .print-mode label:has(input:checked) { background: #3b2922; border-color: #c4664c; color: #f2b8a6; }
+  html.dark .style-pick input:checked + span { color: #f2b8a6; }
+  html.dark .picklist { background: #2c2720; border-color: #4b3f2d; }
+  html.dark .rombar { background: #3a3120; border-color: #6b5626; color: #f3dfae; }
+  html.dark .newbar { background: #1c2a40; border-color: #2f4a73; color: #bcd5f7; }
+  html.dark .msg.ok { background: #1e3321; color: #a9dba9; }
+  html.dark .msg.err { background: #3b1f1f; color: #f3a9a9; }
+  html.dark .page { box-shadow: 0 1px 10px rgba(0,0,0,.7); }
+
+  /* ---- Pages & tags (A4 landscape, 5 x 6 = 30 tags per page, like the old sheet) ---- */
+  .page {
+    width: 297mm; height: 210mm; background: #fff; margin: 0 auto 14px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.18);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .grid { display: grid; grid-template-columns: repeat(5, 57mm); grid-template-rows: repeat(6, 32.5mm); }
+  /* shared tag structure */
+  .tag { display: flex; flex-direction: column; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .tag * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .tag.blank-slot { background: transparent !important; outline: none !important; border: none !important; box-shadow: none !important; }
+  .tag.blank-slot::before { display: none !important; }
+  .tag .name { display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden; line-height: 1; }
+  .tag .name .sep { opacity: .45; font-weight: 400; margin: 0 .25em; }
+  .tag .name .kor { font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans CJK KR", sans-serif; font-weight: 800; }
+  .tag .mid, .tag .foot { display: flex; align-items: center; justify-content: space-between; gap: 2mm; white-space: nowrap; overflow: hidden; }
+  .tag .mid span, .tag .foot span { overflow: hidden; flex: none; }
+  .tag .mid.wrap, .tag .foot.wrap { white-space: normal; line-height: 1.05; }
+  .tag .mid.wrap span, .tag .foot.wrap span { flex: 1 1 auto; overflow: visible; }
+  .tag .mid.wrap span:last-child, .tag .foot.wrap span:last-child { text-align: right; }
+
+  /* Style 1: Classic (the original PrepHelper look) */
+  .style-classic .tag { background: var(--maroon); padding: 2.4mm; outline: .15mm solid rgba(255,255,255,.35); outline-offset: -.075mm; }
+  .style-classic .name { flex: 46; background: var(--cream); color: #000; padding: 0 1.5mm;
+    font-family: "Arial Black", Arial, "Malgun Gothic", "Noto Sans KR", sans-serif; font-weight: 900; }
+  .style-classic .mid { flex: 26; background: var(--slate); color: var(--navy); font-weight: bold; padding: 0 1.8mm; }
+  .style-classic .foot { flex: 28; background: var(--peach); padding: 0 1.8mm; }
+  .style-classic .school { font-family: "Times New Roman", Times, serif; font-weight: bold; font-size: 14pt; color: var(--maroon); }
+  .style-classic .teacher { font-size: 10.5pt; color: #000; }
+
+  /* Style 2: Modern (clean white card, navy accent bar) */
+  .style-modern .tag { background: #fff; border: .2mm dashed #c8c8c8; border-left: 3.2mm solid #1F3A68; padding: 2mm 3mm 2mm 3.2mm; }
+  .style-modern .name { flex: 50; justify-content: flex-start; color: #1F3A68; font-family: "Segoe UI", Arial, "Malgun Gothic", "Noto Sans KR", sans-serif; font-weight: 700; }
+  .style-modern .mid { flex: 22; color: #5b6b82; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; border-top: .3mm solid #e1e6ee; padding-top: .8mm; }
+  .style-modern .foot { flex: 22; }
+  .style-modern .school { font-weight: 800; font-size: 9.5pt; letter-spacing: .14em; color: #C8892B; }
+  .style-modern .teacher { font-size: 9.5pt; color: #333; }
+
+  /* Style 3: Cute (sunny yellow, rounded, acorn-brown text) */
+  .style-cute .tag { background: #F7B731; padding: 1.4mm; outline: .15mm solid rgba(255,255,255,.6); outline-offset: -.075mm; }
+  .style-cute .inner-card { flex: 1; display: flex; flex-direction: column; border-radius: 0; padding: 1.2mm 2.2mm; gap: .9mm;
+    background-color: #FFE066; background-image: radial-gradient(rgba(255,255,255,.55) 0.55mm, transparent 0.65mm); background-size: 4mm 4mm;
+    }
+  .style-cute .name { flex: 55; color: #6B4423; font-family: "Arial Rounded MT Bold", "Trebuchet MS", "Comic Sans MS", Arial, "Malgun Gothic", "Noto Sans KR", sans-serif; font-weight: 800; }
+  .style-cute .name .sep { color: #F08A24; opacity: .8; }
+  .style-cute .mid, .style-cute .foot { flex: 20; gap: 1.2mm; }
+  .style-cute .mid span, .style-cute .foot span { background: #fff; border-radius: 3mm; padding: .5mm 2mm; font-weight: 700; color: #6B4423; }
+  .style-cute .mid span:empty, .style-cute .foot span:empty { display: none; } /* no blank white pill when days or teacher is empty */
+  .style-cute .school { font-size: 8.5pt; letter-spacing: .08em; color: #F08A24 !important; }
+  .style-cute .teacher { font-size: 8.5pt; }
+
+  /* Style 4: TOPIA (based on topiaenglishzone.co.kr: white, deep red wordmark, navy text) */
+  .style-topia .tag { background: #fff; border: .2mm dashed #cfcfcf; padding: 1.8mm 3mm 1.6mm; overflow: hidden; }
+  .style-topia .tag::after { content: "T"; position: absolute; left: -1.5mm; bottom: -6.5mm; font: 900 46pt/1 "Times New Roman", Times, serif; color: #7E1B17; opacity: .07; pointer-events: none; }
+  .style-topia .foot { order: -1; flex: 20; border-bottom: .35mm solid #7E1B17; padding-bottom: .4mm; }
+  .style-topia .school { font-family: "Times New Roman", Times, serif; font-weight: 700; font-size: 12.5pt; color: #7E1B17; letter-spacing: .01em; }
+  .style-topia .teacher { font-size: 8.5pt; color: #555; }
+  .style-topia .name { flex: 52; color: #1B2238; font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif; font-weight: 800; }
+  .style-topia .name .sep { color: #c9a9a6; opacity: 1; }
+  .style-topia .mid { flex: 20; color: #1B2238; font-weight: 600; padding-left: 6mm; }
+  .tag.blank-slot::after { display: none !important; }
+  /* class colour */
+  .style-classic .tag.cc .mid { background: var(--cc-bg); color: var(--cc-fg); }
+  .style-modern .tag.cc { border-left-color: var(--cc-strong); }
+  .style-modern .tag.cc .mid { color: var(--cc-strong); }
+  .style-cute .tag.cc { background: var(--cc-strong); }
+  .style-cute .tag.cc .mid span { color: var(--cc-fg); }
+  .style-topia .tag.cc .foot { border-bottom-color: var(--cc-strong); }
+  .style-topia .tag.cc .mid { color: var(--cc-strong); }
+
+  /* Squirrel watermark */
+  .tag { position: relative; }
+  .tag .wm { position: absolute; right: 3%; top: 8%; height: 84%; width: auto; aspect-ratio: 1; pointer-events: none; mix-blend-mode: multiply; }
+  .style-classic .wm { opacity: .2; }
+  .style-modern .wm { opacity: .16; }
+  .style-cute .wm { opacity: .22; }
+  .style-topia .wm { opacity: .16; }
+  .no-wm .wm { display: none; }
+
+  .style-pick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 4px; }
+  .style-pick label { margin: 0; border: 2px solid var(--line); border-radius: 8px; padding: 8px 6px; text-align: center; cursor: pointer; font-size: 13px; background: #fff; }
+  .style-pick input { display: none; }
+  .style-pick input:checked + span { font-weight: bold; color: var(--maroon); }
+  .style-pick label:has(input:checked) { border-color: var(--maroon); background: #fff8ea; }
+  .style-pick i { display: block; height: 22px; border-radius: 4px; margin-bottom: 5px; }
+
+  .copyright { font-size: 11.5px; color: var(--muted); text-align: center; margin: 4px 0 8px; line-height: 1.5; }
+  .copyright span { opacity: .8; }
+  .panel p.hint.privacy { margin: 10px 0 0; }
+  #who { position: fixed; inset: 0; z-index: 8500; background: var(--bg); overflow: auto; display: flex; align-items: flex-start; justify-content: center; padding: 8vh 16px 24px; }
+  #who[hidden] { display: none !important; }
+  body.who-open { overflow: hidden; }
+  .who-card { width: min(460px, 100%); background: var(--panel); border: 1px solid var(--line); border-top: 6px solid var(--maroon); border-radius: 12px; padding: 20px 22px; box-shadow: 0 8px 30px rgba(0,0,0,.12); }
+  .who-top { display: flex; align-items: center; gap: 10px; }
+  .who-top h2 { flex: 1; margin: 0; font-size: 19px; color: var(--maroon); }
+  .who-card h3 { margin: 18px 0 6px; font-size: 14px; color: #555; }
+  .who-list { display: grid; gap: 8px; margin-top: 14px; }
+  .who-item { display: flex; gap: 6px; }
+  .who-pick { flex: 1; text-align: left; font-size: 16px; padding: 10px 14px; border-radius: 8px; }
+  .who-form { display: flex; gap: 8px; flex-wrap: wrap; }
+  .who-form input { flex: 1 1 140px; }
+  .who-form button.primary, #notice button.primary { background: var(--maroon); color: var(--cream); border-color: var(--maroon); }
+  .who-card p.hint { font-size: 12.5px; color: var(--muted); line-height: 1.45; margin: 16px 0 0; }
+  .who-err { color: #a00; font-size: 13px; min-height: 1em; margin: 6px 0 0; }
+  .who-card .msg { display: block; margin: 12px 0 0; }
+  #who-btn, #undo-btn, #redo-btn { font-size: 13px; background: transparent; color: var(--cream); border-color: rgba(251,237,197,.45); }
+  #who-btn:hover, #undo-btn:hover:not(:disabled), #redo-btn:hover:not(:disabled) { background: rgba(255,255,255,.12); }
+  #undo-btn:disabled, #redo-btn:disabled { opacity: .4; }
+  #undo-btn:disabled:hover, #redo-btn:disabled:hover { background: transparent; }
+  #undo-btn { margin-right: -10px; }
+  html.dark .who-card h3 { color: #c9c5bc; }
+  html.dark .who-form button.primary, html.dark #notice button.primary { background: var(--cream); color: var(--maroon); border-color: var(--cream); }
+  html.dark .who-err { color: #ff8a80; }
+  html.dark #who-btn, html.dark #undo-btn, html.dark #redo-btn { background: transparent; color: var(--cream); }
+  #notice { position: fixed; z-index: 8600; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(440px, calc(100vw - 32px));
+    background: #fff; color: #222; border-radius: 12px; padding: 14px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.3); border-top: 4px solid var(--maroon); font-size: 14px; line-height: 1.45; }
+  #notice p { margin: 0; }
+  #notice .btns { justify-content: flex-end; }
+  html.dark #notice { background: #2a2925; color: var(--ink); }
+
+  /* Guided tour: everything outside the current step is shaded (and can't be clicked) */
+  #tour-shade { position: fixed; inset: 0; z-index: 9000; background: rgba(18, 10, 6, .64); transition: clip-path .35s ease; }
+  #tour-ring { position: fixed; z-index: 9001; border-radius: 10px; pointer-events: none; box-shadow: 0 0 0 3px #F7B731; transition: all .35s ease; animation: tour-pulse 1.6s ease-in-out infinite; }
+  @keyframes tour-pulse { 50% { box-shadow: 0 0 0 3px #F7B731, 0 0 0 9px rgba(247,183,49,.35); } }
+  #tour-tip { position: fixed; z-index: 9002; width: 310px; max-width: calc(100vw - 24px); background: #fff; color: #222; border-radius: 12px; padding: 16px 18px 14px; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-size: 14px; line-height: 1.5; transition: top .35s ease, left .35s ease; }
+  #tour-tip h3 { margin: 0 0 6px; font-size: 16px; color: var(--maroon); }
+  #tour-tip p { margin: 0; }
+  #tour-tip .tour-nav { display: flex; align-items: center; gap: 6px; margin-top: 14px; }
+  #tour-tip .tour-count { flex: 1; font-size: 12px; color: #888; }
+  #tour-tip .tour-skip { border: 0; background: none; color: #888; padding: 4px 6px; font-size: 12.5px; }
+  #tour-tip .tour-next { background: var(--maroon); color: var(--cream); border-color: var(--maroon); font-weight: bold; }
+  #tour-tip .tour-arrow { position: absolute; width: 16px; height: 16px; background: inherit; transform: rotate(45deg); }
+  #tour-tip.at-right .tour-arrow { left: -7px; }
+  #tour-tip.at-left .tour-arrow { right: -7px; }
+  #tour-tip.at-bottom .tour-arrow { top: -7px; }
+  #tour-tip.at-top .tour-arrow { bottom: -7px; }
+  #tour-tip.at-center .tour-arrow { display: none; }
+  #tour-tip .tour-hand { position: absolute; font-size: 26px; line-height: 1; pointer-events: none; animation: tour-nudge 1s ease-in-out infinite; }
+  #tour-tip.at-right .tour-hand { left: -46px; } #tour-tip.at-left .tour-hand { right: -46px; }
+  #tour-tip.at-bottom .tour-hand { top: -44px; } #tour-tip.at-top .tour-hand { bottom: -44px; }
+  #tour-tip.at-center .tour-hand { display: none; }
+  @keyframes tour-nudge { 50% { translate: var(--nx, 0) var(--ny, 0); } }
+  html.dark #tour-tip { background: #2a2925; color: var(--ink); }
+  html.dark #tour-tip h3 { color: #f2b8a6; }
+  html.dark #tour-tip .tour-next { background: var(--cream); color: var(--maroon); border-color: var(--cream); }
+
+  @media print {
+    #tour-shade, #tour-ring, #tour-tip, #notice, #who { display: none !important; }
+    @page { size: A4 landscape; margin: 0; }
+    body { background: #fff; }
+    header, .controls, .summary, .noprint { display: none !important; }
+    .wrap { display: block; padding: 0; }
+    #preview-area { position: static; max-height: none; overflow: visible; padding: 0; }
+    .tag.active { box-shadow: none; }
+    #pages { zoom: 1 !important; }
+    .page { margin: 0; box-shadow: none; page-break-after: always; break-after: page; }
+    .page:last-child { page-break-after: auto; break-after: auto; }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="squirrel" viewBox="0 0 100 100">
+<g stroke="#5A3420" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+  <path fill="#D9783C" d="M50 80 C72 87 93 72 93 48 C94 26 82 9 64 10 C51 11 45 22 51 29 C56 35 64 31 62 25 C69 29 73 38 71 48 C69 61 61 70 49 72 Z"/>
+  <path fill="none" stroke="#F3B27A" stroke-width="2.2" d="M58 70 C70 64 80 54 82 42 C84 30 78 19 69 17"/>
+  <path fill="#C8703A" d="M30 52 C23 62 25 82 40 86 C54 89 62 80 60 66 C58 54 50 46 40 46 C35 46 32 48 30 52 Z"/>
+  <path fill="#F4D3AE" stroke="none" d="M30 60 C27 68 30 80 38 81 C44 81 44 70 40 62 C37 56 32 55 30 60 Z"/>
+  <path fill="#C8703A" d="M45 41 C47 30 41 22 31 22 C24 22 18 27 15 33 C12 37 10 40 12 43 C14 46 20 48 27 48 C37 49 44 46 45 41 Z"/>
+  <path fill="#C8703A" d="M33 25 C32 17 35 11 40 9 C43 15 42 21 39 26 Z"/>
+  <path fill="#F4D3AE" stroke="none" d="M35.5 22 C35.5 17 37 14 39.5 12.5 C40.5 16 40 20 38 23 Z"/>
+  <ellipse cx="21" cy="64" rx="5" ry="6" fill="#B87A45"/>
+  <path fill="#6B4423" d="M15 60.5 C15 54.5 27 54.5 27 60.5 Z"/>
+  <path fill="none" d="M21 55 L22 51.5"/>
+  <ellipse cx="26.5" cy="60" rx="4" ry="3" fill="#C8703A"/>
+  <ellipse cx="26.5" cy="67" rx="4" ry="3" fill="#C8703A"/>
+  <ellipse cx="42" cy="86.5" rx="9.5" ry="3.6" fill="#C8703A"/>
+  <circle cx="24.5" cy="33.5" r="1.9" fill="#3A2214" stroke="none"/>
+  <circle cx="25.1" cy="32.8" r=".6" fill="#fff" stroke="none"/>
+  <ellipse cx="23" cy="40" rx="3.2" ry="2" fill="#F29A8E" stroke="none" opacity=".8"/>
+  <circle cx="11.6" cy="41.5" r="1.4" fill="#3A2214" stroke="none"/>
+</g>
+  </symbol>
+</svg>
+<header>
+  <h1 data-i18n="title">Name Tag Generator</h1>
+  <span class="byline">by Joseph McLaren</span>
+  <span class="spacer"></span>
+  <button id="help" class="icon lang" onclick="tourStart()" data-i18n-title="helpTitle" title="How to use this tool" aria-label="How to use this tool">?</button>
+  <button id="lang" class="icon lang" onclick="toggleLang()"></button>
+  <button id="theme" class="icon" onclick="toggleTheme()" title="Dark mode" aria-label="Dark mode"></button>
+  <button id="who-btn" onclick="signOut()" hidden></button>
+  <button id="undo-btn" onclick="undo()" disabled data-i18n="undo" data-i18n-title="undoTitle" title="Undo the last change (Ctrl+Z)">↶ Undo</button>
+  <button id="redo-btn" onclick="redo()" disabled data-i18n="redo" data-i18n-title="redoTitle" title="Redo the change you undid (Ctrl+Y)">↷ Redo</button>
+  <button id="print-btn" class="primary" onclick="printOut()" data-i18n="print">Print tags</button>
+</header>
+
+<div id="who" hidden></div>
+<div class="wrap">
+  <div class="controls">
+    <div class="panel" id="p-details">
+      <h2 data-i18n="d1">1. Your details</h2>
+      <div class="row">
+        <div><label for="teacher" data-i18n="teacherLbl">Your name (bottom right of each tag)</label><input type="text" id="teacher" placeholder="e.g. Eugene" data-i18n-placeholder="teacherPh"></div>
+        <div><label for="school" data-i18n="schoolLbl">School label (bottom left)</label><input type="text" id="school" value="TOPIA"></div>
+      </div>
+      <label for="namemode" data-i18n="namemodeLbl">Names on the tag</label>
+      <select id="namemode">
+        <option value="both" data-i18n="both">English | Korean</option>
+        <option value="korfirst" data-i18n="korEng">Korean | English</option>
+        <option value="eng" data-i18n="engOnly">English only</option>
+        <option value="kor" data-i18n="korOnly">Korean only</option>
+      </select>
+      <label class="check"><input type="checkbox" id="newpage" checked> <span data-i18n="newpage">Start each class on a new page</span></label>
+      <p class="hint privacy" data-i18n="privacy">🔒 Shared computer: your classes are saved under your name. Click <b>Switch</b> at the top when you're done. You're also signed out after 30 minutes without use.</p>
+    </div>
+
+    <div class="panel" id="p-style">
+      <h2 data-i18n="styleH">Tag style</h2>
+      <div class="style-pick">
+        <label><input type="radio" name="tagstyle" value="classic"><i style="background:linear-gradient(#FBEDC5 0 50%,#CFD2DF 50% 75%,#E9BFA5 75%);border:4px solid #7A1701"></i><span data-i18n="classic">Classic</span></label>
+        <label><input type="radio" name="tagstyle" value="modern"><i style="background:#fff;border:1px solid #ccc;border-left:8px solid #1F3A68"></i><span data-i18n="modern">Modern</span></label>
+        <label><input type="radio" name="tagstyle" value="cute"><i style="background:#FFE066;border:4px solid #F7B731"></i><span data-i18n="cute">Cute</span></label>
+        <label><input type="radio" name="tagstyle" value="topia"><i style="background:#fff;border:1px solid #ddd;border-top:6px solid #7E1B17"></i><span>TOPIA</span></label>
+      </div>
+      <label class="check"><input type="checkbox" id="watermark" checked> <span data-i18n="wm">Squirrel watermark</span></label>
+      <label class="check"><input type="checkbox" id="cropmarks" checked> <span data-i18n="crop">Cutting guides (crop marks + class label in the margin)</span></label>
+    </div>
+
+    <div class="panel" id="p-add">
+      <h2 data-i18n="d2">2. Add students</h2>
+      <p class="hint" data-i18n="topiaHint">Students come straight from the TOPIA attendance page, using the <i>Copy students</i> button.</p>
+      <ol class="hint steps">
+        <li><span data-i18n="li1"><b>One time only:</b> show your bookmarks bar (Ctrl+Shift+B), then drag this button onto it:</span>
+          <a id="bookmarklet" class="bookmarklet" href="#" onclick="return false" title="Drag me to your bookmarks bar" data-i18n="bm" data-i18n-title="bmTitle">Copy students</a></li>
+        <li data-i18n="li2">On the TOPIA <b>Attendance</b> page (the list of your classes for a day), click <b>Copy students</b> in your bookmarks bar. It opens each class's list by itself and closes it again with Cancel. It never presses Save.</li>
+        <li data-i18n="li3">When it's finished, click <b>Copy for name tags</b> in the red box.</li>
+        <li data-i18n="li4">Come back here, click the box below and press <b>Ctrl+V</b>. Every class and student comes in at once, with the days filled in.</li>
+        <li data-i18n="li5">Classes that meet on other days? Change the date on the TOPIA page and repeat. New classes are added, and days like <i>Mon / Wed</i> build up automatically.</li>
+      </ol>
+      <label for="paste" data-i18n="pasteLbl">Paste here (Ctrl+V)</label>
+      <textarea id="paste" data-i18n-placeholder="pastePh" placeholder="Click here and press Ctrl+V after using Copy students"></textarea>
+      <div class="btns">
+        <button class="danger" onclick="clearAll()" data-i18n="clearBtn">Clear everything</button>
+      </div>
+      <div id="msg" class="msg"></div>
+      <div id="newall" class="btns" hidden><button onclick="tickNew(state.classes)"></button></div>
+    </div>
+
+    <div class="panel" id="p-check">
+      <h2 data-i18n="d3">3. Check each class</h2>
+      <div class="print-mode">
+        <label><input type="radio" name="printmode" value="all"><span data-i18n="printAll">Print all classes</span></label>
+        <label><input type="radio" name="printmode" value="reprint"><span data-i18n="reprint">Reprint some students</span></label>
+      </div>
+      <p class="hint" id="reprint-hint" hidden data-i18n="reprintHint">Tick the students who need a new tag (a new student, or a lost tag). Only those tags print, packed together on as few pages as possible. Need two of someone? Change ×1 to ×2 next to their name. <a href="#" onclick="clearPicks();return false">Untick everyone</a></p>
+      <p class="hint" data-i18n="hint3">Pick the subject and days, and untick classes you don't need. Use ×2 or ×3 next to a class to print extra copies of each tag. Names come from TOPIA. If one is wrong, fix it on TOPIA and copy the students again.</p>
+      <datalist id="subjects">
+        <option>Debate</option><option>Grammar</option><option>Integrated</option><option>Language Arts</option>
+        <option>Phonics</option><option>Speaking</option><option>Writing</option>
+        <option>TOEFL Reading</option>
+      </datalist>
+      <datalist id="dayslist">
+        <option>Mon / Wed</option><option>Tues / Thurs</option>
+      </datalist>
+      <div id="legend"></div>
+      <div id="classbar" hidden></div>
+      <div id="classes"></div>
+    </div>
+    <p class="copyright">Made by Joseph McLaren<br><span>Includes SheetJS (Apache License 2.0).</span></p>
+  </div>
+
+  <div id="preview-area">
+    <p class="summary" id="summary"></p>
+    <div id="pages"></div>
+  </div>
+</div>
+
+<script>
+const STORE_KEY = 'nameTagGenerator.v1';
+let state = { teacher: '', school: 'TOPIA', newpage: true, nameMode: 'both', style: 'classic', watermark: true, cropmarks: true, reprint: false, theme: '', lang: 'en', classes: [] };
+let nextId = 1;
+
+/* ---------- English / Korean screen ---------- */
+// Only the tool's own screen changes language; what's printed on the tags stays as typed.
+const KO = {
+  title: '이름표 만들기', helpTitle: '사용법 안내',
+  privacy: '🔒 공용 컴퓨터: 반 목록은 내 이름으로 저장됩니다. 다 쓰면 위의 <b>바꾸기</b>를 누르세요. 30분 동안 사용하지 않아도 자동으로 로그아웃됩니다.',
+  print: '이름표 인쇄', undo: '↶ 되돌리기', undoTitle: '마지막 변경 되돌리기 (Ctrl+Z)', redo: '↷ 다시 하기', redoTitle: '되돌린 변경 다시 하기 (Ctrl+Y)',
+  d1: '1. 기본 정보',
+  teacherLbl: '내 이름 (이름표 오른쪽 아래)', teacherPh: '예: Eugene',
+  schoolLbl: '학원 이름 (왼쪽 아래)',
+  namemodeLbl: '이름표에 넣을 이름', both: '영어 | 한국어', korEng: '한국어 | 영어', engOnly: '영어만', korOnly: '한국어만',
+  newpage: '반마다 새 페이지에서 시작',
+  styleH: '이름표 스타일', classic: '클래식', modern: '모던', cute: '귀여운',
+  wm: '다람쥐 워터마크', crop: '재단선 (재단 표시 + 여백에 반 이름)',
+  d2: '2. 학생 추가',
+  pasteLbl: '여기에 붙여 넣기 (Ctrl+V)',
+  pastePh: '학생 복사를 사용한 뒤 여기를 누르고 Ctrl+V를 누르세요',
+  clearBtn: '모두 지우기',
+  topiaHint: '학생은 <i>학생 복사</i> 버튼으로 TOPIA 출석 페이지에서 바로 가져옵니다.',
+  li1: '<b>처음 한 번만:</b> 북마크바를 표시하고(Ctrl+Shift+B) 이 버튼을 북마크바로 끌어다 놓으세요:',
+  bm: '학생 복사', bmTitle: '북마크바로 끌어다 놓으세요',
+  li2: 'TOPIA <b>출석</b> 페이지(그날의 반 목록)에서 북마크바의 <b>학생 복사</b>를 누르세요. 반마다 명단을 차례로 열고 취소로 다시 닫습니다. 저장은 절대 누르지 않습니다.',
+  li3: '다 끝나면 빨간 상자의 <b>Copy for name tags · 이름표용 복사</b>를 누르세요.',
+  li4: '이 페이지로 돌아와 아래 칸을 누르고 <b>Ctrl+V</b>를 누르세요. 모든 반과 학생이 요일까지 채워져 한 번에 들어옵니다.',
+  li5: '다른 요일에 수업하는 반이 있나요? TOPIA 페이지에서 날짜를 바꾸고 다시 하세요. 새 반이 추가되고 <i>Mon / Wed</i> 같은 요일이 자동으로 쌓입니다.',
+  d3: '3. 반별 확인',
+  printAll: '모든 반 인쇄', reprint: '일부 학생만 다시 인쇄',
+  reprintHint: '새 이름표가 필요한 학생(새 학생, 잃어버린 이름표)을 체크하세요. 체크한 이름표만 최대한 적은 장수에 모아 인쇄됩니다. 두 장이 필요하면 이름 옆의 ×1을 ×2로 바꾸세요. <a href="#" onclick="clearPicks();return false">모두 체크 해제</a>',
+  hint3: '과목과 요일을 고르고, 필요 없는 반은 체크를 해제하세요. 반 옆의 ×2, ×3으로 이름표를 여러 장 인쇄할 수 있습니다. 이름은 TOPIA에서 가져옵니다. 이름이 틀렸다면 TOPIA에서 고친 뒤 학생을 다시 복사하세요.',
+};
+const isKo = () => state.lang === 'ko';
+const L = (en, ko) => isKo() ? ko : en;
+
+function applyLang() {
+  const ko = isKo();
+  document.documentElement.lang = ko ? 'ko' : 'en';
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    if (el.dataset.en === undefined) el.dataset.en = el.innerHTML;
+    el.innerHTML = ko ? KO[el.dataset.i18n] : el.dataset.en;
+  });
+  ['placeholder', 'title'].forEach(attr => {
+    document.querySelectorAll(`[data-i18n-${attr}]`).forEach(el => {
+      const keep = 'en' + attr;
+      if (el.dataset[keep] === undefined) el.dataset[keep] = el.getAttribute(attr) || '';
+      el.setAttribute(attr, ko ? KO[el.dataset['i18n' + attr[0].toUpperCase() + attr.slice(1)]] : el.dataset[keep]);
+    });
+  });
+  const btn = document.getElementById('lang');
+  btn.textContent = ko ? 'EN' : '한';
+  btn.title = ko ? 'View in English' : '한국어로 보기';
+  btn.setAttribute('aria-label', btn.title);
+}
+function toggleLang() {
+  state.lang = isKo() ? 'en' : 'ko';
+  applyLang(); applyTheme(); updateWhoBtn(); renderClasses(); render();
+  if (!document.getElementById('who').hidden) renderWho();
+  if (tourAt >= 0) tourGo(tourAt);
+  const m = document.getElementById('msg'); m.className = 'msg'; // the last message was in the other language
+}
+
+/* ---------- teacher profiles ----------
+   Many teachers share the tool. Each teacher picks their name when it opens and gets their own saved
+   classes and settings. Opened online (published on claude.ai with its database), every teacher's
+   classes are kept in that database, one document each, so they follow the teacher to any computer.
+   Opened as a plain file, they stay in this browser (one localStorage entry each), as before.
+   Language and dark mode are kept per computer. A reload keeps the same teacher signed in for that
+   tab only, and anyone idle for 30 minutes is signed out. This keeps lists apart, not secret: anyone
+   who can open the tool can pick any name. */
+const PROFILE_PREFIX = 'nameTagGenerator.p.', CURRENT_KEY = 'nameTagGenerator.current';
+const IDLE_MS = 30 * 60 * 1000, WARN_MS = 60 * 1000;
+let profiles = [], currentId = null, lastActive = Date.now();
+let localProfiles = [];                    // teachers saved in this browser
+let cloud = null, cloudReady = false;      // the online database, once it has answered
+let cloudDocs = {};                        // id -> { name, state, updated, by } from the database
+const TAB_ID = Math.random().toString(36).slice(2, 10);
+const freshState = () => ({ teacher: '', school: 'TOPIA', newpage: true, nameMode: 'both', style: 'classic', watermark: true,
+  cropmarks: true, reprint: false, theme: state.theme, lang: state.lang, classes: [] });
+const currentProfile = () => profiles.find(p => p.id === currentId);
+const newProfileId = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const readLocal = id => { try { return JSON.parse(localStorage.getItem(PROFILE_PREFIX + id) || 'null'); } catch (e) { return null; } };
+
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ lang: state.lang, theme: state.theme, profiles: cloud ? localProfiles : profiles })); } catch (e) {}
+  if (!currentId) return;
+  const mine = Object.assign({}, state, { classes: state.classes.filter(c => !c.demo) }); // never the tour's sample class
+  delete mine.lang; delete mine.theme;
+  trackUndo();
+  if (cloud) cloudSave(currentId, mine);
+  else try { localStorage.setItem(PROFILE_PREFIX + currentId, JSON.stringify(mine)); } catch (e) {}
+  try { sessionStorage.setItem(CURRENT_KEY, JSON.stringify({ id: currentId, lastActive })); } catch (e) {}
+}
+
+/* Online saving: changes are written half a second after they stop, one write at a time. */
+let cloudQueue = {}, cloudTimer = 0, cloudWriting = false, lastWritten = {}, syncState = 'ok';
+function cloudSave(id, data) {
+  const json = JSON.stringify(data);
+  if (lastWritten[id] === json && !cloudQueue[id]) return;
+  cloudQueue[id] = json; setSync('saving');
+  clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudFlush, 500);
+}
+async function cloudFlush() {
+  const id = Object.keys(cloudQueue)[0];
+  if (cloudWriting || !id) return;
+  const json = cloudQueue[id]; delete cloudQueue[id];
+  const p = profiles.find(x => x.id === id);
+  if (!p) return cloudFlush(); // removed meanwhile
+  cloudWriting = true;
+  try {
+    await cloud.doc('teachers/' + id).set({ name: p.name, state: JSON.parse(json), updated: Date.now(), by: TAB_ID });
+    lastWritten[id] = json;
+  } catch (e) {
+    if (!cloudQueue[id]) cloudQueue[id] = json;
+    cloudWriting = false;
+    setSync(e && e.code === 'invalid_argument' ? 'readonly' : e && e.code === 'quota_exceeded' ? 'full' : 'error');
+    if (e && e.code === 'unavailable') { clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudFlush, 3000 + Math.random() * 2000); }
+    return;
+  }
+  cloudWriting = false;
+  if (Object.keys(cloudQueue).length) cloudFlush(); else setSync('ok');
+}
+window.addEventListener('pagehide', () => { if (cloud) { save(); clearTimeout(cloudTimer); cloudFlush(); } });
+window.addEventListener('beforeunload', e => { if (cloud && (cloudWriting || Object.keys(cloudQueue).length)) { cloudFlush(); e.preventDefault(); e.returnValue = ''; } });
+
+function setSync(s) {
+  syncState = s;
+  const el = document.getElementById('sync');
+  if (!el) return;
+  el.hidden = !cloud || !currentId;
+  el.className = 'sync ' + s;
+  el.textContent = {
+    ok: L('☁ Saved online', '☁ 온라인 저장됨'), saving: L('☁ Saving…', '☁ 저장 중…'),
+    error: L('⚠ Not saved yet. Check the internet', '⚠ 아직 저장 안 됨. 인터넷을 확인하세요'),
+    readonly: L('⚠ View only: ask the owner for edit access to save', '⚠ 보기 전용: 저장하려면 소유자에게 편집 권한을 요청하세요'),
+    full: L('⚠ Online storage is full', '⚠ 온라인 저장 공간이 가득 찼습니다'),
+  }[s];
+}
+
+function load() {
+  let g = null;
+  try { g = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) {}
+  if (g) {
+    if (g.lang) state.lang = g.lang;
+    if (g.theme !== undefined) state.theme = g.theme;
+    localProfiles = Array.isArray(g.profiles) ? g.profiles : [];
+    // Saved before profiles existed: give those classes to a profile named after the teacher.
+    if (Array.isArray(g.classes) && (g.classes.length || clean(g.teacher))) {
+      const old = Object.assign({}, g); delete old.profiles; delete old.lang; delete old.theme;
+      const id = 'p' + Date.now().toString(36);
+      localProfiles.push({ id, name: clean(g.teacher) || 'Teacher 1' });
+      try { localStorage.setItem(PROFILE_PREFIX + id, JSON.stringify(old)); } catch (e) {}
+    }
+  }
+  profiles = localProfiles;
+  save(); // the shared entry now holds only the shared settings and names
+  syncUI(); showWho();
+  // Online, the page's database answers within a moment; as a plain file there is none.
+  const use = window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
+  Promise.resolve(use).catch(() => null).then(db => db ? startCloud(db) : startLocal());
+}
+function resumeSession() {
+  let cur = null;
+  try { cur = JSON.parse(sessionStorage.getItem(CURRENT_KEY) || 'null'); } catch (e) {}
+  if (cur && profiles.some(p => p.id === cur.id) && Date.now() - (cur.lastActive || 0) < IDLE_MS) openProfile(cur.id);
+  else renderWho();
+}
+function startLocal() { cloudReady = true; resumeSession(); }
+function startCloud(db) {
+  cloud = db; profiles = [];
+  db.collection('teachers').onSnapshot(snap => {
+    cloudDocs = {};
+    snap.docs.forEach(d => { cloudDocs[d.id] = d.data(); });
+    profiles = snap.docs.map(d => ({ id: d.id, name: clean(String(cloudDocs[d.id].name || '')) })).filter(p => p.name)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (!cloudReady) { cloudReady = true; resumeSession(); return; }
+    if (currentId && !cloudDocs[currentId]) {
+      currentId = null; signOut(L('Your name was removed on another computer.', '다른 컴퓨터에서 이 선생님이 삭제되었습니다.'));
+      return;
+    }
+    // The signed-in teacher's classes were changed somewhere else (another computer or tab).
+    snap.docChanges().forEach(ch => {
+      const d = cloudDocs[ch.doc.id];
+      if (ch.type !== 'modified' || ch.doc.id !== currentId || ch.doc.metadata.hasPendingWrites || !d || d.by === TAB_ID) return;
+      if (JSON.stringify(d.state) === lastWritten[currentId]) return;
+      showNotice(L('<b>Your classes were changed on another computer.</b> Load those changes, or keep what is on this screen (it will replace them).',
+        '<b>다른 컴퓨터에서 반 목록이 바뀌었습니다.</b> 바뀐 내용을 불러오거나, 지금 화면의 내용을 유지하세요 (바뀐 내용을 덮어씁니다).'),
+        [[L('Load changes', '불러오기'), () => { hideNotice(); openProfile(currentId); }],
+         [L('Keep mine', '내 것 유지'), () => { hideNotice(); lastWritten[currentId] = ''; save(); }]], 'remote');
+    });
+    if (!document.getElementById('who').hidden) renderWho();
+    updateWhoBtn();
+  }, () => { setSync('error'); });
+}
+
+function openProfile(id) {
+  let d = cloud ? (cloudDocs[id] && cloudDocs[id].state) : readLocal(id);
+  d = d && typeof d === 'object' ? JSON.parse(JSON.stringify(d)) : {};
+  if (cloud && cloudDocs[id]) lastWritten[id] = JSON.stringify(cloudDocs[id].state);
+  state = Object.assign(freshState(), d, { lang: state.lang, theme: state.theme });
+  if (!Array.isArray(state.classes)) state.classes = [];
+  nextId = 1; state.classes.forEach(c => { c.id = nextId++; c.days = pairDays(c.days); });
+  currentId = id; lastActive = Date.now(); activeId = null; resetUndo();
+  hideWho(); hideNotice(); syncUI(); save(); setSync(syncState === 'readonly' ? 'readonly' : 'ok');
+  if (!state.toured && !state.classes.length) setTimeout(tourStart, 400); // a teacher's first visit
+}
+
+function signOut(message) {
+  if (tourAt >= 0) tourEnd();
+  save();
+  if (cloud) { clearTimeout(cloudTimer); cloudFlush(); }
+  currentId = null;
+  try { sessionStorage.removeItem(CURRENT_KEY); } catch (e) {}
+  state = freshState(); activeId = null; resetUndo();
+  syncUI(); hideNotice(); showWho(message); setSync(syncState);
+}
+
+// Put the signed-in teacher's settings into the page.
+function syncUI() {
+  if (state.style === 'playful') state.style = 'cute';
+  if (state.cropmarks === undefined) state.cropmarks = true;
+  document.getElementById('teacher').value = state.teacher || '';
+  document.getElementById('school').value = state.school;
+  document.getElementById('newpage').checked = state.newpage;
+  document.getElementById('watermark').checked = state.watermark !== false;
+  document.getElementById('cropmarks').checked = state.cropmarks;
+  document.getElementById('namemode').value = state.nameMode || 'both';
+  (document.querySelector(`input[name=tagstyle][value="${state.style}"]`) || document.querySelector('input[name=tagstyle]')).checked = true;
+  document.getElementById('paste').value = '';
+  document.getElementById('msg').className = 'msg';
+  applyLang(); applyTheme(); showPrintMode(); updateWhoBtn();
+  renderClasses(); render(); fitPreview();
+}
+function updateWhoBtn() {
+  const p = currentProfile(), btn = document.getElementById('who-btn');
+  if (!document.getElementById('sync')) btn.insertAdjacentHTML('beforebegin', '<span id="sync" class="sync" hidden></span>');
+  setSync(syncState);
+  btn.hidden = !p;
+  if (!p) return;
+  btn.innerHTML = `👤 <b>${esc(p.name)}</b> · ${L('Switch', '바꾸기')}`;
+  btn.title = L('Switch teacher (your classes stay saved)', '선생님 바꾸기 (내 반 목록은 저장됩니다)');
+}
+
+/* Undo and redo. Every saved change is compared with the one before. Each click is one step; typing
+   counts as one step until it pauses for 1.5 seconds. Redo brings back what Undo took away, until
+   something new is changed. Kept for the signed-in teacher until they switch. */
+let undoStack = [], redoStack = [], undoBase = null, undoAt = 0, undoTyping = false, lastTyped = false;
+const undoSnap = () => JSON.stringify(Object.assign({}, state, { lang: 0, theme: 0, toured: 0, classes: state.classes.filter(c => !c.demo) }));
+function resetUndo() { undoStack = []; redoStack = []; undoBase = null; undoAt = 0; updateUndoBtn(); }
+function trackUndo() {
+  const now = undoSnap(), typed = undoTyping; undoTyping = false;
+  if (undoBase === null) undoBase = now;
+  if (now === undoBase) return;
+  if (!(typed && lastTyped && Date.now() - undoAt < 1500)) { undoStack.push(undoBase); if (undoStack.length > 50) undoStack.shift(); }
+  redoStack = [];
+  undoBase = now; undoAt = Date.now(); lastTyped = typed; updateUndoBtn();
+}
+function updateUndoBtn() {
+  const u = document.getElementById('undo-btn'), r = document.getElementById('redo-btn');
+  if (u) u.disabled = !undoStack.length;
+  if (r) r.disabled = !redoStack.length;
+}
+function undo() { stepHistory(undoStack, redoStack); }
+function redo() { stepHistory(redoStack, undoStack); }
+// Move one step back (or forward): what is on screen now goes onto the other list.
+function stepHistory(from, to) {
+  if (!from.length || !currentId) return;
+  if (tourAt >= 0) tourEnd();
+  to.push(undoSnap());
+  const prev = JSON.parse(from.pop());
+  state = Object.assign(prev, { lang: state.lang, theme: state.theme, toured: state.toured });
+  nextId = state.classes.reduce((m, c) => Math.max(m, c.id || 0), 0) + 1;
+  if (!state.classes.some(c => c.id === activeId)) activeId = null;
+  undoBase = undoSnap(); undoAt = 0;
+  syncUI(); updateUndoBtn();
+}
+// Ctrl+Z (⌘Z on a Mac) undoes, Ctrl+Y or Ctrl+Shift+Z redoes, except while typing in a box, where they
+// work on the typing.
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+  const k = e.key.toLowerCase(), isRedo = k === 'y' || (k === 'z' && e.shiftKey), isUndo = k === 'z' && !e.shiftKey;
+  if (!isUndo && !isRedo) return;
+  if (e.target.closest && e.target.closest('input[type=text], textarea')) return;
+  if (!currentId || !document.getElementById('who').hidden || !(isUndo ? undoStack : redoStack).length) return;
+  e.preventDefault(); isUndo ? undo() : redo();
+});
+
+/* A yes/no question in the page itself (pop-up boxes can be blocked when the tool is online). */
+function ask(html, yes) {
+  return new Promise(done => showNotice(html, [[yes, () => { hideNotice(); done(true); }], [L('Cancel', '취소'), () => { hideNotice(); done(false); }]], 'ask'));
+}
+
+/* "Who's making name tags?" screen */
+function showWho(message) {
+  document.getElementById('who').hidden = false;
+  document.body.classList.add('who-open');
+  renderWho(message);
+}
+function hideWho() { document.getElementById('who').hidden = true; document.body.classList.remove('who-open'); }
+// Teachers saved in this browser who aren't online yet.
+const localOnly = () => cloud ? localProfiles.filter(p => readLocal(p.id) && !profiles.some(o => o.name.toLowerCase() === p.name.toLowerCase())) : [];
+function renderWho(message) {
+  const box = document.getElementById('who');
+  const top = `<div class="who-top"><h2>${L("Who's making name tags?", '누가 이름표를 만드나요?')}</h2>
+    <button class="small" onclick="toggleLang()" title="${isKo() ? 'View in English' : '한국어로 보기'}">${isKo() ? 'EN' : '한'}</button></div>` +
+    (message ? `<p class="msg ok">${esc(message)}</p>` : '');
+  if (!cloudReady) {
+    box.innerHTML = `<div class="who-card">${top}<p class="hint">${L('Loading teachers…', '선생님 목록을 불러오는 중…')}</p>
+      <p class="copyright">Made by Joseph McLaren</p></div>`;
+    return;
+  }
+  const list = profiles.length
+    ? `<div class="who-list">${profiles.map(p => `<div class="who-item"><button class="who-pick" data-act="pick" data-id="${p.id}">${esc(p.name)}</button>` +
+        `<button class="small danger" data-act="del" data-id="${p.id}" title="${L('Remove this teacher', '이 선생님 삭제')}">✕</button></div>`).join('')}</div>`
+    : `<p class="hint">${L('No teachers yet. Add your name below to start.', '아직 등록된 선생님이 없습니다. 아래에 이름을 넣고 시작하세요.')}</p>`;
+  const moving = localOnly();
+  const move = moving.length ? `<div class="who-move"><p>${L(`${moving.length === 1 ? '1 teacher is' : moving.length + ' teachers are'} saved only on this computer: <b>${esc(moving.map(p => p.name).join(', '))}</b>.`,
+      `이 컴퓨터에만 저장된 선생님이 ${moving.length}명 있습니다: <b>${esc(moving.map(p => p.name).join(', '))}</b>.`)}</p>
+    <button class="primary" data-act="upload">${L('Move them online', '온라인으로 옮기기')}</button></div>` : '';
+  box.innerHTML = `<div class="who-card">${top}${move}${list}
+    <h3>${profiles.length ? L('New teacher', '새 선생님') : L('Your name', '내 이름')}</h3>
+    <form id="who-new" class="who-form">
+      <input type="text" id="new-name" placeholder="${L('Your name, e.g. Eugene', '이름 (예: Eugene)')}" autocomplete="off">
+      <button class="primary">${L('Start', '시작')}</button></form>
+    <p class="who-err" id="who-err"></p>
+    <p class="hint">${cloud
+      ? L("Each teacher's classes are saved online, so you can open this page on any computer and carry on. Click Switch at the top when you're done. You're also signed out after 30 minutes without use.",
+        '선생님마다 반 목록이 온라인에 저장되어 어느 컴퓨터에서든 이 페이지를 열어 이어서 쓸 수 있습니다. 다 쓰면 위의 바꾸기를 누르세요. 30분 동안 사용하지 않아도 자동으로 로그아웃됩니다.')
+      : L("Each teacher's classes are saved separately on this computer. Click Switch at the top when you're done. You're also signed out after 30 minutes without use.",
+        '선생님마다 반 목록이 이 컴퓨터에 따로 저장됩니다. 다 쓰면 위의 바꾸기를 누르세요. 30분 동안 사용하지 않아도 자동으로 로그아웃됩니다.')}</p>
+    <p class="copyright">Made by Joseph McLaren</p></div>`;
+  if (!profiles.length) document.getElementById('new-name').focus();
+}
+const whoErr = t => { const e = document.getElementById('who-err'); if (e) e.textContent = t; };
+async function removeProfile(id) {
+  delete cloudQueue[id];
+  if (cloud) {
+    try { await cloud.doc('teachers/' + id).delete(); } catch (e) { whoErr(L('Could not remove it. Check the internet and try again.', '삭제하지 못했습니다. 인터넷을 확인하고 다시 해 보세요.')); return; }
+  } else {
+    profiles = profiles.filter(p => p.id !== id);
+    try { localStorage.removeItem(PROFILE_PREFIX + id); } catch (e) {}
+  }
+  save(); renderWho();
+}
+// Copy the teachers saved in this browser into the online database, then clear them from this computer.
+async function uploadLocal() {
+  const moving = localOnly();
+  whoErr(L('Moving…', '옮기는 중…'));
+  for (const p of moving) {
+    const d = readLocal(p.id) || {};
+    try { await cloud.doc('teachers/' + newProfileId()).set({ name: p.name, state: d, updated: Date.now(), by: TAB_ID }); }
+    catch (e) { whoErr(L(`Could not move ${p.name}. Check the internet and try again.`, `${p.name} 선생님을 옮기지 못했습니다. 인터넷을 확인하고 다시 해 보세요.`)); return; }
+    localProfiles = localProfiles.filter(x => x.id !== p.id);
+    try { localStorage.removeItem(PROFILE_PREFIX + p.id); } catch (e) {}
+    save();
+  }
+  whoErr('');
+}
+document.getElementById('who').addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  if (b.dataset.act === 'upload') { b.disabled = true; await uploadLocal(); renderWho(); return; }
+  const p = profiles.find(x => x.id === b.dataset.id);
+  if (!p) return;
+  if (b.dataset.act === 'pick') openProfile(p.id);
+  else if (b.dataset.act === 'del' && await ask(cloud
+      ? L(`Remove <b>${esc(p.name)}</b> and all their classes? This removes them on every computer.`, `<b>${esc(p.name)}</b> 선생님과 반 목록을 모두 삭제할까요? 모든 컴퓨터에서 삭제됩니다.`)
+      : L(`Remove <b>${esc(p.name)}</b> and all their classes from this computer?`, `<b>${esc(p.name)}</b> 선생님과 반 목록을 이 컴퓨터에서 모두 삭제할까요?`),
+    L('Remove', '삭제'))) removeProfile(p.id);
+});
+document.getElementById('who').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!cloudReady) return;
+  const name = clean(document.getElementById('new-name').value);
+  if (!name) { whoErr(L('Type your name first.', '먼저 이름을 입력하세요.')); return; }
+  if (profiles.some(p => p.name.toLowerCase() === name.toLowerCase())) { whoErr(L('That name is already here. Pick it from the list above.', '이미 있는 이름입니다. 위 목록에서 고르세요.')); return; }
+  const id = newProfileId();
+  if (cloud) {
+    try { await cloud.doc('teachers/' + id).set({ name, state: { teacher: name }, updated: Date.now(), by: TAB_ID }); }
+    catch (err) { whoErr(err && err.code === 'invalid_argument' ? L('This page is view only for you. Ask the owner for edit access.', '이 페이지는 보기 전용입니다. 소유자에게 편집 권한을 요청하세요.')
+      : L('Could not save online. Check the internet and try again.', '온라인에 저장하지 못했습니다. 인터넷을 확인하고 다시 해 보세요.')); return; }
+    if (!profiles.some(p => p.id === id)) { profiles.push({ id, name }); cloudDocs[id] = { name, state: { teacher: name } }; }
+  } else {
+    profiles.push({ id, name });
+    try { localStorage.setItem(PROFILE_PREFIX + id, JSON.stringify({ teacher: name })); } catch (e) {}
+  }
+  openProfile(id);
+});
+
+/* Idle sign-out, and a reminder after printing */
+function showNotice(html, buttons, kind) {
+  let box = document.getElementById('notice');
+  if (!box) { box = document.createElement('div'); box.id = 'notice'; box.setAttribute('role', 'alert'); document.body.appendChild(box); }
+  box.innerHTML = `<p>${html}</p><div class="btns">${buttons.map((b, i) => `<button class="${i ? '' : 'primary'}" data-i="${i}">${b[0]}</button>`).join('')}</div>`;
+  box.querySelectorAll('button').forEach(el => el.onclick = () => buttons[el.dataset.i][1]());
+  box.dataset.kind = kind; box.hidden = false;
+}
+function hideNotice() { const box = document.getElementById('notice'); if (box) { box.hidden = true; box.dataset.kind = ''; } }
+let activeSaved = 0;
+['pointerdown', 'keydown', 'input', 'wheel', 'touchstart', 'mousemove'].forEach(ev => document.addEventListener(ev, () => {
+  lastActive = Date.now();
+  const box = document.getElementById('notice');
+  if (box && box.dataset.kind === 'idle') hideNotice();
+  if (currentId && Date.now() - activeSaved > 15000) { activeSaved = Date.now(); save(); } // so a reload knows how long it's been
+}, { capture: true, passive: true }));
+setInterval(() => {
+  if (!currentId) return;
+  const left = IDLE_MS - (Date.now() - lastActive);
+  if (left <= 0) signOut(L('You were signed out after 30 minutes without use. Your classes are saved.', '30분 동안 사용하지 않아 로그아웃되었습니다. 반 목록은 저장되어 있습니다.'));
+  else if (left <= WARN_MS) showNotice(L(`<b>Still there?</b> You'll be signed out in ${Math.ceil(left / 1000)} seconds so the next teacher can't see your classes.`,
+    `<b>아직 사용 중이신가요?</b> 다음 선생님이 내 반 목록을 보지 않도록 ${Math.ceil(left / 1000)}초 뒤 로그아웃됩니다.`),
+    [[L('Keep working', '계속 사용'), hideNotice]], 'idle');
+}, 1000);
+
+/* ---------- helpers ---------- */
+const esc = s => String(s ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+const clean = v => String(v ?? '').replace(/\s+/g, ' ').trim();
+// "E3_2(t1)" -> "E3-2"  (same rule as the old workbook)
+const shortClass = raw => clean(raw).split('(')[0].replace(/_/g, '-').trim();
+
+function showMsg(text, ok) {
+  const m = document.getElementById('msg');
+  m.textContent = text; m.className = 'msg ' + (ok ? 'ok' : 'err');
+}
+
+function newClass(name) {
+  return { id: nextId++, name: name || '', subject: '', days: '', teacher: '', include: true, copies: 1, names: [] };
+}
+
+/* ---------- class colours ----------
+   The subject decides the colour (the class line, side bar or frame, depending on the style), so a
+   book's subject shows at a glance. Subjects not listed here keep the style's own colours. */
+const COLORS = {
+  'debate':        { bg: '#F6CFCB', fg: '#7A1510', strong: '#C62828', en: 'Red',    ko: '빨강' },
+  'grammar':       { bg: '#F9E79F', fg: '#5E4700', strong: '#E0B100', en: 'Yellow', ko: '노랑' },
+  'phonics':       { bg: '#F7BE85', fg: '#5A2A05', strong: '#E07A2E', en: 'Orange', ko: '주황' },
+  'speaking':      { bg: '#CFE0F5', fg: '#1F3A68', strong: '#2F6DB5', en: 'Blue',   ko: '파랑' },
+  'writing':       { bg: '#D5ECC8', fg: '#1E5B2A', strong: '#3B8C3A', en: 'Green',  ko: '초록' },
+  'integrated':    { bg: '#E3D6F2', fg: '#4B2A78', strong: '#7B52AB', en: 'Purple', ko: '보라' },
+  'language arts': { bg: '#C9EBE7', fg: '#145650', strong: '#23978C', en: 'Teal',   ko: '청록' },
+  'toefl':         { bg: '#D3D8E8', fg: '#1B2550', strong: '#34407A', en: 'Navy',   ko: '남색' },
+};
+const SUBJECT_NAMES = { 'debate': 'Debate', 'grammar': 'Grammar', 'phonics': 'Phonics', 'speaking': 'Speaking', 'writing': 'Writing',
+  'integrated': 'Integrated', 'language arts': 'Language Arts', 'toefl': 'TOEFL Reading' };
+const classColor = c => { const sub = clean(c.subject || '').toLowerCase(); const k = Object.keys(COLORS).find(k => sub.includes(k)); return k ? COLORS[k] : null; };
+const subDot = c => { const cc = classColor(c); return cc ? `<i class="subdot" style="background:${cc.strong}" title="${L(cc.en, cc.ko)}"></i>` : ''; };
+function renderLegend() {
+  document.getElementById('legend').innerHTML = L('Colours:', '과목별 색:') + ' ' +
+    Object.keys(COLORS).map(k => `<span><i style="background:${COLORS[k].strong}"></i>${SUBJECT_NAMES[k]}</span>`).join('');
+}
+
+/* ---------- English names for Korean-only students ----------
+   Suggests a spelling of the given name (the family name is left out, as on the tags), using the
+   Revised Romanization rules with the usual name-friendly simplifications. The teacher checks
+   and edits the suggestions before they are used. */
+const R_INIT = ['g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '', 'j', 'jj', 'ch', 'k', 't', 'p', 'h'];
+const R_MED = ['a', 'ae', 'ya', 'yae', 'eo', 'e', 'yeo', 'ye', 'o', 'wa', 'wae', 'oe', 'yo', 'u', 'wo', 'we', 'wi', 'yu', 'eu', 'ui', 'i'];
+const R_FIN = ['', 'k', 'k', 'k', 'n', 'n', 'n', 't', 'l', 'k', 'm', 'l', 'l', 'l', 'p', 'l', 'm', 'p', 'p', 't', 't', 'ng', 't', 't', 'k', 't', 'p', 't'];
+// A final consonant moves onto a following silent ㅇ (민아 -> Mina, 온유 -> Onyu).
+const R_LINK = { 1: 'g', 4: 'n', 7: 'd', 8: 'r', 16: 'm', 17: 'b', 19: 's', 21: 'ng', 22: 'j', 23: 'ch', 25: 't', 27: 'h' };
+const TWO_SYLLABLE_SURNAMES = ['남궁', '황보', '제갈', '선우', '독고', '사공', '서문', '동방'];
+function romanize(kor) {
+  const k = clean(kor).replace(/\s+/g, '');
+  if (!/^[가-힣]{2,5}$/.test(k)) return '';
+  const given = k.length >= 4 && TWO_SYLLABLE_SURNAMES.includes(k.slice(0, 2)) ? k.slice(2) : k.length >= 2 ? k.slice(1) : k;
+  const syl = [...given].map(ch => { const n = ch.charCodeAt(0) - 0xAC00; return { i: Math.floor(n / 588), m: Math.floor(n % 588 / 28), f: n % 28 }; });
+  let out = '';
+  syl.forEach((s, x) => {
+    const next = syl[x + 1];
+    let init = R_INIT[s.i];
+    if (x > 0 && s.i === 5 && syl[x - 1].f === 8) init = 'l'; // ㄹㄹ -> ll
+    out += init + R_MED[s.m];
+    if (!s.f) return;
+    if (next && next.i === 11 && R_LINK[s.f] !== undefined) out += R_LINK[s.f];
+    else out += R_FIN[s.f];
+  });
+  return out.charAt(0).toUpperCase() + out.slice(1);
+}
+const korOnlyNames = c => [...new Set(c.names.filter(n => { const p = splitName(n); return n && !p.eng && p.kor && !(c.korKeep || []).includes(n); }))];
+function romHTML(c) {
+  if (state.nameMode === 'kor') return '';
+  const list = korOnlyNames(c);
+  if (!list.length) return '';
+  return `<div class="rombar"><b>${L(list.length === 1 ? '1 student has no English name.' : `${list.length} students have no English name.`, `영어 이름이 없는 학생 ${list.length}명`)}</b>
+    ${L('Check or change the suggested spelling:', '추천 영어 이름을 확인하거나 고치세요:')}
+    <div class="rom-list">${list.map(n => `<span>${esc(splitName(n).kor)}</span><input type="text" data-kor="${esc(n)}" value="${esc(romanize(splitName(n).kor))}">`).join('')}</div>
+    <span class="nb-btns"><button class="small" data-act="romuse">${L('Add these English names', '이 영어 이름 넣기')}</button><button class="small" data-act="romkeep">${L('Keep Korean only', '한국어만 쓰기')}</button></span></div>`;
+}
+
+/* ---------- parsing a class list (rows = arrays of cells) ---------- */
+function findCol(header, patterns) {
+  for (const p of patterns) {
+    const i = header.findIndex(h => p.test(clean(h)));
+    if (i >= 0) return i;
+  }
+  return -1;
+}
+
+// Column names recognised in exported class lists, attendance pages and hand-made sheets.
+const COLS = {
+  eng: [/영문\s*이름|영어\s*이름|영문\s*명|영어\s*명/, /eng(lish)?\.?\s*name/i, /^english$/i, /^(student\s*)?name$/i],
+  kor: [/한글\s*이름|국문\s*이름|한국\s*이름|korean/i, /^(학생\s*)?(이름|성명|학생명)$/],
+  cls: [/^반\s*명$|^반$|반\s*이름|^클래스$|^수업\s*명$/, /^class(\s*name)?$/i],
+  subj: [/^subject$/i, /^과목(\s*명)?$/],
+};
+const NAME_PAIR = /^(.*?[A-Za-z].*?)\s*[(（]\s*([ㄱ-힣][ㄱ-힣\s]*)\s*[)）]$/;
+const CLASS_TOKEN = /([A-Za-z]{1,3}\d+[_-]\d+(?:\([^)]*\))?)/;
+const has = (r, key) => r.some(c => COLS[key].some(p => p.test(c)));
+// A header row names a student-name column, or is a class table (class name + subject, no students).
+const isHeader = r => has(r, 'eng') || has(r, 'kor') || (has(r, 'cls') && has(r, 'subj'));
+
+function parseRows(rows) {
+  rows = rows.map(r => (r || []).map(clean));
+  const groups = new Map();
+  groups.subjects = new Map();
+  const add = (className, name) => {
+    if (!groups.has(className)) groups.set(className, []);
+    if (name !== undefined) groups.get(className).push(name);
+  };
+  if (!rows.some(isHeader)) {
+    // No header: treat it as a plain list of names (first non-empty cell of each row).
+    rows.forEach(r => { const n = r.find(c => c); if (n && !/^▶/.test(n)) add('', n); });
+    return groups;
+  }
+  let eng = -1, kor = -1, cls = -1, subj = -1, current = '';
+  for (const r of rows) {
+    const filled = r.filter(c => c);
+    if (!filled.length) continue;
+    // A header row (each pasted table may have its own) tells us which columns hold what.
+    if (isHeader(r)) {
+      eng = findCol(r, COLS.eng); kor = findCol(r, COLS.kor); cls = findCol(r, COLS.cls); subj = findCol(r, COLS.subj);
+      if (eng === kor) kor = -1;
+      if (kor < 0) kor = r.findIndex((c, i) => i !== eng && /^(student\s*)?name$|^korean/i.test(c)); // e.g. Name next to English Name
+      continue;
+    }
+    // Section lines set the class for the rows under them: "▶  E3_2(t1)  ★ 담임: …", a table's title,
+    // or a row with a single cell that looks like a class code.
+    const sec = filled[0].match(/^▶\s*(.*)$/) || (filled.length === 1 && filled[0].match(CLASS_TOKEN) ? [0, filled[0]] : null);
+    if (sec) { const t = sec[1].match(CLASS_TOKEN); current = t ? t[1] : clean(sec[1]).split(/\s+/).slice(0, 2).join(' '); continue; }
+    const rowClass = cls >= 0 && r[cls] ? r[cls] : current;
+    if (subj >= 0 && r[subj] && rowClass) groups.subjects.set(rowClass, r[subj]);
+    if (eng < 0 && kor < 0) { if (cls >= 0 && CLASS_TOKEN.test(rowClass)) add(rowClass); continue; } // class list only
+    let e = eng >= 0 ? r[eng] || '' : '', k = kor >= 0 ? r[kor] || '' : '';
+    // TOPIA writes names as "Sam(김시율)"; find that cell even if the header and cells don't line up.
+    if ((!e || /^\d+$/.test(e)) && !k) e = r.find(c => NAME_PAIR.test(c)) || r.find(c => /^[ㄱ-힣]{2,5}$/.test(c) && !/학교$/.test(c)) || e;
+    const pair = !k && e.match(NAME_PAIR);
+    if (pair) { e = clean(pair[1]); k = clean(pair[2]); }
+    const hangul = /[ㄱ-힣]/;
+    if (hangul.test(e) && !hangul.test(k)) [e, k] = [k, e]; // columns the other way round
+    if (!e && !k) continue; // not a student row
+    if (/^\d+$/.test(e) && !k) continue; // stray totals / numbers
+    add(rowClass, e && k ? `${e} | ${k}` : (e || `| ${k}`));
+  }
+  return groups;
+}
+
+// Students come in one way only: the text the Copy students button copies.
+const ONLY_TOPIA = () => showMsg(L('Only lists copied with the Copy students button can be pasted here. Follow the steps above.',
+  '학생 복사 버튼으로 복사한 명단만 붙여 넣을 수 있습니다. 위의 단계를 따라 하세요.'), false);
+const pasteBox = document.getElementById('paste');
+pasteBox.addEventListener('paste', e => {
+  e.preventDefault();
+  const text = e.clipboardData && e.clipboardData.getData('text/plain');
+  if (!text || !text.startsWith('#TOPIA-NAMETAGS')) { ONLY_TOPIA(); return; }
+  const lines = text.split(/\r?\n/).slice(1);
+  const date = (lines[0] || '').match(/^#DATE (\d{4})-(\d\d)-(\d\d)/);
+  const groups = parseRows(parseDelimited(lines.filter(l => !l.startsWith('#')).join('\n')));
+  if (date) groups.weekday = new Date(+date[1], +date[2] - 1, +date[3]).getDay();
+  applyGroups(groups);
+});
+// Typing or dropping text into the box does nothing.
+pasteBox.addEventListener('input', () => { if (pasteBox.value) { pasteBox.value = ''; ONLY_TOPIA(); } });
+pasteBox.addEventListener('drop', e => { e.preventDefault(); ONLY_TOPIA(); });
+
+/* ---------- "Copy students" bookmark ----------
+   Runs on the TOPIA attendance page (where the teacher is already signed in). It opens each
+   class's Attendance list in turn, reads the students, and closes it again with Cancel (it never
+   presses Save or All Present). Then it offers one button to copy everything for the paste box.
+   Kept free of line comments because it becomes a one-line javascript: link. */
+function copyStudentsBookmarklet() {
+  var D = document, out = ['#TOPIA-NAMETAGS'];
+  var dateEl = D.querySelector('input[type=date]');
+  if (dateEl && dateEl.value) out.push('#DATE ' + dateEl.value);
+  var vis = function (el) { return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length); };
+  var cls = function (el) { return String(el.getAttribute('class') || ''); };
+  var txt = function (el) { return (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim(); };
+  var isRow = function (el) {
+    var k = el.children;
+    if (el.tagName === 'TR') return true;
+    if (!/row/i.test(cls(el)) || k.length < 2) return false;
+    for (var i = 0; i < k.length; i++) if (!/col|cell/i.test(cls(k[i]))) return false;
+    return true;
+  };
+  var rowsNow = function () {
+    var r = [], all = D.body.querySelectorAll('*');
+    for (var i = 0; i < all.length; i++) if (isRow(all[i]) && vis(all[i])) r.push(all[i]);
+    return r;
+  };
+  var cellsOf = function (row) { var c = []; for (var j = 0; j < row.children.length; j++) c.push(txt(row.children[j])); return c.join('\t'); };
+  var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+  var banned = /^(save|저장|all present|전체\s*출석)$/i;
+  var squash = function (s) { return String(s || '').replace(/\s+/g, '').toLowerCase(); };
+  var isHead = function (line) { return /(^|\t)(name|이름|성명|학생명)(\t|$)/i.test(line); };
+  var sameClass = function (a, b) { a = squash(a); b = squash(b); return !!a && !!b && (a.indexOf(b) === 0 || b.indexOf(a) === 0 || a.split('(')[0] === b.split('(')[0]); };
+  var popupInfo = function () {
+    var t = D.body.innerText || '';
+    var n = t.match(/(?:student\s*count|학생\s*수|인원\s*수?)\s*[:：]?\s*(\d+)/i);
+    var c = t.match(/class\s*name\s*[:：]\s*([^\n\r\t]+)/i) || t.match(/반\s*이름\s*[:：]\s*([^\n\r\t]+)/);
+    return { count: n ? +n[1] : null, name: c ? c[1].trim() : '' };
+  };
+  var freshRows = function () { return rowsNow().filter(function (r) { return base.indexOf(r) < 0; }); };
+  var box = D.createElement('div');
+  box.style.cssText = 'position:fixed;top:16px;right:16px;z-index:2147483647;background:#7A1701;color:#FBEDC5;font:15px Arial,sans-serif;padding:14px 18px;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.35);max-width:360px;max-height:80vh;overflow:auto;line-height:1.4';
+  D.body.appendChild(box);
+  var say = function (h) { box.innerHTML = h; };
+  // Each message is in English, then Korean underneath.
+  var ko = function (h) { return '<div style="font-size:13px;opacity:.85;margin-top:3px">' + h + '</div>'; };
+  var base = rowsNow();
+  base.forEach(function (r) { out.push(cellsOf(r)); });
+  var buttons = [];
+  base.forEach(function (r) {
+    var b = r.querySelector('button');
+    if (b && /attendance|출석/i.test(txt(b))) buttons.push({ btn: b, name: txt(r.children[0]) });
+  });
+  if (!buttons.length) { say('No Attendance buttons found. Open the Attendance page with your class list first.' + ko('출석 버튼을 찾지 못했습니다. 먼저 반 목록이 있는 출석 페이지를 여세요.')); setTimeout(function () { box.remove(); }, 5000); return; }
+  var closePopup = async function () {
+    var closers = Array.prototype.filter.call(D.querySelectorAll('button, a'), function (el) {
+      var w = txt(el);
+      return vis(el) && !banned.test(w) && (/^(cancel|취소|close|닫기)$/i.test(w) || /close/i.test(cls(el)));
+    });
+    closers.sort(function (a, b) { return (/^(cancel|취소)$/i.test(txt(b)) ? 1 : 0) - (/^(cancel|취소)$/i.test(txt(a)) ? 1 : 0); });
+    if (closers.length) closers[0].click();
+    for (var u = 0; u < 40; u++) { await sleep(150); if (!freshRows().length && !popupInfo().name) break; }
+    await sleep(400);
+  };
+  var readClass = async function (item, label, labelKo) {
+    var best = null;
+    for (var attempt = 1; attempt <= 3; attempt++) {
+      say(label + (attempt > 1 ? ' (try ' + attempt + ')' : '') + '&hellip;' + ko(labelKo + (attempt > 1 ? ' (' + attempt + '번째 시도)' : '') + '&hellip;'));
+      item.btn.click();
+      var seen = [], keys = {}, started = Date.now(), changed = Date.now(), info = { count: null };
+      while (Date.now() - started < 15000) {
+        await sleep(200);
+        info = popupInfo();
+        if (info.name && !sameClass(info.name, item.name)) { info = { count: null }; continue; }
+        var lines = freshRows().map(cellsOf);
+        if (lines.length && seen.length && !lines.some(function (l) { return keys[l]; })) { seen = []; keys = {}; }
+        lines.forEach(function (l) { if (!keys[l]) { keys[l] = 1; seen.push(l); changed = Date.now(); } });
+        var n = seen.filter(function (l) { return !isHead(l); }).length;
+        var still = Date.now() - changed;
+        if (info.count !== null && n >= info.count && still > 600) break;
+        if (info.count === null && n > 0 && still > 2500) break;
+        if (info.count !== null && n < info.count && lines.length && still > 800) {
+          var rows = freshRows(), last = rows[rows.length - 1];
+          for (var el = last && last.parentElement; el && el !== D.body; el = el.parentElement) {
+            if (el.scrollHeight > el.clientHeight + 4) el.scrollTop = el.scrollHeight;
+          }
+        }
+      }
+      var got = { lines: seen, students: seen.filter(function (l) { return !isHead(l); }).length, count: info.count };
+      if (!best || got.students > best.students || (got.count !== null && best.count === null)) best = got;
+      await closePopup();
+      if (best.count !== null ? best.students >= best.count : best.students > 0) break;
+      await sleep(800);
+    }
+    return best;
+  };
+  (async function () {
+    var report = [], total = 0, short = 0;
+    for (var i = 0; i < buttons.length; i++) {
+      var r = await readClass(buttons[i], 'Reading class ' + (i + 1) + ' of ' + buttons.length + ': <b>' + buttons[i].name + '</b>',
+        '반 읽는 중 (' + (i + 1) + '/' + buttons.length + '): <b>' + buttons[i].name + '</b>');
+      out.push('▶ ' + buttons[i].name);
+      r.lines.forEach(function (l) { out.push(l); });
+      total += r.students;
+      var full = r.count === null || r.students >= r.count;
+      if (!full) short++;
+      report.push((full ? '&#10003; ' : '&#9888; ') + buttons[i].name + ': ' + r.students + (r.count !== null ? ' of ' + r.count : '') + ' students');
+    }
+    var text = out.join('\n');
+    say((short ? '<b>' + short + ' class' + (short > 1 ? 'es are' : ' is') + ' missing students.</b> Close this and click Copy students again, or add them by hand.' +
+        ko('<b>' + short + '개 반에 빠진 학생이 있습니다.</b> 이 창을 닫고 학생 복사를 다시 누르거나 직접 추가하세요.')
+      : 'Read <b>' + buttons.length + '</b> classes and <b>' + total + '</b> students.' + ko('반 <b>' + buttons.length + '</b>개, 학생 <b>' + total + '</b>명을 읽었습니다.')) +
+      '<div style="font-size:12.5px;margin:6px 0 2px;opacity:.9">' + report.join('<br>') + '</div>' +
+      '<button id="ntg-copy" style="margin-top:10px;padding:8px 14px;border:0;border-radius:6px;background:#FBEDC5;color:#7A1701;font-weight:bold;cursor:pointer">Copy for name tags · 이름표용 복사</button> ' +
+      '<button id="ntg-x" style="margin-top:10px;padding:8px 10px;border:0;border-radius:6px;background:transparent;color:#FBEDC5;cursor:pointer">Close · 닫기</button>' +
+      '<div style="font-size:10.5px;margin-top:8px;opacity:.55">Name Tag Generator by Joseph McLaren</div>');
+    D.getElementById('ntg-x').onclick = function () { box.remove(); };
+    D.getElementById('ntg-copy').onclick = function () {
+      var ok = function () { say('Copied. Go to the name tag tool, click the paste box and press <b>Ctrl+V</b>.' + ko('복사했습니다. 이름표 도구로 가서 붙여 넣기 칸을 누르고 <b>Ctrl+V</b>를 누르세요.')); setTimeout(function () { box.remove(); }, 6000); };
+      var fallback = function () {
+        var ta = D.createElement('textarea');
+        ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px;top:0;user-select:text';
+        D.body.appendChild(ta); ta.select();
+        var done = false; try { done = D.execCommand('copy'); } catch (e) {}
+        ta.remove();
+        if (done) ok(); else say('Copying was blocked by the browser. Please try the button again.' + ko('브라우저가 복사를 막았습니다. 버튼을 다시 눌러 주세요.'));
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, fallback); else fallback();
+    };
+  })();
+}
+document.getElementById('bookmarklet').href = 'javascript:' + encodeURIComponent('(' + copyStudentsBookmarklet.toString() + ')()');
+
+// Page layout: 5 x 6 tags of 57 x 32.5 mm on A4 landscape, like the old sheet.
+const layout = () => ({ cols: 5, rows: 6, cw: 57, rh: 32.5 });
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
+// Classes always meet in pairs: any Monday or Wednesday means "Mon / Wed", Tuesday or Thursday "Tues / Thurs".
+function pairDays(days) {
+  const d = String(days || '').toLowerCase();
+  if (/mon|wed|월|수/.test(d) && !/tue|thu|화|목/.test(d)) return 'Mon / Wed';
+  if (/tue|thu|화|목/.test(d) && !/mon|wed|월|수/.test(d)) return 'Tues / Thurs';
+  return days || '';
+}
+
+// Subject: a plain dropdown of the usual subjects (a typed-in subject still works through "Other").
+const SUBJECTS = ['Debate', 'Grammar', 'Integrated', 'Language Arts', 'Phonics', 'Speaking', 'Writing', 'TOEFL Reading'];
+function subjectHTML(c) {
+  const known = SUBJECTS.find(x => x.toLowerCase() === clean(c.subject || '').toLowerCase());
+  const other = !!clean(c.subject || '') && !known || c.subjectOther;
+  return `<select data-f="subjectSel">
+      <option value="" ${!c.subject && !other ? 'selected' : ''}>${L('Choose…', '고르세요…')}</option>
+      ${SUBJECTS.map(x => `<option ${known === x && !c.subjectOther ? 'selected' : ''}>${x}</option>`).join('')}
+      <option value="__other" ${other ? 'selected' : ''}>${L('Other (type it)…', '기타 (직접 입력)…')}</option>
+    </select>
+    <input type="text" data-f="subject" value="${esc(c.subject)}" placeholder="${L('Type the subject', '과목 입력')}"${other ? '' : ' hidden'} style="margin-top:4px">`;
+}
+
+// The same child, even if the import spells the name a little differently (spaces, capitals) or
+// only has one half of it. Two children who share an English name are told apart by the Korean.
+const normName = s => s.toLowerCase().replace(/\s+/g, '');
+function sameStudent(a, b) {
+  const x = splitName(a), y = splitName(b);
+  let shared = 0;
+  for (const part of ['eng', 'kor']) {
+    if (!x[part] || !y[part]) continue;
+    if (normName(x[part]) !== normName(y[part])) return false;
+    shared++;
+  }
+  return shared > 0;
+}
+
+function applyGroups(groups) {
+  let students = 0;
+  const fresh = [];
+  const subjects = groups.subjects || new Map();
+  for (const [raw, names] of groups) {
+    const nm = shortClass(raw);
+    let c = state.classes.find(x => x.name === nm && nm);
+    if (!c) { c = newClass(nm); state.classes.push(c); }
+    if (names.length) { // a class-only list keeps any names already typed in
+      // Flag students who weren't in this class before. A class seen for the first time has no "before".
+      const before = c.names.filter(Boolean);
+      if (before.length) {
+        const added = names.filter(n => n && !before.some(o => sameStudent(o, n)));
+        c.newNames = [...new Set([...(c.newNames || []).filter(n => names.includes(n)), ...added])];
+        added.forEach(n => fresh.push(`${splitName(n).eng || splitName(n).kor} (${c.name})`));
+      }
+      c.names = names;
+    }
+    if (subjects.has(raw) && !c.subject) c.subject = clean(subjects.get(raw));
+    // Each pasted day adds its weekday, so Monday + Wednesday pastes give "Mon / Wed".
+    if (groups.weekday !== undefined && (!c.days || c.daysAuto)) {
+      c.weekdays = [...new Set([...(c.weekdays || []), groups.weekday])].sort((a, b) => (a || 7) - (b || 7));
+      c.days = pairDays(c.weekdays.map(d => WEEKDAYS[d]).join(' / '));
+      c.daysAuto = true;
+    }
+    students += names.length;
+  }
+  if (!groups.size) { showMsg(L("Couldn't find any classes or student names in that list.", '이 명단에서 반이나 학생 이름을 찾지 못했습니다.'), false); return; }
+  const n = groups.size, cls = `${n} class${n === 1 ? '' : 'es'}`;
+  const shown = fresh.slice(0, 8).join(', '), more = fresh.length - 8;
+  const newText = !fresh.length ? '' : L(
+    ` ${fresh.length} new student${fresh.length === 1 ? '' : 's'}: ${shown}${more > 0 ? ` and ${more} more` : ''}.`,
+    ` 새 학생 ${fresh.length}명: ${shown}${more > 0 ? ` 외 ${more}명` : ''}.`);
+  showMsg(students
+    ? L(`Imported ${students} students in ${cls}.${newText} Check the subject and days for each class below.`,
+        `학생 ${students}명을 ${n}개 반으로 가져왔습니다.${newText} 아래에서 반마다 과목과 요일을 확인하세요.`)
+    : L(`Imported ${cls} with their subjects. This list has no student names, so add them to each class below.`,
+        `${n}개 반과 과목을 가져왔습니다. 이 명단에는 학생 이름이 없으니 아래 각 반에 이름을 추가하세요.`), true);
+  renderClasses(); render();
+}
+
+function parseDelimited(text) {
+  const delim = text.includes('\t') ? '\t' : (text.includes(',') ? ',' : '\t');
+  return text.split(/\r?\n/).map(line => {
+    if (delim === ',') { // simple CSV with quotes
+      const out = []; let cur = '', q = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (q) { if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; } else if (ch === '"') q = false; else cur += ch; }
+        else if (ch === '"') q = true; else if (ch === ',') { out.push(cur); cur = ''; } else cur += ch;
+      }
+      out.push(cur); return out;
+    }
+    return line.split('\t');
+  });
+}
+
+/* ---------- class editor ---------- */
+async function clearAll() {
+  if (!state.classes.length) return;
+  if (!await ask(L('Remove every class and name from the tool?', '모든 반과 이름을 지울까요?'), L('Remove', '삭제'))) return;
+  state.classes = [];
+  renderClasses(); render();
+  showMsg(L('Cleared.', '모두 지웠습니다.'), true);
+}
+
+function renderClasses() {
+  renderLegend();
+  const el = document.getElementById('classes');
+  renderClassBar();
+  if (!state.classes.length) { el.innerHTML = `<div class="empty">${L('No classes yet. Use <i>Copy students</i> on the TOPIA attendance page, then paste above.', '아직 반이 없습니다. TOPIA 출석 페이지에서 <i>학생 복사</i>를 사용한 뒤 위에 붙여 넣으세요.')}</div>`; return; }
+  el.innerHTML = state.classes.map(c => `
+    <div class="class-card ${c.include || state.reprint ? '' : 'off'}${c.id === activeId ? ' active' : ''}" data-id="${c.id}"${classColor(c) ? ` style="border-left-color:${classColor(c).strong}"` : ''}>
+      <div class="head">
+        <strong>${esc(c.name) || L('New class', '새 반')}</strong>
+        <span class="count">${countText(c)}</span>
+        ${state.reprint ? '' : `<label class="inc" title="${L('Print this class', '이 반 인쇄')}"><input type="checkbox" data-f="include" ${c.include ? 'checked' : ''}>${L('Print', '인쇄')}</label>`}
+        <select data-f="copies" class="copies" title="${L('Copies of each name tag', '이름표마다 인쇄할 장수')}">
+          ${[1, 2, 3].map(k => `<option value="${k}" ${(c.copies || 1) == k ? 'selected' : ''}>×${k}</option>`).join('')}
+        </select>
+        <button class="small danger" data-act="remove" title="${L('Remove class', '반 삭제')}">✕</button>
+      </div>
+      ${romHTML(c)}
+      ${(c.newNames || []).length ? `<div class="newbar"><b>${L('New since last import:', '지난번 이후 새 학생:')}</b> ${c.newNames.map(esc).join(', ')}
+        <span class="nb-btns"><button class="small" data-act="ticknew">${L('Reprint these', '이 학생들 인쇄')}</button><button class="small" data-act="dismissnew">${L('Dismiss', '닫기')}</button></span></div>` : ''}
+      <div class="row">
+        <div><label>${L('Subject', '과목')}<span class="dotwrap">${subDot(c)}</span></label>${subjectHTML(c)}</div>
+      </div>
+      <div class="row">
+        <div><div class="dayhead"><label>${L('Days', '요일')}</label>${DAY_CHOICES.map(d => `<button class="small daychip${clean(c.days) === d ? ' on' : ''}" data-act="days" data-v="${d}">${d}</button>`).join('')}</div>
+          <input type="text" data-f="days" list="dayslist" value="${esc(c.days)}" placeholder="${L('pick above or type', '위에서 고르거나 입력')}"></div>
+        <div><label>${L('Teacher (blank = your name)', '선생님 (비우면 내 이름)')}</label><input type="text" data-f="teacher" value="${esc(c.teacher)}"></div>
+      </div>
+      <label>${L('Students (from TOPIA)', '학생 (TOPIA에서 가져옴)')}</label>
+      <div class="namelist">${c.names.map(n => `<span>${esc(clean(String(n).replace(/^\|\s*|\s*\|$/g, '')) || '–')}</span>`).join('')}</div>
+      ${state.reprint ? `<div class="picklist">${pickHTML(c)}</div>` : ''}
+    </div>`).join('');
+  updateNewAll();
+}
+
+// Above the class boxes: how many classes will print, with buttons to tick all or none.
+function renderClassBar() {
+  const bar = document.getElementById('classbar'), all = state.classes.filter(c => !c.demo);
+  bar.hidden = state.reprint || all.length < 2;
+  if (bar.hidden) return;
+  const n = all.filter(c => c.include).length;
+  bar.innerHTML = `<span>${L(`Printing <b>${n} of ${all.length}</b> classes`, `<b>${all.length}개 중 ${n}개</b> 반 인쇄`)}</span>` +
+    `<button class="small" data-all="1">${L('Tick all', '모두 체크')}</button><button class="small" data-all="0">${L('Untick all', '모두 해제')}</button>`;
+}
+document.getElementById('classbar').addEventListener('click', e => {
+  const b = e.target.closest('[data-all]'); if (!b) return;
+  state.classes.forEach(c => { c.include = b.dataset.all === '1'; });
+  renderClasses(); render();
+});
+
+// One button under the import message to reprint every new student at once.
+function updateNewAll() {
+  const n = state.classes.reduce((a, c) => a + (c.newNames || []).length, 0);
+  const box = document.getElementById('newall');
+  box.hidden = !n;
+  box.querySelector('button').textContent = L(`Reprint the ${n} new student${n === 1 ? '' : 's'}`, `새 학생 ${n}명 이름표 인쇄`);
+}
+function tickNew(list) {
+  list.forEach(c => { if ((c.newNames || []).length) c.picked = [...new Set([...(c.picked || []), ...c.newNames])]; });
+  state.reprint = true;
+  showPrintMode(); renderClasses(); render();
+}
+
+// Reprint mode: a tick box per student. Ticks are kept by name, so editing other names keeps them.
+function pickHTML(c) {
+  const picked = new Set(c.picked || []);
+  const names = [...new Set(c.names.filter(Boolean))];
+  return names.length
+    ? names.map(n => `<label><input type="checkbox" data-f="pick" data-name="${esc(n)}" ${picked.has(n) ? 'checked' : ''}>${esc(n)}` +
+        ((c.newNames || []).includes(n) ? ` <span class="newtag">${L('NEW', '신규')}</span>` : '') +
+        (picked.has(n) ? `<select data-f="pickcount" data-name="${esc(n)}" title="${L('How many of this tag', '이 이름표 장수')}">${[1, 2, 3].map(k =>
+          `<option value="${k}" ${pickCount(c, n) === k ? 'selected' : ''}>×${k}</option>`).join('')}</select>` : '') + '</label>').join('')
+    : `<span class="none">${L('No students in this class yet.', '이 반에는 아직 학생이 없습니다.')}</span>`;
+}
+const pickCount = (c, n) => (c.pickCounts && c.pickCounts[n]) || 1;
+function pickedNames(c) { const p = new Set(c.picked || []); return c.names.filter(n => n && p.has(n)); }
+function clearPicks() { state.classes.forEach(c => { c.picked = []; }); renderClasses(); render(); }
+
+const DAY_CHOICES = ['Mon / Wed', 'Tues / Thurs'];
+
+function countText(c) {
+  const k = c.copies || 1, n = c.names.length;
+  if (isKo()) return k > 1 ? `${n} × ${k} = 이름표 ${n * k}개` : `이름표 ${n}개`;
+  return k > 1 ? `${n} × ${k} = ${n * k} tags` : `${n} tag${n === 1 ? '' : 's'}`;
+}
+
+document.getElementById('classes').addEventListener('input', e => {
+  const card = e.target.closest('.class-card'); if (!card) return;
+  const c = state.classes.find(x => x.id == card.dataset.id); const f = e.target.dataset.f;
+  if (!c || !f) return;
+  if (f === 'include') { c.include = e.target.checked; card.classList.toggle('off', !c.include); renderClassBar(); }
+  else if (f === 'subjectSel') {
+    const box = card.querySelector('[data-f="subject"]');
+    c.subjectOther = e.target.value === '__other';
+    if (c.subjectOther) { box.hidden = false; box.value = ''; c.subject = ''; box.focus(); }
+    else { box.hidden = true; c.subject = e.target.value; box.value = c.subject; }
+    const cc = classColor(c); card.style.borderLeftColor = cc ? cc.strong : ''; card.querySelector('.dotwrap').innerHTML = subDot(c);
+  }
+  else if (f === 'days') { card.querySelectorAll('.daychip').forEach(b => b.classList.toggle('on', b.dataset.v === clean(e.target.value))); c.days = e.target.value; c.daysAuto = false; }
+  else if (f === 'pick') {
+    const p = new Set(c.picked || []), n = e.target.dataset.name;
+    if (e.target.checked) p.add(n); else p.delete(n);
+    c.picked = [...p];
+    card.querySelector('.picklist').innerHTML = pickHTML(c);
+  }
+  else if (f === 'pickcount') { c.pickCounts = Object.assign({}, c.pickCounts, { [e.target.dataset.name]: +e.target.value }); }
+  else if (f === 'names') {
+    c.names = e.target.value.split('\n').map(clean).filter(Boolean).map(n => n === '-' ? '' : n);
+    if (c.newNames) c.newNames = c.newNames.filter(n => c.names.includes(n));
+    card.querySelector('.count').textContent = countText(c);
+    const pl = card.querySelector('.picklist'); if (pl) pl.innerHTML = pickHTML(c);
+    const rb = card.querySelector('.rombar'), rh = romHTML(c);
+    if (rb && !rh) rb.remove();
+    else if (!rb && rh) card.querySelector('.head').insertAdjacentHTML('afterend', rh);
+  }
+  else if (f === 'copies') { c.copies = +e.target.value; card.querySelector('.count').textContent = countText(c); }
+  else { c[f] = e.target.value; if (f === 'days') c.daysAuto = false;
+    if (f === 'subject') { const cc = classColor(c); card.style.borderLeftColor = cc ? cc.strong : ''; card.querySelector('.dotwrap').innerHTML = subDot(c); } if (f === 'name') card.querySelector('strong').textContent = c.name || L('New class', '새 반'); }
+  if (f === 'include' || f === 'copies' || f === 'pick' || f === 'pickcount') render(); else scheduleRender();
+});
+// Typed days become the pair when the box is left: "Mon" -> "Mon / Wed", "thurs" -> "Tues / Thurs".
+document.getElementById('classes').addEventListener('change', e => {
+  if (e.target.dataset.f !== 'days') return;
+  const c = state.classes.find(x => x.id == e.target.closest('.class-card').dataset.id);
+  if (!c || pairDays(c.days) === c.days) return;
+  c.days = pairDays(c.days); renderClasses(); render();
+});
+document.getElementById('classes').addEventListener('click', async e => {
+  const act = e.target.dataset.act;
+  if (!act) return;
+  const id = e.target.closest('.class-card').dataset.id;
+  const c = state.classes.find(x => x.id == id);
+  if (act === 'ticknew') { tickNew([c]); return; }
+  if (act === 'days') {
+    c.days = e.target.dataset.v; c.daysAuto = false;
+    const cardEl = e.target.closest('.class-card');
+    cardEl.querySelector('[data-f="days"]').value = c.days;
+    cardEl.querySelectorAll('.daychip').forEach(b => b.classList.toggle('on', b.dataset.v === c.days));
+    render(); return;
+  }
+  if (act === 'dismissnew') { c.newNames = []; renderClasses(); render(); return; }
+  if (act === 'romuse' || act === 'romkeep') {
+    const card = e.target.closest('.class-card');
+    if (act === 'romkeep') c.korKeep = [...new Set([...(c.korKeep || []), ...korOnlyNames(c)])];
+    else card.querySelectorAll('.rombar input[data-kor]').forEach(inp => {
+      const eng = clean(inp.value), kor = inp.dataset.kor;
+      if (!eng) return;
+      const full = `${eng} | ${splitName(kor).kor}`;
+      c.names = c.names.map(n => n === kor ? full : n);
+      if (c.picked) c.picked = c.picked.map(n => n === kor ? full : n);
+      if (c.newNames) c.newNames = c.newNames.map(n => n === kor ? full : n);
+    });
+    renderClasses(); render(); return;
+  }
+  if (c && c.names.length && !await ask(L(`Remove ${esc(c.name || 'this class')} and its ${c.names.length} names?`, `${esc(c.name || '이 반')}과(와) 이름 ${c.names.length}개를 삭제할까요?`), L('Remove', '삭제'))) return;
+  state.classes = state.classes.filter(x => x.id != id);
+  renderClasses(); render();
+});
+
+/* ---------- settings ---------- */
+['teacher', 'school'].forEach(k => {
+  const el = document.getElementById(k);
+  el.addEventListener('input', () => { state[k] = el.value; scheduleRender(); });
+});
+document.getElementById('newpage').addEventListener('change', e => { state.newpage = e.target.checked; render(); });
+document.getElementById('watermark').addEventListener('change', e => { state.watermark = e.target.checked; render(); });
+document.getElementById('cropmarks').addEventListener('change', e => { state.cropmarks = e.target.checked; render(); });
+document.getElementById('namemode').addEventListener('change', e => { state.nameMode = e.target.value; render(); });
+
+// Dark mode follows the computer's setting until the button is used, then remembers the choice.
+const darkQuery = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
+function applyTheme() {
+  const dark = state.theme === 'dark' || (state.theme !== 'light' && !!(darkQuery && darkQuery.matches));
+  document.documentElement.classList.toggle('dark', dark);
+  const btn = document.getElementById('theme'), label = dark ? L('Light mode', '라이트 모드') : L('Dark mode', '다크 모드');
+  btn.innerHTML = dark // sun to go light, moon to go dark
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>';
+  btn.title = label; btn.setAttribute('aria-label', label);
+}
+function toggleTheme() {
+  state.theme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+  applyTheme(); save();
+}
+if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener('change', applyTheme);
+
+document.querySelectorAll('input[name=printmode]').forEach(r => r.addEventListener('change', () => {
+  state.reprint = r.value === 'reprint'; showPrintMode(); renderClasses(); render();
+}));
+function showPrintMode() {
+  document.querySelector(`input[name=printmode][value="${state.reprint ? 'reprint' : 'all'}"]`).checked = true;
+  document.getElementById('reprint-hint').hidden = !state.reprint;
+}
+document.querySelectorAll('input[name=tagstyle]').forEach(r => r.addEventListener('change', () => { state.style = r.value; render(); }));
+
+/* ---------- tag rendering ---------- */
+function nameSize(n) {
+  // Shrink long names so they fit on one line (tag name box is ~49mm wide).
+  const len = [...n].reduce((a, ch) => a + (/[ㄱ-힣]/.test(ch) ? 1.6 : (/[A-Z MW]/.test(ch) ? 1.15 : 1)), 0);
+  // Starting size only; fitNames() then shrinks it to the real width.
+  return len <= 7 ? 24 : Math.max(12, Math.min(22, Math.floor(24 * 9 / len)));
+}
+
+function midSize(cls, days) {
+  const len = cls.length + (days || '').length + 2;
+  return len <= 24 ? 9.5 : Math.max(6.5, Math.round(9.5 * 24 / len * 10) / 10);
+}
+
+// "Soyul | 김소율" -> { eng: 'Soyul', kor: '김소율' }; a name with no "|" is sorted by its script.
+function splitName(n) {
+  const parts = String(n || '').split('|').map(clean);
+  if (parts.length > 1) return { eng: parts[0], kor: parts.slice(1).join(' ') };
+  return /[ㄱ-힣]/.test(parts[0]) ? { eng: '', kor: parts[0] } : { eng: parts[0], kor: '' };
+}
+
+function nameHTML(raw) {
+  const { eng, kor } = splitName(raw);
+  let e = eng, k = kor;
+  if (state.nameMode === 'eng') { k = e ? '' : k; }
+  if (state.nameMode === 'kor') { e = k ? '' : e; }
+  const korFirst = state.nameMode === 'korfirst';
+  const text = e && k ? (korFirst ? `${k} | ${e}` : `${e} | ${k}`) : (e || k);
+  const html = e && k ? (korFirst ? `<span class="kor">${esc(k)}</span><span class="sep">|</span><span>${esc(e)}</span>`
+                                  : `<span>${esc(e)}</span><span class="sep">|</span><span class="kor">${esc(k)}</span>`)
+                      : (k ? `<span class="kor">${esc(k)}</span>` : esc(e));
+  return { text, html };
+}
+
+const SQUIRREL = '<svg class="wm" viewBox="0 0 100 100" aria-hidden="true"><use href="#squirrel"/></svg>';
+
+function tagHTML(c, name, ci) {
+  const cls = [c.name, c.subject].filter(Boolean).join(' ');
+  const teacher = clean(c.teacher) || clean(state.teacher);
+  const n = nameHTML(name);
+  const inner = `
+    <div class="name" style="font-size:${nameSize(n.text)}pt">${n.html}</div>
+    <div class="mid" style="font-size:${midSize(cls, c.days)}pt"><span>${esc(cls)}</span><span>${esc(c.days)}</span></div>
+    <div class="foot"><span class="school">${esc(state.style === 'topia' ? state.school.replace(/^TOPIA$/i, 'TOPIΛ') : state.school)}</span><span class="teacher">${esc(teacher)}</span></div>`;
+  const cc = classColor(c);
+  const attrs = `data-cid="${c.id}" class="tag${cc ? ' cc' : ''}${c.id === activeId ? ' active' : ''}"` +
+    (cc ? ` style="--cc-bg:${cc.bg};--cc-fg:${cc.fg};--cc-strong:${cc.strong}"` : '');
+  const mark = (c.newNames || []).includes(name) ? '<span class="newmark noprint">NEW</span>' : ''; // screen only
+  const SQUIRREL_ = SQUIRREL + mark;
+  return state.style === 'cute'
+    ? `<div ${attrs}><div class="inner-card">${inner}</div>${SQUIRREL_}</div>`
+    : `<div ${attrs}>${inner}${SQUIRREL_}</div>`;
+}
+
+// Typing re-renders after a short pause instead of on every key press.
+let renderTimer = 0;
+function scheduleRender() { clearTimeout(renderTimer); undoTyping = true; renderTimer = setTimeout(render, 150); }
+
+function render() {
+  clearTimeout(renderTimer);
+  save();
+  const grid = layout(), PER = grid.cols * grid.rows;
+  const chunks = []; // { tags: [...html], names: Set of class names } per page
+  let cur = { tags: [], names: new Set() };
+  const flush = () => { if (cur.tags.length) chunks.push(cur); cur = { tags: [], names: new Set() }; };
+  let total = 0, classes = 0;
+  for (const c of state.classes) {
+    // Reprints use only the ticked students, one tag each, packed together across classes.
+    const list = state.reprint ? pickedNames(c) : (c.include ? c.names : []);
+    if (!list.length) continue;
+    const ci = classes++;
+    if (state.newpage && !state.reprint) flush();
+    for (const n of list) {
+      for (let k = 0; k < (state.reprint ? pickCount(c, n) : c.copies || 1); k++) { // copies of one student sit side by side
+        cur.tags.push(tagHTML(c, n, ci)); cur.names.add(c.name || L('Class ', '반 ') + (ci + 1)); total++;
+        if (cur.tags.length === PER) flush();
+      }
+    }
+  }
+  flush();
+  document.getElementById('pages').innerHTML = chunks.map((pg, i) => {
+    const tags = pg.tags;
+    while (tags.length < PER) tags.push('<div class="tag blank-slot"></div>');
+    const label = `${[...pg.names].join(', ')}  ·  ${L(`page ${i + 1} of ${chunks.length}`, `${i + 1} / ${chunks.length}쪽`)}`;
+    return `<div class="page style-${esc(state.style)}${state.watermark ? '' : ' no-wm'}">${state.cropmarks ? cropMarks(label) : ''}${creditMark()}<div class="grid">${tags.join('')}</div></div>`;
+  }).join('');
+  fitNames();
+  const pages = chunks.length;
+  document.getElementById('summary').textContent = !total
+    ? (state.reprint ? L('Tick the students who need a new tag, under each class on the left.', '왼쪽 각 반에서 새 이름표가 필요한 학생을 체크하세요.')
+                     : L('Your tags will appear here.', '여기에 이름표가 나타납니다.'))
+    : (state.reprint ? L('Reprint: ', '다시 인쇄: ') : '') + L(
+      `${total} tag${total === 1 ? '' : 's'} from ${classes} class${classes === 1 ? '' : 'es'} on ${pages} page${pages === 1 ? '' : 's'} (A4 landscape, ${PER} per page). Print at 100% scale with "Background graphics" turned on.`,
+      `이름표 ${total}개 · ${classes}개 반 · ${pages}쪽 (A4 가로, 한 쪽에 ${PER}개). 배율 100%, "배경 그래픽" 켜기로 인쇄하세요.`);
+}
+
+// Shrink any name that still overflows its box (measured, so mixed English/Korean fits exactly).
+function fitNames() {
+  // Measure at full size (the preview is zoomed out) so the fit matches what prints. All reads are
+  // done before all writes so the browser lays the page out a handful of times, not once per tag.
+  const pages = document.getElementById('pages');
+  const zoom = pages.style.zoom;
+  pages.style.zoom = 1;
+  pages.classList.add('measuring');
+
+  // Names: scale straight to the width that fits, then nudge any that are still a hair too wide.
+  const names = [...pages.querySelectorAll('.name')];
+  const ratios = names.map(el => el.clientWidth / Math.max(1, el.scrollWidth));
+  names.forEach((el, i) => {
+    if (ratios[i] < 1) el.style.fontSize = Math.max(7, Math.floor(parseFloat(el.style.fontSize) * ratios[i] * 0.97 * 2) / 2) + 'pt';
+  });
+  names.filter(el => el.scrollWidth > el.clientWidth + 1).forEach(el => {
+    let pt = parseFloat(el.style.fontSize);
+    while (el.scrollWidth > el.clientWidth + 1 && pt > 7) { pt -= 0.5; el.style.fontSize = pt + 'pt'; }
+  });
+
+  // Class/subject + days line, and the teacher name: keep 5% spare so print rounding can't cut
+  // anything off, and wrap onto two lines as a last resort instead of hiding text.
+  const rows = [];
+  pages.querySelectorAll('.mid').forEach(el => rows.push({ row: el, target: el }));
+  pages.querySelectorAll('.foot').forEach(el => { const t = el.querySelector('.teacher'); if (t) rows.push({ row: el, target: t }); });
+  const measure = r => {
+    const cs = getComputedStyle(r.row), kids = [...r.row.children];
+    r.room = r.row.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    r.need = kids.reduce((w, k) => w + k.scrollWidth, 0) + (parseFloat(cs.columnGap) || 0) * (kids.length - 1);
+  };
+  rows.forEach(r => { measure(r); r.pt = parseFloat(getComputedStyle(r.target).fontSize) * 0.75; });
+  rows.forEach(r => {
+    if (r.need > r.room * 0.95) { r.pt = Math.max(6.75, Math.floor(r.pt * r.room * 0.95 / r.need * 4) / 4); r.target.style.fontSize = r.pt + 'pt'; }
+  });
+  rows.forEach(measure);
+  rows.filter(r => r.need > r.room * 0.95 && r.pt > 6.75).forEach(r => { // pills with fixed padding shrink less than the text
+    while (r.need > r.room * 0.95 && r.pt > 6.75) { r.pt -= 0.25; r.target.style.fontSize = r.pt + 'pt'; measure(r); }
+  });
+  rows.forEach(r => { if (r.need > r.room) r.row.classList.add('wrap'); });
+
+  pages.classList.remove('measuring');
+  pages.style.zoom = zoom;
+}
+
+// Guillotine guides: the 5 x 6 grid always sits in the same place on every page, so these marks line
+// up through a whole stack. Bold marks run from the page edge right up to the tags, and a thin line
+// runs along every cut between the tags themselves, so the cuts still show when a printer leaves the
+// paper's edge blank.
+function cropMarks(label) {
+  const { cols, rows, cw: CW, rh: RH } = layout();
+  const W = 297, H = 210, x0 = (W - cols * CW) / 2, y0 = (H - rows * RH) / 2;
+  let d = '', grid = '';
+  for (let k = 0; k <= cols; k++) { const x = x0 + k * CW; d += `M${x} 0V${y0}M${x} ${H - y0}V${H}`; grid += `M${x} ${y0}V${H - y0}`; }
+  for (let k = 0; k <= rows; k++) { const y = y0 + k * RH; d += `M0 ${y}H${x0}M${W - x0} ${y}H${W}`; grid += `M${x0} ${y}H${W - x0}`; }
+  return `<svg class="crop" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path d="${d}" stroke="#000" stroke-width=".6" fill="none"/>` +
+    `<path d="${grid}" stroke="#444" stroke-width=".2" fill="none" opacity=".85"/>` +
+    `<text x="${x0 + 2}" y="${H - y0 / 2 + 1}" font-size="2.6" font-family="Arial, sans-serif" fill="#555">${esc(label)}</text></svg>`;
+}
+// The creator's credit, printed in the bottom margin of every page whether or not the cutting guides are on.
+function creditMark() {
+  const { cols, rows, cw: CW, rh: RH } = layout();
+  const W = 297, H = 210, x0 = (W - cols * CW) / 2, y0 = (H - rows * RH) / 2;
+  return `<svg class="crop" viewBox="0 0 ${W} ${H}" aria-hidden="true"><text x="${W - x0 - 2}" y="${H - y0 / 2 + 1}" font-size="2" font-family="Arial, sans-serif" fill="#999" text-anchor="end">Name tags by Joseph McLaren</text></svg>`;
+}
+
+/* Printing. As a plain file the tool opens the print dialog itself. Online (on claude.ai) a page
+   can't open the print dialog, so it saves a small print file holding just the tag pages, which
+   opens the print dialog when the teacher opens it. */
+const downloadsReady = window.claude && typeof window.claude.use === 'function'
+  ? Promise.resolve(window.claude.use('downloads')).catch(() => null) : Promise.resolve(null);
+async function printOut() {
+  const downloads = await downloadsReady;
+  if (!downloads) {
+    window.print();
+    return;
+  }
+  const pages = document.getElementById('pages').innerHTML;
+  if (!document.querySelector('#pages .page')) { showMsg(L('Add a class first.', '먼저 반을 추가하세요.')); return; }
+  const day = new Date().toISOString().slice(0, 10);
+  const html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="author" content="Joseph McLaren">' +
+    `<title>Name tags ${day}</title><style>${document.querySelector('style').textContent}
+    .printnote { font: 14px/1.5 Arial, sans-serif; color: #333; background: #FBEDC5; padding: 12px 16px; margin: 0 0 16px; }
+    @media print { .printnote { display: none; } }</style></head>` +
+    `<body>${document.querySelector('body > svg').outerHTML}` +
+    `<p class="printnote">${L('The print window should open by itself. If it doesn\'t, press <b>Ctrl+P</b> (<b>⌘P</b> on a Mac). Use paper size A4, landscape, margins <b>None</b>, scale <b>100%</b>.',
+      '인쇄 창이 자동으로 열립니다. 열리지 않으면 <b>Ctrl+P</b> (Mac은 <b>⌘P</b>)를 누르세요. 용지 A4, 가로, 여백 <b>없음</b>, 배율 <b>100%</b>로 인쇄하세요.')}<br>` +
+    `<span style="font-size:11px;opacity:.6">Name Tag Generator by Joseph McLaren</span></p>` +
+    `<div id="preview-area"><div id="pages">${pages}</div></div>` +
+    '<script>addEventListener("load", function () { setTimeout(function () { window.print(); }, 400); });<\/script></body></html>';
+  try {
+    await downloads.save({ filename: `name-tags-${day}.html`, data: html });
+  } catch (e) {
+    if (!e || e.code !== 'declined') showMsg(L('Could not save the print file. Try again in a moment.', '인쇄 파일을 저장하지 못했습니다. 잠시 후 다시 해 보세요.'));
+    return;
+  }
+  showNotice(L('<b>Print file saved.</b> Open it from your downloads and it will print. Done? Sign out so the next teacher can\'t see your classes.',
+    '<b>인쇄 파일을 저장했습니다.</b> 다운로드에서 열면 인쇄됩니다. 다 끝났나요? 다음 선생님이 내 반 목록을 보지 않도록 로그아웃하세요.'),
+    [[L('Sign out', '로그아웃'), () => signOut()], [L('Not yet', '나중에'), hideNotice]], 'print');
+}
+window.addEventListener('afterprint', () => {
+  if (!currentId) return;
+  setTimeout(() => showNotice(L("<b>Finished printing?</b> Sign out so the next teacher can't see your classes. They stay saved for next time.", '<b>인쇄가 끝났나요?</b> 다음 선생님이 내 반 목록을 보지 않도록 로그아웃하세요. 반 목록은 다음을 위해 저장됩니다.'),
+    [[L('Sign out', '로그아웃'), () => signOut()], [L('Not yet', '나중에'), hideNotice]], 'print'), 300);
+});
+
+// Link the class list and the preview: editing a class scrolls its tags into view and highlights
+// them; clicking a tag jumps back to its class.
+let activeId = null;
+function setActive(id, scroll) {
+  activeId = id;
+  document.querySelectorAll('.class-card').forEach(el => el.classList.toggle('active', el.dataset.id == id));
+  document.querySelectorAll('#pages .tag[data-cid]').forEach(el => el.classList.toggle('active', el.dataset.cid == id));
+  const first = document.querySelector(`#pages .tag[data-cid="${id}"]`);
+  if (scroll && first) {
+    const area = document.getElementById('preview-area');
+    const target = first.closest('.page') || first;
+    area.scrollBy({ top: target.getBoundingClientRect().top - area.getBoundingClientRect().top - 30, behavior: 'smooth' });
+  }
+}
+document.getElementById('classes').addEventListener('focusin', e => {
+  const card = e.target.closest('.class-card');
+  if (card && card.dataset.id != activeId) setActive(+card.dataset.id, true);
+});
+document.getElementById('pages').addEventListener('click', e => {
+  const tag = e.target.closest('.tag[data-cid]'); if (!tag) return;
+  const card = document.querySelector(`.class-card[data-id="${tag.dataset.cid}"]`);
+  if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); setActive(+tag.dataset.cid, false); }
+});
+
+// Shrink the on-screen preview to fit the window (printing always uses full size).
+function fitPreview() {
+  const area = document.getElementById('preview-area');
+  const pageW = 297 * 96 / 25.4;
+  document.getElementById('pages').style.zoom = Math.min(1, (area.clientWidth - 4) / pageW);
+}
+window.addEventListener('resize', fitPreview);
+// Keep the preview and scrolling clear of the sticky header, whose height changes when it wraps.
+function fitHeader() { document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px'); }
+window.addEventListener('resize', fitHeader);
+if (window.ResizeObserver) new ResizeObserver(fitHeader).observe(document.querySelector('header'));
+fitHeader();
+window.addEventListener('beforeprint', () => { if (renderTimer) render(); });
+
+/* ---------- guided tour ---------- */
+// Each step spotlights part of the screen; the rest is shaded. Steps whose target isn't on screen
+// (for example the class boxes before any class exists) point at the nearest thing that is.
+const TOUR = [
+  { en: ['Welcome!', 'This quick tour shows each part of the tool, one step at a time. Use Next or the arrow keys. You can stop any time and bring it back with the ? button.'],
+    ko: ['환영합니다!', '이 짧은 안내에서 각 부분을 차례로 보여 드립니다. 다음 버튼이나 화살표 키로 넘기세요. 언제든 그만둘 수 있고 ? 버튼으로 다시 볼 수 있습니다.'] },
+  { sel: '#p-details',
+    en: ['1. Your details', 'Type your name. It goes on the bottom right of every tag. Then choose whether tags show English, Korean or both names.'],
+    ko: ['1. 기본 정보', '내 이름을 입력하세요. 모든 이름표 오른쪽 아래에 들어갑니다. 그리고 이름표에 영어, 한국어, 둘 다 중 무엇을 넣을지 고르세요.'] },
+  { sel: '#p-style',
+    en: ['Pick a look', 'Choose one of the four styles. Keep Cutting guides on: the little lines show exactly where to cut with the paper cutter.'],
+    ko: ['디자인 고르기', '네 가지 스타일 중 하나를 고르세요. 재단선은 켜 두세요. 재단기로 자를 위치를 작은 선으로 보여 줍니다.'] },
+  { sel: '#p-add',
+    en: ['2. Add your students', 'Drag the red Copy students button to your bookmarks bar once. After that, click it on the TOPIA attendance page, come back, and press Ctrl+V in the box here.'],
+    ko: ['2. 학생 추가', '빨간 학생 복사 버튼을 북마크바로 한 번만 끌어다 놓으세요. 그다음부터는 TOPIA 출석 페이지에서 누르고, 돌아와서 여기 칸에 Ctrl+V를 누르면 됩니다.'] },
+  { sel: ['#classes .class-card', '#p-check'],
+    en: ['3. Check each class', 'Every class gets a box. Fill in the subject and click Mon / Wed or Tues / Thurs (or type the days). Untick a class to leave it out, or pick ×2 / ×3 for extra copies.'],
+    ko: ['3. 반별 확인', '반마다 상자가 하나씩 생깁니다. 과목을 넣고 Mon / Wed나 Tues / Thurs를 누르거나 직접 입력하세요. 체크를 해제하면 그 반은 빠지고, ×2 / ×3으로 여러 장 인쇄할 수 있습니다.'] },
+  { sel: '.print-mode',
+    en: ['Only need a few tags?', 'Switch to Reprint some students and tick just the ones who need a new tag. When you import a class again, new students are flagged for you.'],
+    ko: ['몇 장만 필요할 때', '일부 학생만 다시 인쇄로 바꾸고 새 이름표가 필요한 학생만 체크하세요. 반 명단을 다시 가져오면 새 학생이 자동으로 표시됩니다.'] },
+  { sel: ['#pages .page', '#preview-area'],
+    en: ['Check the preview', 'This is exactly what prints, page by page. Click any tag to jump to its class on the left.'],
+    ko: ['미리 보기 확인', '인쇄되는 모습 그대로 한 쪽씩 보여 줍니다. 이름표를 누르면 왼쪽의 해당 반으로 이동합니다.'] },
+  { sel: '#print-btn', prefer: 'bottom',
+    en: ['4. Print and cut', 'Print with the scale at 100% and Background graphics turned on. Then cut along the guides.'],
+    ko: ['4. 인쇄하고 자르기', '배율 100%, 배경 그래픽 켜기로 인쇄하세요. 그다음 재단선을 따라 자르세요.'] },
+  { sel: '#who-btn', prefer: 'bottom',
+    en: ['When you\'re done', 'Click Switch to sign out so the next teacher can\'t see your classes. Your lists stay saved under your name for next time. You\'re also signed out after 30 minutes without use.'],
+    ko: ['다 썼다면', '바꾸기를 눌러 로그아웃하면 다음 선생님이 내 반 목록을 볼 수 없습니다. 목록은 다음을 위해 내 이름으로 저장됩니다. 30분 동안 사용하지 않아도 자동으로 로그아웃됩니다.'] },
+  { sel: ['#undo-btn', '#redo-btn'], union: true, prefer: 'bottom',
+    en: ['Made a mistake?', 'Undo takes back your last change, even a deleted class. Click it again to go back further, and Redo puts a change back. Ctrl+Z and Ctrl+Y work too.'],
+    ko: ['실수했나요?', '되돌리기를 누르면 마지막 변경이 취소됩니다. 삭제한 반도 돌아옵니다. 여러 번 누르면 더 이전으로 돌아가고, 다시 하기를 누르면 취소한 변경이 돌아옵니다. Ctrl+Z와 Ctrl+Y도 됩니다.'] },
+  { sel: ['#help', '#lang', '#theme'], union: true, prefer: 'bottom',
+    en: ['Make it yours', '한 / EN switches the language, the moon turns on dark mode, and ? brings this tour back. That\'s it!'],
+    ko: ['편하게 설정', '한 / EN으로 언어를, 달 모양으로 다크 모드를 바꾸고, ?로 이 안내를 다시 볼 수 있습니다. 끝!'] },
+];
+let tourAt = -1;
+
+function tourStart() {
+  if (!document.getElementById('tour-shade')) {
+    document.body.insertAdjacentHTML('beforeend',
+      '<div id="tour-shade"></div><div id="tour-ring"></div><div id="tour-tip" role="dialog" aria-live="polite"><span class="tour-arrow"></span><span class="tour-hand"></span><h3></h3><p></p>' +
+      '<div class="tour-nav"><span class="tour-count"></span><button class="tour-skip" onclick="tourEnd()"></button><button class="small tour-back" onclick="tourGo(tourAt - 1)"></button><button class="small tour-next" onclick="tourGo(tourAt + 1)"></button></div></div>');
+  }
+  // With nothing imported yet, a sample class fills the class box and preview so there's something
+  // to point at. It's removed when the tour ends and never saved.
+  if (!state.classes.length) {
+    const c = Object.assign(newClass('E1-1'), { subject: 'Phonics', days: 'Mon / Wed', demo: true,
+      names: ['Sam | 김시율', 'Luna | 김차윤', 'Kevin | 신온유', 'Ella | 김태희'] });
+    state.classes.push(c);
+    renderClasses(); render();
+  }
+  tourGo(0);
+}
+
+function tourEnd() {
+  ['tour-shade', 'tour-ring', 'tour-tip'].forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
+  tourAt = -1;
+  state.toured = true;
+  if (state.classes.some(c => c.demo)) { state.classes = state.classes.filter(c => !c.demo); renderClasses(); render(); }
+  save();
+}
+
+function tourTarget(step) {
+  const sels = [].concat(step.sel || []);
+  const vis = el => el && el.getClientRects().length;
+  if (step.union) return sels.map(q => document.querySelector(q)).filter(vis);
+  for (const q of sels) { const el = document.querySelector(q); if (vis(el)) return [el]; }
+  return [];
+}
+
+function tourGo(i) {
+  if (i < 0) return;
+  if (i >= TOUR.length) { tourEnd(); return; }
+  tourAt = i;
+  const step = TOUR[i], els = tourTarget(step);
+  if (els[0]) {
+    els[0].scrollIntoView({ block: 'center', behavior: 'instant' });
+    const area = document.getElementById('preview-area'); // the preview scrolls on its own
+    if (area.contains(els[0])) area.scrollTop = 0;
+  }
+  const [title, body] = isKo() ? step.ko : step.en;
+  const tip = document.getElementById('tour-tip');
+  tip.querySelector('h3').textContent = title;
+  tip.querySelector('p').textContent = body + (i === 0 && state.classes.some(c => c.demo)
+    ? L(' A sample class is added so you can see how it works. It disappears when the tour ends.', ' 사용 모습을 보여 드리려고 예시 반을 하나 넣었습니다. 안내가 끝나면 사라집니다.') : '');
+  tip.querySelector('.tour-count').textContent = `${i + 1} / ${TOUR.length}`;
+  tip.querySelector('.tour-skip').textContent = i === TOUR.length - 1 ? '' : L('Skip tour', '건너뛰기');
+  tip.querySelector('.tour-back').textContent = L('Back', '이전');
+  tip.querySelector('.tour-back').style.visibility = i ? 'visible' : 'hidden';
+  tip.querySelector('.tour-next').textContent = i === TOUR.length - 1 ? L('Done', '완료') : i ? L('Next', '다음') : L('Start', '시작');
+  requestAnimationFrame(() => { tourPlace(); tip.querySelector('.tour-next').focus({ preventScroll: true }); });
+}
+
+// Put the hole over the target and the bubble beside it, with its arrow pointing at the target.
+function tourPlace() {
+  if (tourAt < 0) return;
+  const tip = document.getElementById('tour-tip'), ring = document.getElementById('tour-ring'), shade = document.getElementById('tour-shade');
+  const els = tourTarget(TOUR[tourAt]);
+  const W = innerWidth, H = innerHeight, pad = 6, gap = 50; // room for the pointing hand
+  let r = null;
+  els.forEach(el => {
+    const b = el.getBoundingClientRect();
+    r = r ? { left: Math.min(r.left, b.left), top: Math.min(r.top, b.top), right: Math.max(r.right, b.right), bottom: Math.max(r.bottom, b.bottom) } : { left: b.left, top: b.top, right: b.right, bottom: b.bottom };
+  });
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let side = 'center', x = (W - tw) / 2, y = (H - th) / 2;
+  if (r) {
+    r = { left: Math.max(4, r.left - pad), top: Math.max(4, r.top - pad), right: Math.min(W - 4, r.right + pad), bottom: Math.min(H - 4, r.bottom + pad) };
+    const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
+    const clampY = v => Math.max(12, Math.min(H - th - 12, v)), clampX = v => Math.max(12, Math.min(W - tw - 12, v));
+    const fits = { right: r.right + gap + tw < W - 8, left: r.left - gap - tw > 8, bottom: r.bottom + gap + th < H - 8, top: true };
+    side = [TOUR[tourAt].prefer, 'right', 'left', 'bottom', 'top'].find(k => k && fits[k]);
+    if (side === 'right') { x = r.right + gap; y = clampY(cy - th / 2); }
+    else if (side === 'left') { x = r.left - gap - tw; y = clampY(cy - th / 2); }
+    else if (side === 'bottom') { y = r.bottom + gap; x = clampX(cx - tw / 2); }
+    else { y = Math.max(12, r.top - gap - th); x = clampX(cx - tw / 2); }
+    const arrow = tip.querySelector('.tour-arrow'), hand = tip.querySelector('.tour-hand');
+    if (side === 'right' || side === 'left') {
+      const ay = Math.max(14, Math.min(th - 30, cy - y - 8));
+      arrow.style.top = ay + 'px'; arrow.style.left = arrow.style.right = '';
+      hand.style.top = (ay - 6) + 'px'; hand.style.left = hand.style.right = '';
+    } else {
+      const ax = Math.max(14, Math.min(tw - 30, cx - x - 8));
+      arrow.style.left = ax + 'px'; arrow.style.top = '';
+      hand.style.left = (ax - 5) + 'px'; hand.style.top = hand.style.bottom = '';
+    }
+    hand.textContent = { right: '👈', left: '👉', bottom: '👆', top: '👇' }[side];
+    hand.style.setProperty('--nx', side === 'right' ? '-6px' : side === 'left' ? '6px' : '0');
+    hand.style.setProperty('--ny', side === 'bottom' ? '-6px' : side === 'top' ? '6px' : '0');
+    Object.assign(ring.style, { left: r.left + 'px', top: r.top + 'px', width: (r.right - r.left) + 'px', height: (r.bottom - r.top) + 'px', opacity: 1 });
+    shade.style.clipPath = `polygon(0 0, 0 100%, ${r.left}px 100%, ${r.left}px ${r.top}px, ${r.right}px ${r.top}px, ${r.right}px ${r.bottom}px, ${r.left}px ${r.bottom}px, ${r.left}px 100%, 100% 100%, 100% 0)`;
+  } else {
+    ring.style.opacity = 0;
+    shade.style.clipPath = `polygon(0 0, 0 100%, ${W / 2}px 100%, ${W / 2}px ${H / 2}px, ${W / 2}px ${H / 2}px, ${W / 2}px ${H / 2}px, ${W / 2}px ${H / 2}px, ${W / 2}px 100%, 100% 100%, 100% 0)`;
+  }
+  tip.className = 'at-' + side;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+window.addEventListener('resize', tourPlace);
+document.addEventListener('scroll', tourPlace, true);
+document.addEventListener('keydown', e => {
+  if (tourAt < 0) return;
+  if (e.key === 'Escape') tourEnd();
+  else if (e.key === 'ArrowRight') tourGo(tourAt + 1);
+  else if (e.key === 'ArrowLeft') tourGo(tourAt - 1);
+});
+
+/* ---------- start ---------- */
+load(); // signs the same teacher back in after a reload, otherwise asks who's using the tool
+
+/* Opened from the Class Prep Station (name-tags.html?from=prep): after printing, go back to it.
+   Opened on its own, the tool behaves as before. */
+(function () {
+  if (new URLSearchParams(location.search).get('from') !== 'prep') return;
+  // signing out first keeps this teacher's classes saved but hidden from the next teacher
+  const back = () => { try { if (currentId) signOut(); } catch (e) {} location.href = 'class-prep.html?back=tags'; };
+  const bar = document.createElement('a');
+  bar.href = 'class-prep.html?back=tags'; bar.className = 'prepback'; bar.addEventListener('click', e => { e.preventDefault(); back(); }); bar.textContent = '← Back to Class Prep';
+  const st = document.createElement('style');
+  st.textContent = '.prepback{position:fixed;left:16px;bottom:16px;z-index:900;background:#7a1c0c;color:#fff;font:600 15px/1 Arial,sans-serif;padding:12px 16px;border-radius:999px;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}@media print{.prepback{display:none}}';
+  document.head.appendChild(st); document.body.appendChild(bar);
+  let timer = null;
+  window.addEventListener('afterprint', () => {
+    setTimeout(() => {
+      showNotice(L('<b>Name tags printed.</b> Going back to Class Prep for the next step…', '<b>이름표를 인쇄했습니다.</b> 다음 단계를 위해 Class Prep으로 돌아갑니다…'),
+        [[L('Back to Class Prep now', '지금 돌아가기'), back], [L('Stay here', '여기 머물기'), () => { clearTimeout(timer); hideNotice(); }]], 'print');
+      timer = setTimeout(back, 4000);
+    }, 400);
+  });
+})();
+</script>
+</body>
+</html>
