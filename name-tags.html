@@ -50,7 +50,7 @@
   .panel h2 { margin: 0 0 10px; font-size: 15px; color: var(--maroon); }
   .panel p.hint { margin: 4px 0 10px; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
   label { font-size: 12.5px; color: #444; display: block; margin: 8px 0 3px; }
-  input[type=text], input[type=number], select, textarea { font: inherit; font-size: 14px; width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; background: #fff; }
+  input[type=text], input[type=password], input[type=number], select, textarea { font: inherit; font-size: 14px; width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; background: #fff; }
   textarea { resize: vertical; min-height: 90px; line-height: 1.4; }
   .row { display: flex; gap: 8px; }
   .row > * { flex: 1; min-width: 0; }
@@ -76,6 +76,10 @@
   .class-card select.copies { width: auto; padding: 3px 6px; font-size: 13px; }
   .class-card .namelist { display: flex; flex-wrap: wrap; gap: 4px; font-size: 13px; }
   .class-card .namelist span { padding: 2px 8px; border-radius: 10px; background: rgba(0,0,0,.05); }
+  .class-card .namelist span.added { background: rgba(122,23,1,.1); }
+  .class-card .namelist .x { border: 0; background: none; padding: 0 0 0 5px; font-size: 11px; color: var(--muted); cursor: pointer; }
+  .class-card .addname { display: flex; gap: 6px; margin-top: 8px; }
+  .class-card .addname input { flex: 1; }
   .empty { font-size: 13px; color: var(--muted); padding: 10px 0 2px; }
   /* The preview floats beside the class list and follows whichever class is being edited. */
   #preview-area { position: sticky; top: calc(var(--hh, 62px) + 12px); max-height: calc(100vh - var(--hh, 62px) - 24px); overflow: auto; padding-right: 4px; }
@@ -129,7 +133,7 @@
   html.dark button:disabled:hover { background: #2d2c28; }
   html.dark button.primary { background: var(--cream); color: var(--maroon); border-color: var(--cream); }
   html.dark button.danger { color: #ff8a80; }
-  html.dark input[type=text], html.dark input[type=number], html.dark select, html.dark textarea { background: #1b1a17; color: var(--ink); border-color: #4b4944; }
+  html.dark input[type=text], html.dark input[type=password], html.dark input[type=number], html.dark select, html.dark textarea { background: #1b1a17; color: var(--ink); border-color: #4b4944; }
   html.dark label, html.dark .check, html.dark .summary, html.dark .picklist label { color: #d2cec5; }
   html.dark .panel h2 { color: #f2b8a6; }
   html.dark a { color: #8fb8ff; }
@@ -247,8 +251,9 @@
   .who-pick { flex: 1; text-align: left; font-size: 16px; padding: 10px 14px; border-radius: 8px; }
   .who-form { display: flex; gap: 8px; flex-wrap: wrap; }
   .who-form input { flex: 1 1 140px; }
-  .who-form button.primary, #notice button.primary { background: var(--maroon); color: var(--cream); border-color: var(--maroon); }
+  .who-form button.primary, #notice button.primary, .who-card > button.primary { background: var(--maroon); color: var(--cream); border-color: var(--maroon); }
   .who-card p.hint { font-size: 12.5px; color: var(--muted); line-height: 1.45; margin: 16px 0 0; }
+  .who-card > button.primary { margin-top: 12px; }
   .who-err { color: #a00; font-size: 13px; min-height: 1em; margin: 6px 0 0; }
   .who-card .msg { display: block; margin: 12px 0 0; }
   #who-btn, #undo-btn, #redo-btn { font-size: 13px; background: transparent; color: var(--cream); border-color: rgba(251,237,197,.45); }
@@ -257,7 +262,7 @@
   #undo-btn:disabled:hover, #redo-btn:disabled:hover { background: transparent; }
   #undo-btn { margin-right: -10px; }
   html.dark .who-card h3 { color: #c9c5bc; }
-  html.dark .who-form button.primary, html.dark #notice button.primary { background: var(--cream); color: var(--maroon); border-color: var(--cream); }
+  html.dark .who-form button.primary, html.dark #notice button.primary, html.dark .who-card > button.primary { background: var(--cream); color: var(--maroon); border-color: var(--cream); }
   html.dark .who-err { color: #ff8a80; }
   html.dark #who-btn, html.dark #undo-btn, html.dark #redo-btn { background: transparent; color: var(--cream); }
   #notice { position: fixed; z-index: 8600; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(440px, calc(100vw - 32px));
@@ -292,8 +297,47 @@
   html.dark #tour-tip h3 { color: #f2b8a6; }
   html.dark #tour-tip .tour-next { background: var(--cream); color: var(--maroon); border-color: var(--cream); }
 
+  /* "All done" button: appears in the header after printing; clicking it throws confetti and shows a cheer. */
+  /* Offline file only: a button that sends teachers to the website, where the tool can be installed as an app. */
+  #app-btn { font-size: 13px; background: transparent; color: var(--cream); border: 1px dashed rgba(251,237,197,.6); border-radius: 999px; padding: 6px 12px; }
+  #app-btn:hover { background: rgba(255,255,255,.12); }
+  html.dark #app-btn { background: transparent; color: var(--cream); }
+  #yay-btn { background: rgba(251,237,197,.12); color: var(--cream); border: 1px solid rgba(251,237,197,.5); border-radius: 999px; padding: 6px 13px; font-weight: bold;
+    animation: yay-in .5s ease-out; }
+  #yay-btn:hover { background: rgba(251,237,197,.24); }
+  #yay-btn .yay-emoji { display: inline-block; transform-origin: 50% 80%; animation: yay-wiggle 5s ease-in-out .6s infinite; }
+  html.dark #yay-btn { background: rgba(251,237,197,.1); color: var(--cream); border-color: rgba(251,237,197,.4); }
+  html.dark #yay-btn:hover { background: rgba(251,237,197,.2); }
+  @keyframes yay-in { from { opacity: 0; transform: scale(.6); } 70% { transform: scale(1.08); } to { opacity: 1; transform: none; } }
+  @keyframes yay-wiggle { 0%, 84%, 100% { transform: rotate(0); } 88% { transform: rotate(-16deg) scale(1.15); } 92% { transform: rotate(14deg) scale(1.15); } 96% { transform: rotate(-6deg); } }
+  #confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 9600; pointer-events: none; }
+  /* The cheer: a big, bold card that fills most of the screen, with sun rays turning behind it. */
+  #yay-shade { position: fixed; inset: 0; z-index: 9500; background: rgba(18, 10, 6, .6); display: flex; align-items: center; justify-content: center; padding: 4vh 4vw; animation: yay-fade .25s ease-out; cursor: pointer; }
+  #yay-card { position: relative; overflow: hidden; width: min(88vw, 1150px); height: min(80vh, 760px); border-radius: 28px; cursor: default;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(10px, 2.2vh, 26px); padding: 4vh 5vw; text-align: center;
+    background: radial-gradient(circle at 50% 42%, #B3260A 0%, #7A1701 55%, #4d1405 100%); color: var(--cream);
+    box-shadow: 0 30px 90px rgba(0,0,0,.55), inset 0 0 0 6px rgba(251,237,197,.35); animation: yay-pop .7s cubic-bezier(.18, 1.5, .4, 1); }
+  #yay-card::before { content: ""; position: absolute; left: 50%; top: 42%; width: 260vmax; height: 260vmax; margin: -130vmax 0 0 -130vmax; pointer-events: none;
+    background: repeating-conic-gradient(rgba(247,183,49,.16) 0deg 10deg, transparent 10deg 20deg); animation: yay-spin 40s linear infinite; }
+  #yay-card > * { position: relative; }
+  #yay-card .yay-big { font-size: clamp(70px, 17vmin, 180px); line-height: 1; animation: yay-bounce 1.6s ease-in-out .7s infinite; }
+  #yay-card h3 { margin: 0; font-size: clamp(34px, 7.5vmin, 96px); line-height: 1.05; color: #FFE066; font-family: "Arial Black", Arial, "Malgun Gothic", sans-serif;
+    text-shadow: 0 4px 0 rgba(0,0,0,.25); overflow-wrap: anywhere; }
+  #yay-card p { margin: 0; max-width: 30ch; font-size: clamp(18px, 3.4vmin, 34px); line-height: 1.4; color: var(--cream); }
+  #yay-card button { margin-top: clamp(4px, 1.5vh, 16px); background: #FFE066; color: #5a1201; border: 0; font-weight: bold; font-size: clamp(17px, 2.8vmin, 26px);
+    padding: .6em 1.8em; border-radius: 999px; box-shadow: 0 6px 0 #c9a02a; }
+  #yay-card button:hover { background: #fff0a0; }
+  #yay-card button:active { transform: translateY(3px); box-shadow: 0 3px 0 #c9a02a; }
+  html.dark #yay-card { color: var(--cream); }
+  html.dark #yay-card button { background: #FFE066; color: #5a1201; }
+  @keyframes yay-fade { from { opacity: 0; } }
+  @keyframes yay-pop { from { opacity: 0; transform: scale(.3) rotate(-6deg); } }
+  @keyframes yay-spin { to { transform: rotate(360deg); } }
+  @keyframes yay-bounce { 0%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-14px) rotate(-8deg); } 60% { transform: translateY(0) rotate(6deg); } }
+  @media (prefers-reduced-motion: reduce) { #yay-btn, #yay-btn .yay-emoji, #yay-card, #yay-card::before, #yay-card .yay-big, #yay-shade { animation: none; } }
+
   @media print {
-    #tour-shade, #tour-ring, #tour-tip, #notice, #who { display: none !important; }
+    #tour-shade, #tour-ring, #tour-tip, #notice, #who, #confetti, #yay-shade { display: none !important; }
     @page { size: A4 landscape; margin: 0; }
     body { background: #fff; }
     header, .controls, .summary, .noprint { display: none !important; }
@@ -334,6 +378,7 @@
   <h1 data-i18n="title">Name Tag Generator</h1>
   <span class="byline">by Joseph McLaren</span>
   <span class="spacer"></span>
+  <button id="app-btn" onclick="appInfo()" hidden data-i18n="appBtn" data-i18n-title="appTitle" title="Install the tool on this computer as an app">💻 Get the desktop app</button>
   <button id="help" class="icon lang" onclick="tourStart()" data-i18n-title="helpTitle" title="How to use this tool" aria-label="How to use this tool">?</button>
   <button id="lang" class="icon lang" onclick="toggleLang()"></button>
   <button id="theme" class="icon" onclick="toggleTheme()" title="Dark mode" aria-label="Dark mode"></button>
@@ -341,6 +386,7 @@
   <button id="undo-btn" onclick="undo()" disabled data-i18n="undo" data-i18n-title="undoTitle" title="Undo the last change (Ctrl+Z)">↶ Undo</button>
   <button id="redo-btn" onclick="redo()" disabled data-i18n="redo" data-i18n-title="redoTitle" title="Redo the change you undid (Ctrl+Y)">↷ Redo</button>
   <button id="print-btn" class="primary" onclick="printOut()" data-i18n="print">Print tags</button>
+  <button id="yay-btn" onclick="celebrate()" hidden><span class="yay-emoji">🎉</span> <span data-i18n="yay">All done!</span></button>
 </header>
 
 <div id="who" hidden></div>
@@ -402,7 +448,7 @@
         <label><input type="radio" name="printmode" value="reprint"><span data-i18n="reprint">Reprint some students</span></label>
       </div>
       <p class="hint" id="reprint-hint" hidden data-i18n="reprintHint">Tick the students who need a new tag (a new student, or a lost tag). Only those tags print, packed together on as few pages as possible. Need two of someone? Change ×1 to ×2 next to their name. <a href="#" onclick="clearPicks();return false">Untick everyone</a></p>
-      <p class="hint" data-i18n="hint3">Pick the subject and days, and untick classes you don't need. Use ×2 or ×3 next to a class to print extra copies of each tag. Names come from TOPIA. If one is wrong, fix it on TOPIA and copy the students again.</p>
+      <p class="hint" data-i18n="hint3">Pick the subject and days, and untick classes you don't need. Use ×2 or ×3 next to a class to print extra copies of each tag. Names come from TOPIA. A student missing? Type their name in the box under the class and click Add.</p>
       <datalist id="subjects">
         <option>Debate</option><option>Grammar</option><option>Integrated</option><option>Language Arts</option>
         <option>Phonics</option><option>Speaking</option><option>Writing</option>
@@ -434,7 +480,7 @@ let nextId = 1;
 const KO = {
   title: '이름표 만들기', helpTitle: '사용법 안내',
   privacy: '🔒 공용 컴퓨터: 반 목록은 내 이름으로 저장됩니다. 다 쓰면 위의 <b>바꾸기</b>를 누르세요. 30분 동안 사용하지 않아도 자동으로 로그아웃됩니다.',
-  print: '이름표 인쇄', undo: '↶ 되돌리기', undoTitle: '마지막 변경 되돌리기 (Ctrl+Z)', redo: '↷ 다시 하기', redoTitle: '되돌린 변경 다시 하기 (Ctrl+Y)',
+  print: '이름표 인쇄', yay: '다 했어요!', appBtn: '💻 데스크톱 앱 받기', appTitle: '이 컴퓨터에 앱으로 설치하기', undo: '↶ 되돌리기', undoTitle: '마지막 변경 되돌리기 (Ctrl+Z)', redo: '↷ 다시 하기', redoTitle: '되돌린 변경 다시 하기 (Ctrl+Y)',
   d1: '1. 기본 정보',
   teacherLbl: '내 이름 (이름표 오른쪽 아래)', teacherPh: '예: Eugene',
   schoolLbl: '학원 이름 (왼쪽 아래)',
@@ -456,7 +502,7 @@ const KO = {
   d3: '3. 반별 확인',
   printAll: '모든 반 인쇄', reprint: '일부 학생만 다시 인쇄',
   reprintHint: '새 이름표가 필요한 학생(새 학생, 잃어버린 이름표)을 체크하세요. 체크한 이름표만 최대한 적은 장수에 모아 인쇄됩니다. 두 장이 필요하면 이름 옆의 ×1을 ×2로 바꾸세요. <a href="#" onclick="clearPicks();return false">모두 체크 해제</a>',
-  hint3: '과목과 요일을 고르고, 필요 없는 반은 체크를 해제하세요. 반 옆의 ×2, ×3으로 이름표를 여러 장 인쇄할 수 있습니다. 이름은 TOPIA에서 가져옵니다. 이름이 틀렸다면 TOPIA에서 고친 뒤 학생을 다시 복사하세요.',
+  hint3: '과목과 요일을 고르고, 필요 없는 반은 체크를 해제하세요. 반 옆의 ×2, ×3으로 이름표를 여러 장 인쇄할 수 있습니다. 이름은 TOPIA에서 가져옵니다. 빠진 학생이 있으면 반 아래 칸에 이름을 입력하고 추가를 누르세요.',
 };
 const isKo = () => state.lang === 'ko';
 const L = (en, ko) => isKo() ? ko : en;
@@ -541,6 +587,7 @@ async function cloudFlush() {
   } catch (e) {
     if (!cloudQueue[id]) cloudQueue[id] = json;
     cloudWriting = false;
+    if (e && e.code === 'password') { needPassword(true); return; }
     setSync(e && e.code === 'invalid_argument' ? 'readonly' : e && e.code === 'quota_exceeded' ? 'full' : 'error');
     if (e && e.code === 'unavailable') { clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudFlush, 3000 + Math.random() * 2000); }
     return;
@@ -565,6 +612,92 @@ function setSync(s) {
   }[s];
 }
 
+/* ---------- online saving in a Google Sheet ----------
+   On claude.ai the page's own database keeps every teacher's classes. Everywhere else (the website, the
+   desktop app, the file opened from a computer) they go to a Google Sheet that the tool's owner set up once
+   (see sync/README.md). SHEET_URL is that sheet's web app address; with it empty, classes stay in this browser.
+   Teachers type the school password once on each computer. sheetDb() answers the same calls as the
+   claude.ai database, so the rest of the tool doesn't need to know which one it is talking to.
+   It looks for changes from other computers every 30 seconds while the page is in front, and when it comes back. */
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxWt1P8a1C-eywKK9HRgDohuqo5X_6TlDwfhkED-oKIxEyzBOWslsfN74tH-Z7TEd3DiA/exec';
+const SHEET_PW_KEY = 'nameTagGenerator.sheetPassword', SHEET_CACHE_KEY = 'nameTagGenerator.sheetCache';
+let cloudProblem = '';                     // '', 'password', 'wrongpw', 'offline' or 'setup': shown on the who screen
+const sheetPassword = () => { try { return localStorage.getItem(SHEET_PW_KEY) || ''; } catch (e) { return ''; } };
+function sheetDb(url) {
+  let docs = null, listener = null, onErr = null, timer = 0, busy = false, writes = 0, writing = 0;
+  const fail = code => Object.assign(new Error(code), { code });
+  async function call(body) {
+    if (!sheetPassword()) throw fail('password');
+    let res, j = null;
+    try {
+      res = await fetch(url, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(Object.assign({ key: sheetPassword() }, body)) });
+      j = await res.json();
+    } catch (e) { throw fail('unavailable'); }
+    if (!j || !j.ok) throw fail(j && (j.error === 'password' || j.error === 'setup') ? j.error : 'unavailable');
+    return j;
+  }
+  const snapDoc = (id, d) => ({ id, data: () => d, metadata: { hasPendingWrites: false } });
+  function emit(next, first) {
+    const prev = docs || {}, changes = [];
+    docs = next;
+    try { localStorage.setItem(SHEET_CACHE_KEY, JSON.stringify(next)); } catch (e) {}
+    Object.keys(next).forEach(id => {
+      if (!prev[id]) changes.push({ type: 'added', doc: snapDoc(id, next[id]) });
+      else if (JSON.stringify(prev[id]) !== JSON.stringify(next[id])) changes.push({ type: 'modified', doc: snapDoc(id, next[id]) });
+    });
+    Object.keys(prev).forEach(id => { if (!next[id]) changes.push({ type: 'removed', doc: snapDoc(id, prev[id]) }); });
+    if (listener && (first || changes.length)) listener({ docs: Object.keys(next).map(id => snapDoc(id, next[id])), docChanges: () => changes });
+  }
+  async function refresh() {
+    clearTimeout(timer);
+    if (busy || !listener) return;
+    busy = true;
+    const seq = writes;
+    try {
+      const j = await call({ action: 'list' });
+      const had = cloudProblem; cloudProblem = '';
+      if (seq === writes && !writing) emit(j.docs || {}, docs === null || !!had); // a save finished meanwhile: wait for the next look
+    } catch (e) {
+      // No internet: carry on with what this computer saw last; saves wait until it's back.
+      let cached = null;
+      try { cached = JSON.parse(localStorage.getItem(SHEET_CACHE_KEY) || 'null'); } catch (x) {}
+      if (docs === null && e.code === 'unavailable' && cached && typeof cached === 'object') emit(cached, true);
+      if (onErr) onErr(e);
+    }
+    busy = false;
+    if (!document.hidden) timer = setTimeout(refresh, 30000);
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+  async function write(body, apply) {
+    writes++; writing++;
+    try { await call(body); } finally { writing--; }
+    const next = Object.assign({}, docs || {}); apply(next); emit(next);
+  }
+  return {
+    refresh,
+    collection: () => ({ onSnapshot(cb, err) { listener = cb; onErr = err; refresh(); } }),
+    doc(path) {
+      const id = path.split('/')[1];
+      return {
+        set: d => write({ action: 'set', id, doc: d }, next => { next[id] = d; }),
+        delete: () => write({ action: 'delete', id }, next => { delete next[id]; }),
+      };
+    },
+  };
+}
+// Online saving needs the password (again): sign out, keeping unsaved changes until it's typed in.
+function needPassword(wrong) {
+  cloudProblem = wrong ? 'wrongpw' : 'password';
+  if (currentId) signOut(); else showWho();
+}
+function setPassword(pw) {
+  try { localStorage.setItem(SHEET_PW_KEY, pw); } catch (e) {}
+  cloudProblem = 'checking'; renderWho();
+  cloud.refresh();
+  if (Object.keys(cloudQueue).length) { clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudFlush, 1500); }
+}
+
 function load() {
   let g = null;
   try { g = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) {}
@@ -585,7 +718,7 @@ function load() {
   syncUI(); showWho();
   // Online, the page's database answers within a moment; as a plain file there is none.
   const use = window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
-  Promise.resolve(use).catch(() => null).then(db => db ? startCloud(db) : startLocal());
+  Promise.resolve(use).catch(() => null).then(db => db ? startCloud(db) : SHEET_URL ? startCloud(sheetDb(SHEET_URL)) : startLocal());
 }
 function resumeSession() {
   let cur = null;
@@ -618,7 +751,12 @@ function startCloud(db) {
     });
     if (!document.getElementById('who').hidden) renderWho();
     updateWhoBtn();
-  }, () => { setSync('error'); });
+  }, e => {
+    const code = e && e.code;
+    if (code === 'password') { needPassword(cloudProblem === 'checking' || !!sheetPassword()); return; }
+    if (!cloudReady) { cloudProblem = code === 'setup' ? 'setup' : 'offline'; renderWho(); return; }
+    setSync('error');
+  });
 }
 
 function openProfile(id) {
@@ -640,7 +778,7 @@ function signOut(message) {
   currentId = null;
   try { sessionStorage.removeItem(CURRENT_KEY); } catch (e) {}
   state = freshState(); activeId = null; resetUndo();
-  syncUI(); hideNotice(); showWho(message); setSync(syncState);
+  syncUI(); hideNotice(); hideYay(); showWho(message); setSync(syncState);
 }
 
 // Put the signed-in teacher's settings into the page.
@@ -732,6 +870,28 @@ function renderWho(message) {
   const top = `<div class="who-top"><h2>${L("Who's making name tags?", '누가 이름표를 만드나요?')}</h2>
     <button class="small" onclick="toggleLang()" title="${isKo() ? 'View in English' : '한국어로 보기'}">${isKo() ? 'EN' : '한'}</button></div>` +
     (message ? `<p class="msg ok">${esc(message)}</p>` : '');
+  if (['password', 'wrongpw', 'checking'].includes(cloudProblem)) {
+    box.innerHTML = `<div class="who-card">${top}
+      <h3>${L('School password', '학교 비밀번호')}</h3>
+      <p class="hint">${L('Classes are saved online, so they are there on every computer. Type the school password once on this computer. Ask the person who looks after this tool if you don\'t know it.',
+        '반 목록은 온라인에 저장되어 어느 컴퓨터에서든 열 수 있습니다. 이 컴퓨터에서 학교 비밀번호를 한 번만 입력하세요. 모르면 이 도구를 관리하는 분께 물어보세요.')}</p>
+      <form id="who-pw" class="who-form">
+        <input type="password" id="pw-box" placeholder="${L('School password', '학교 비밀번호')}" autocomplete="current-password">
+        <button class="primary">${L('OK', '확인')}</button></form>
+      <p class="who-err" id="who-err">${cloudProblem === 'wrongpw' ? L('That password is not right. Try again.', '비밀번호가 맞지 않습니다. 다시 입력하세요.')
+        : cloudProblem === 'checking' ? L('Checking…', '확인 중…') : ''}</p>
+      <p class="copyright">Made by Joseph McLaren</p></div>`;
+    document.getElementById('pw-box').focus();
+    return;
+  }
+  if (!cloudReady && (cloudProblem === 'offline' || cloudProblem === 'setup')) {
+    box.innerHTML = `<div class="who-card">${top}<p class="msg err">${cloudProblem === 'setup'
+        ? L('Online saving is not finished being set up: the password in the Google Sheet still needs to be changed.', '온라인 저장 설정이 끝나지 않았습니다. Google 시트의 비밀번호를 바꿔야 합니다.')
+        : L("Can't reach the online save. Check the internet, then try again.", '온라인 저장소에 연결할 수 없습니다. 인터넷을 확인하고 다시 해 보세요.')}</p>
+      <button class="primary" data-act="retry">${L('Try again', '다시 시도')}</button>
+      <p class="copyright">Made by Joseph McLaren</p></div>`;
+    return;
+  }
   if (!cloudReady) {
     box.innerHTML = `<div class="who-card">${top}<p class="hint">${L('Loading teachers…', '선생님 목록을 불러오는 중…')}</p>
       <p class="copyright">Made by Joseph McLaren</p></div>`;
@@ -786,6 +946,7 @@ async function uploadLocal() {
 }
 document.getElementById('who').addEventListener('click', async e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
+  if (b.dataset.act === 'retry') { cloudProblem = ''; renderWho(); cloud.refresh(); return; }
   if (b.dataset.act === 'upload') { b.disabled = true; await uploadLocal(); renderWho(); return; }
   const p = profiles.find(x => x.id === b.dataset.id);
   if (!p) return;
@@ -797,6 +958,11 @@ document.getElementById('who').addEventListener('click', async e => {
 });
 document.getElementById('who').addEventListener('submit', async e => {
   e.preventDefault();
+  if (e.target.id === 'who-pw') {
+    const pw = document.getElementById('pw-box').value.trim();
+    if (pw) setPassword(pw); else document.getElementById('pw-box').focus();
+    return;
+  }
   if (!cloudReady) return;
   const name = clean(document.getElementById('new-name').value);
   if (!name) { whoErr(L('Type your name first.', '먼저 이름을 입력하세요.')); return; }
@@ -1184,7 +1350,9 @@ function applyGroups(groups) {
         c.newNames = [...new Set([...(c.newNames || []).filter(n => names.includes(n)), ...added])];
         added.forEach(n => fresh.push(`${splitName(n).eng || splitName(n).kor} (${c.name})`));
       }
-      c.names = names;
+      const keep = (c.added || []).filter(a => !names.some(n => sameStudent(n, a)));
+      c.added = keep;
+      c.names = [...names, ...keep];
     }
     if (subjects.has(raw) && !c.subject) c.subject = clean(subjects.get(raw));
     // Each pasted day adds its weekday, so Monday + Wednesday pastes give "Mon / Wed".
@@ -1261,8 +1429,10 @@ function renderClasses() {
           <input type="text" data-f="days" list="dayslist" value="${esc(c.days)}" placeholder="${L('pick above or type', '위에서 고르거나 입력')}"></div>
         <div><label>${L('Teacher (blank = your name)', '선생님 (비우면 내 이름)')}</label><input type="text" data-f="teacher" value="${esc(c.teacher)}"></div>
       </div>
-      <label>${L('Students (from TOPIA)', '학생 (TOPIA에서 가져옴)')}</label>
-      <div class="namelist">${c.names.map(n => `<span>${esc(clean(String(n).replace(/^\|\s*|\s*\|$/g, '')) || '–')}</span>`).join('')}</div>
+      <label>${L('Students', '학생')}</label>
+      <div class="namelist">${c.names.map(n => `<span${isAdded(c, n) ? ' class="added"' : ''}>${esc(clean(String(n).replace(/^\|\s*|\s*\|$/g, '')) || '–')}` +
+        (isAdded(c, n) ? `<button class="x" data-act="delname" data-name="${esc(n)}" title="${L('Remove this student', '이 학생 삭제')}">✕</button>` : '') + '</span>').join('')}</div>
+      <div class="addname"><input type="text" data-addname placeholder="${L('Add a student, e.g. Soyul | 김소율', '학생 추가, 예: Soyul | 김소율')}"><button class="small" data-act="addname">${L('Add', '추가')}</button></div>
       ${state.reprint ? `<div class="picklist">${pickHTML(c)}</div>` : ''}
     </div>`).join('');
   updateNewAll();
@@ -1307,6 +1477,32 @@ function pickHTML(c) {
           `<option value="${k}" ${pickCount(c, n) === k ? 'selected' : ''}>×${k}</option>`).join('')}</select>` : '') + '</label>').join('')
     : `<span class="none">${L('No students in this class yet.', '이 반에는 아직 학생이 없습니다.')}</span>`;
 }
+// Students typed in by hand (kept apart so a new TOPIA copy doesn't drop them, and only they can be removed).
+const isAdded = (c, n) => (c.added || []).includes(n);
+function typedName(t) {
+  t = clean(t); if (!t) return '';
+  const pair = t.match(NAME_PAIR);
+  if (pair) return `${clean(pair[1])} | ${clean(pair[2])}`;
+  let [e, k = ''] = t.split('|').map(clean);
+  if (/[ㄱ-힣]/.test(e) && !/[ㄱ-힣]/.test(k)) [e, k] = [k, e];
+  return e && k ? `${e} | ${k}` : (e || `| ${k}`);
+}
+function addStudent(c, input) {
+  const n = typedName(input.value);
+  if (!n) { input.focus(); return; }
+  if (c.names.some(o => sameStudent(o, n))) { showMsg(L(`${n} is already in ${c.name}.`, `${n} 학생은 이미 ${c.name}에 있습니다.`), false); return; }
+  c.names.push(n);
+  c.added = [...(c.added || []), n];
+  if (state.reprint) c.picked = [...new Set([...(c.picked || []), n])]; // a new student needs a tag
+  renderClasses(); render();
+  const box = document.querySelector(`.class-card[data-id="${c.id}"] [data-addname]`); if (box) box.focus();
+}
+document.getElementById('classes').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !e.target.matches('[data-addname]')) return;
+  e.preventDefault();
+  const c = state.classes.find(x => x.id == e.target.closest('.class-card').dataset.id);
+  if (c) addStudent(c, e.target);
+});
 const pickCount = (c, n) => (c.pickCounts && c.pickCounts[n]) || 1;
 function pickedNames(c) { const p = new Set(c.picked || []); return c.names.filter(n => n && p.has(n)); }
 function clearPicks() { state.classes.forEach(c => { c.picked = []; }); renderClasses(); render(); }
@@ -1366,6 +1562,13 @@ document.getElementById('classes').addEventListener('click', async e => {
   const id = e.target.closest('.class-card').dataset.id;
   const c = state.classes.find(x => x.id == id);
   if (act === 'ticknew') { tickNew([c]); return; }
+  if (act === 'addname') { addStudent(c, e.target.closest('.class-card').querySelector('[data-addname]')); return; }
+  if (act === 'delname') {
+    const n = e.target.dataset.name;
+    c.names = c.names.filter(x => x !== n); c.added = (c.added || []).filter(x => x !== n);
+    if (c.picked) c.picked = c.picked.filter(x => x !== n);
+    renderClasses(); render(); return;
+  }
   if (act === 'days') {
     c.days = e.target.dataset.v; c.daysAuto = false;
     const cardEl = e.target.closest('.class-card');
@@ -1384,6 +1587,7 @@ document.getElementById('classes').addEventListener('click', async e => {
       c.names = c.names.map(n => n === kor ? full : n);
       if (c.picked) c.picked = c.picked.map(n => n === kor ? full : n);
       if (c.newNames) c.newNames = c.newNames.map(n => n === kor ? full : n);
+      if (c.added) c.added = c.added.map(n => n === kor ? full : n);
     });
     renderClasses(); render(); return;
   }
@@ -1618,15 +1822,97 @@ async function printOut() {
     if (!e || e.code !== 'declined') showMsg(L('Could not save the print file. Try again in a moment.', '인쇄 파일을 저장하지 못했습니다. 잠시 후 다시 해 보세요.'));
     return;
   }
+  showYay();
   showNotice(L('<b>Print file saved.</b> Open it from your downloads and it will print. Done? Sign out so the next teacher can\'t see your classes.',
     '<b>인쇄 파일을 저장했습니다.</b> 다운로드에서 열면 인쇄됩니다. 다 끝났나요? 다음 선생님이 내 반 목록을 보지 않도록 로그아웃하세요.'),
     [[L('Sign out', '로그아웃'), () => signOut()], [L('Not yet', '나중에'), hideNotice]], 'print');
 }
 window.addEventListener('afterprint', () => {
   if (!currentId) return;
+  showYay();
   setTimeout(() => showNotice(L("<b>Finished printing?</b> Sign out so the next teacher can't see your classes. They stay saved for next time.", '<b>인쇄가 끝났나요?</b> 다음 선생님이 내 반 목록을 보지 않도록 로그아웃하세요. 반 목록은 다음을 위해 저장됩니다.'),
     [[L('Sign out', '로그아웃'), () => signOut()], [L('Not yet', '나중에'), hideNotice]], 'print'), 300);
 });
+
+/* The "All done!" button. It shows in the header once the tags have gone to the printer (or the print
+   file was saved) and stays until the teacher signs out. Clicking it sprays confetti and shows a cheer. */
+/* Offline file only: the browser can't install a file opened from the computer, so this explains
+   how to install the website version instead. */
+const APP_URL = 'https://disconnekted.github.io/Name-tag-generator-/';
+if (location.protocol === 'file:') document.getElementById('app-btn').hidden = false;
+function appInfo() {
+  showNotice(L('<b>Get the desktop app</b><br>1. Click <b>Open the website</b> below (use Chrome or Edge).<br>2. Click the install icon at the right end of the address bar, or ⋮ menu → <i>Cast, save and share</i> → <i>Install page as app</i>.<br>3. The tool gets its own icon on your computer and works without the internet.',
+    '<b>데스크톱 앱 받기</b><br>1. 아래 <b>웹사이트 열기</b>를 누르세요 (Chrome 또는 Edge).<br>2. 주소창 오른쪽 끝의 설치 아이콘을 누르거나, ⋮ 메뉴 → <i>전송, 저장, 공유</i> → <i>페이지를 앱으로 설치</i>를 누르세요.<br>3. 컴퓨터에 아이콘이 생기고 인터넷 없이도 쓸 수 있습니다.'),
+    [[L('Open the website', '웹사이트 열기'), () => { window.open(APP_URL, '_blank', 'noopener'); hideNotice(); }], [L('Close', '닫기'), hideNotice]], 'app');
+}
+function showYay() { const b = document.getElementById('yay-btn'); if (b) b.hidden = false; }
+function hideYay() { const b = document.getElementById('yay-btn'); if (b) b.hidden = true; closeYay(); }
+const CHEERS = [
+  ['Great job{n}!', '{n}잘하셨어요!', 'Your name tags are ready. Your students are going to love them.', '이름표가 준비되었어요. 학생들이 정말 좋아할 거예요.'],
+  ['You did it{n}!', '{n}해냈어요!', 'Every book now knows exactly who it belongs to.', '이제 모든 책이 주인을 찾았어요.'],
+  ['Wonderful work{n}!', '{n}정말 멋져요!', 'All finished. Time for a well-earned coffee break. ☕', '다 끝났어요. 커피 한 잔의 여유를 즐기세요. ☕'],
+  ['All done{n}!', '{n}수고하셨어요!', 'Thank you for all the care you put into your classes.', '반을 위해 정성을 쏟아 주셔서 감사해요.'],
+  ['Amazing{n}!', '{n}최고예요!', 'Neat tags, happy students, organised books. Nicely done!', '깔끔한 이름표, 행복한 학생들, 정리된 책들. 아주 잘하셨어요!'],
+];
+let lastCheer = -1;
+function celebrate() {
+  closeYay();
+  let i; do { i = Math.floor(Math.random() * CHEERS.length); } while (i === lastCheer && CHEERS.length > 1);
+  lastCheer = i;
+  const c = CHEERS[i], name = (state.teacher || '').trim();
+  const title = isKo() ? c[1].replace('{n}', name ? name + ' 선생님, ' : '') : c[0].replace('{n}', name ? ', ' + name : '');
+  const shade = document.createElement('div');
+  shade.id = 'yay-shade';
+  shade.innerHTML = `<div id="yay-card" role="dialog" aria-modal="true" aria-labelledby="yay-title"><div class="yay-big">🎉</div>` +
+    `<h3 id="yay-title">${esc(title)}</h3><p>${esc(L(c[2], c[3]))}</p><button type="button">${esc(L('Thanks!', '고마워요!'))}</button></div>`;
+  shade.addEventListener('click', e => { if (e.target === shade || e.target.tagName === 'BUTTON') closeYay(); });
+  document.body.appendChild(shade);
+  shade.querySelector('button').focus();
+  confetti(innerWidth / 2, innerHeight * .4);
+}
+function closeYay() { const s = document.getElementById('yay-shade'); if (s) s.remove(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeYay(); });
+
+// Confetti drawn on a full-window canvas: one burst from the button, plus two side cannons.
+function confetti(bx, by) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const old = document.getElementById('confetti'); if (old) old.remove();
+  const cv = document.createElement('canvas'); cv.id = 'confetti';
+  const dpr = Math.min(devicePixelRatio || 1, 2), W = innerWidth, H = innerHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  document.body.appendChild(cv);
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  const colors = ['#7A1701', '#FBEDC5', '#2D3A65', '#E9BFA5', '#F4B400', '#2BB3A3', '#EF6F9B', '#6DA8FF'];
+  const parts = [];
+  const add = (x, y, n, angle, spread, speed) => {
+    for (let k = 0; k < n; k++) {
+      const a = angle + (Math.random() - .5) * spread, v = speed * (.55 + Math.random() * .6);
+      parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, w: 8 + Math.random() * 8, h: 5 + Math.random() * 8,
+        r: Math.random() * 6.3, vr: (Math.random() - .5) * .35, c: colors[Math.floor(Math.random() * colors.length)], round: Math.random() < .25,
+        sway: Math.random() * 6.3 });
+    }
+  };
+  add(bx, by, 160, 0, Math.PI * 2, 17);                       // a burst from the middle
+  add(0, H * .85, 110, -Math.PI / 3, .8, 26);                 // bottom-left cannon
+  add(W, H * .85, 110, -Math.PI * 2 / 3, .8, 26);             // bottom-right cannon
+  setTimeout(() => { for (let k = 0; k < 140; k++) add(Math.random() * W, -20 - Math.random() * 120, 1, Math.PI / 2, .6, 3); }, 500); // then a shower from the top
+  const start = performance.now();
+  (function frame(t) {
+    const age = t - start;
+    ctx.clearRect(0, 0, W, H);
+    for (const p of parts) {
+      p.vy += .32; p.vx *= .985; p.vy *= .985; p.sway += .08;
+      p.x += p.vx + Math.sin(p.sway) * .8; p.y += p.vy; p.r += p.vr;
+      ctx.globalAlpha = age > 4400 ? Math.max(0, 1 - (age - 4400) / 800) : 1;
+      ctx.fillStyle = p.c;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+      if (p.round) { ctx.beginPath(); ctx.arc(0, 0, p.h / 2, 0, 6.3); ctx.fill(); }
+      else ctx.fillRect(-p.w / 2, -p.h / 2 * Math.abs(Math.cos(p.sway)), p.w, p.h * Math.abs(Math.cos(p.sway)) + 1);
+      ctx.restore();
+    }
+    if (age < 5200 && cv.isConnected) requestAnimationFrame(frame); else cv.remove();
+  })(start);
+}
 
 // Link the class list and the preview: editing a class scrolls its tags into view and highlights
 // them; clicking a tag jumps back to its class.
@@ -1827,7 +2113,7 @@ load(); // signs the same teacher back in after a reload, otherwise asks who's u
   const bar = document.createElement('a');
   bar.href = 'class-prep.html?back=tags'; bar.className = 'prepback'; bar.addEventListener('click', e => { e.preventDefault(); back(); }); bar.textContent = '← Back to Class Prep';
   const st = document.createElement('style');
-  st.textContent = '.prepback{position:fixed;left:16px;bottom:16px;z-index:900;background:#7a1c0c;color:#fff;font:600 15px/1 Arial,sans-serif;padding:12px 16px;border-radius:999px;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}@media print{.prepback{display:none}}';
+  st.textContent = '.prepback{position:fixed;left:16px;bottom:16px;z-index:8550;background:#7a1c0c;color:#fff;font:600 15px/1 Arial,sans-serif;padding:12px 16px;border-radius:999px;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}@media print{.prepback{display:none}}';
   document.head.appendChild(st); document.body.appendChild(bar);
   let timer = null;
   window.addEventListener('afterprint', () => {
