@@ -386,6 +386,9 @@ details.panel.fold:not([open]){gap:0}
 .notetog{justify-self:start}
 .scard .line[hidden],.notebox [hidden],.infotext[hidden]{display:none!important}
 @media print{#chartFab,#ipadBox,#chartPanel{display:none!important}}
+.dayacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.dayout{display:inline-flex;white-space:nowrap;align-items:center;gap:6px;font-size:14px;border:1px solid var(--line,#ccc);border-radius:8px;padding:4px 8px;background:var(--card,#fff)}
+.dayacts .dayout input[data-dayout]{width:4.2em!important;flex:none;font-size:16px;padding:6px;text-align:center}
 </style>
 
 </head><body>
@@ -540,15 +543,30 @@ const LAYOUTS = {
     { sheet: 'WRITING', cats: () => [ATT(), A('Word Test', { outOf: 100 }), A('Essay'), A('Monthly Test', { due: 'm' }), A('Participation', { outOf: 10 })], monthly: 'MONTHLY REPORT', extras: () => [] },
   ],
 };
+/* Columns follow the school's evaluation item order: Attendance, Participation, writing work,
+   word/vocabulary tests, then everything else (presentation, debate, monthly test...). */
+function evalRank(k) {
+  if (k.kind === 'att') return 0;
+  const l = String(k.label || '');
+  if (/particip/i.test(l)) return 1;
+  if (/writ|essay|summary/i.test(l)) return 2;
+  if (/word|vocab|idiom/i.test(l)) return 3;
+  return 4;
+}
+const evalOrder = cats => cats.map((k, i) => [k, i]).sort((a, b) => evalRank(a[0]) - evalRank(b[0]) || a[1] - b[1]).map(x => x[0]);
+// Word tests can have a different total each lesson (e.g. 18 words one day, 20 the next).
+const isWordCat = k => k && k.kind === 'score' && (k.due === 'w' || /word|vocab|idiom/i.test(k.label || ''));
+function outOfAt(c, k, i) { const o = c && c.dayOut && c.dayOut[k.id] && c.dayOut[k.id][i]; return o || k.outOf; }
+const catAt = (c, k, i) => { const o = outOfAt(c, k, i); return String(o) === String(k.outOf) ? k : Object.assign({}, k, { outOf: o }); };
 // The layout for a subject at a level ("V1") and semester ("A"/"B").
 function templateFor(key, level, sem) {
   const opts = LAYOUTS[key];
   if (opts) {
     const L = opts.find(o => (!o.lv || o.lv.includes(level)) && (!o.sem || o.sem === sem)) || opts[opts.length - 1];
-    return { cats: L.cats(), extras: L.extras(), monthly: L.monthly, sheet: L.sheet };
+    return { cats: evalOrder(L.cats()), extras: L.extras(), monthly: L.monthly, sheet: L.sheet };
   }
   const t = SUBJECTS[key] || { cats: [ATT(), A('Word Test', { outOf: 10 }), A('Test'), A('Homework', { kind: 'check' }), A('Participation', { outOf: 10 })], extras: [] };
-  return { cats: t.cats.map(k => Object.assign({}, k)), extras: t.extras.map(x => Object.assign({}, x)), monthly: 'MONTHLY REPORT', sheet: '' };
+  return { cats: evalOrder(t.cats.map(k => Object.assign({}, k))), extras: t.extras.map(x => Object.assign({}, x)), monthly: 'MONTHLY REPORT', sheet: '' };
 }
 const templateOf = (c, key) => templateFor(key || c.subject, c.level || levelOf(c.name), c.sem || 'B');
 const uLab = (x, u) => (x.labels && x.labels[u]) || String(u + 1);
@@ -630,10 +648,10 @@ function rowStats(c, s, cat, from = 0, to = NDAYS) {
     const n = x => marked.filter(v => v === x).length;
     return { text: `${n('O')}○ ${n('T')}△ ${n('X')}✗`, pct: marked.reduce((a, v) => a + MARK_PCT[v], 0) / marked.length };
   }
-  const ps = vals.map(v => pct(v, cat.outOf)).filter(v => v !== null);
+  const ps = vals.map((v, j) => pct(v, outOfAt(c, cat, from + j))).filter(v => v !== null);
   if (!ps.length) return null;
   const avg = ps.reduce((a, b) => a + b, 0) / ps.length;
-  return { text: round(avg) + (cat.outOf || vals.some(v => /[\/%]/.test(v || '')) ? '%' : ''), pct: avg };
+  return { text: round(avg) + (cat.outOf || (c.dayOut && c.dayOut[cat.id]) || vals.some(v => /[\/%]/.test(v || '')) ? '%' : ''), pct: avg };
 }
 function overall(c, s) {
   const ps = c.cats.filter(k => k.kind === 'score').map(k => rowStats(c, s, k)).filter(Boolean).map(r => r.pct);
@@ -800,7 +818,7 @@ function startCloud(d) {
 
 /* Documents from the online save arrive read-only, so every class gets its own editable copy.
    (Without this, taps that change a score fail silently.) */
-const editable = cls => { const c = newTotals(JSON.parse(JSON.stringify(cls))); if (c && c.subject === 'pathways') { c.subject = 'langarts'; c._migrated = true; } return c; };
+const editable = cls => { const c = newOrder(newTotals(JSON.parse(JSON.stringify(cls)))); if (c && c.subject === 'pathways') { c.subject = 'langarts'; c._migrated = true; } return c; };
 /* 2026-11: the school's real totals (participation /10, word tests /10, Pathways and Language Arts /20,
    Writing and Grammar /100, TOEFL vocabulary /25 plus idioms /10). Saved classes get them once; a column
    that already has marks keeps its old total so those marks still mean the same. */
@@ -821,6 +839,12 @@ function newTotals(c) {
     c.cats.splice(i >= 0 ? i + 1 : 1, 0, Object.assign(A('Idioms Test', { outOf: 10 }), { id: 'idioms-test' }));
   }
   c.totalsV = 2; c._migrated = true;
+  return c;
+}
+// Saved classes move to the evaluation item order once (marks are kept: they belong to the column, not its place).
+function newOrder(c) {
+  if (!c || c.orderV >= 1 || !Array.isArray(c.cats)) return c;
+  c.cats = evalOrder(c.cats); c.orderV = 1; c._migrated = true;
   return c;
 }
 function openTeacher(id) {
@@ -1018,7 +1042,7 @@ function sheetHTML(c, syl) {
       days.forEach(i => {
         const v = vals[i] || '';
         const cls = `day${monthOf(i) === 1 ? ' m2' : ''}${isDue(k, syl, i) ? ' due' : ''}${inClass(s, i) ? '' : ' off'}`;
-        if (k.kind === 'score') h += `<td class="${cls}"><button type="button" class="cell sc" data-i="${i}" id="c-${esc(s.id)}-${esc(k.id)}-${i}" aria-label="${esc(s.eng || s.kor)} ${esc(k.label)} day ${i + 1}" title="${esc(cellTitle(v, k))}">${esc(v)}</button></td>`;
+        if (k.kind === 'score') h += `<td class="${cls}"><button type="button" class="cell sc" data-i="${i}" id="c-${esc(s.id)}-${esc(k.id)}-${i}" aria-label="${esc(s.eng || s.kor)} ${esc(k.label)} day ${i + 1}" title="${esc(cellTitle(v, catAt(c, k, i)))}">${esc(v)}</button></td>`;
         else h += `<td class="${cls}"><button type="button" class="tog v-${esc(v)}" data-i="${i}" aria-label="${esc(s.eng || s.kor)} ${esc(k.label)} day ${i + 1}">${togLabel(k, v)}</button></td>`;
       });
       h += `<td class="avg">${st ? esc(st.text) : ''}</td>`;
@@ -1096,7 +1120,7 @@ function keep(c) { touch(c); fillPreviews(); } // the example class is never sav
 
 main.addEventListener('input', e => {
   const t = e.target, c = cur(); if (!c) return;
-  if (t.classList.contains('cell')) { const r = rowCtx(t); setCell(c, r.sid, r.cat.id, +t.dataset.i, t.value); t.title = cellTitle(t.value, r.cat); refreshStats(r.sid); keep(c); return; }
+  if (t.classList.contains('cell')) { const r = rowCtx(t); setCell(c, r.sid, r.cat.id, +t.dataset.i, t.value); t.title = cellTitle(t.value, catAt(c, r.cat, +t.dataset.i)); refreshStats(r.sid); keep(c); return; }
   if (t.dataset.sf) { const s = c.students.find(x => x.id === rowCtx(t).sid); s[t.dataset.sf] = t.value; keep(c); return; }
   if (t.hasAttribute('data-note')) { c.notes[t.closest('[data-sid]').dataset.sid] = t.value; keep(c); return; }
   if (t.hasAttribute('data-xtext')) { const r = rowCtx(t); c.extra[r.sid] ||= {}; c.extra[r.sid][t.closest('[data-x]').dataset.x] = t.value; keep(c); return; }
@@ -1569,7 +1593,7 @@ function dayHTML(c, syl) {
     </div>
     <div class="daystrip" aria-label="Jump to a lesson">${[...Array(NDAYS).keys()].map(j => `<button type="button" data-day="${j}" class="m${monthOf(j) + 1}${marked(j) ? ' done' : ''}" aria-current="${j === i}">${j + 1}</button>`).join('')}</div>
     ${!c.start && !c.example ? `<p class="nudge">📅 Set the <b>Day 1 date</b> so this opens on today's lesson: <input type="date" data-setstart aria-label="Day 1 date"></p>` : ''}
-    <div class="row"><button type="button" class="primary" data-act="allpresent">✓ Everyone present</button><span class="hint">then tap anyone late or absent</span></div>`;
+    <div class="row dayacts"><button type="button" class="primary" data-act="allpresent">✓ Everyone present</button><button type="button" data-act="allfull" title="Everyone here gets ✓, ○ and full marks in every empty box for today, in every column. Boxes you already filled stay as they are.">💯 100% everyone</button>${c.cats.filter(isWordCat).map(k => `<label class="dayout" title="Change this if today's test has a different number of questions. Only Day ${i + 1} changes.">${esc(k.label)} out of <input type="number" inputmode="numeric" min="1" max="200" data-dayout="${esc(k.id)}" value="${esc(outOfAt(c, k, i))}" placeholder="${esc(k.outOf || '')}"></label>`).join('')}<span class="hint">then tap anyone late or absent</span></div>`;
   if (!c.students.length) return h + '<p class="hint">No students yet. Paste the class list on the left.</p>';
   h += '<div class="cards">';
   const away = c.students.filter(s => !inClass(s, i));
@@ -1580,8 +1604,8 @@ function dayHTML(c, syl) {
     const anyDue = !!syl;
     const main = k => !anyDue || k.kind === 'att' || /particip/i.test(k.label) || isDue(k, syl, i) || val(c, s.id, k.id, i);
     const extra = c.cats.filter(k => !main(k)).length, open = moreOpen.has(s.id);
-    c.cats.forEach(k => {
-      const v = val(c, s.id, k.id, i), due = isDue(k, syl, i);
+    c.cats.forEach(k0 => {
+      const k = catAt(c, k0, i), v = val(c, s.id, k.id, i), due = isDue(k, syl, i);
       h += `<div class="line${due ? ' due' : ''}" data-cat="${esc(k.id)}"${main(k) || open ? '' : ' hidden'}><span class="lab">${esc(k.label)}${due ? ' <em>today</em>' : ''}</span>`;
       if (k.kind === 'att') h += `<span class="seg">${[['P', '✓ Here'], ['L', 'Late'], ['A', 'Absent']].map(([x, t]) => `<button type="button" class="v-${x}" data-set="${x}" aria-pressed="${v === x}">${t}</button>`).join('')}</span>`;
       else if (k.kind === 'mark') h += `<span class="seg">${[['O', '○ Circle'], ['T', '△ Triangle'], ['X', '✗ X']].map(([x, t]) => `<button type="button" class="v-${x}" data-set="${x}" aria-pressed="${v === x}">${t}</button>`).join('')}</span>`;
@@ -1603,8 +1627,9 @@ function choices(k) {
   return [...Array(21).keys()].map(x => 100 - x * 5);
 }
 function openPad(sid, catId, i) {
-  const c = cur(), k = c.cats.find(x => x.id === catId), s = c.students.find(x => x.id === sid);
-  if (!k || !s) return;
+  const c = cur(), k0 = c.cats.find(x => x.id === catId), s = c.students.find(x => x.id === sid);
+  if (!k0 || !s) return;
+  const k = catAt(c, k0, i);
   pad = { sid, cat: catId, i };
   const v = val(c, sid, catId, i);
   const el = document.getElementById('pad');
@@ -1635,7 +1660,7 @@ function movePad(step) {
   if (s) openPad(s.id, pad.cat, pad.i); else closePad();
 }
 function paint(sid, catId, i) {
-  const c = cur(), k = c.cats.find(x => x.id === catId), v = val(c, sid, catId, i);
+  const c = cur(), k = catAt(c, c.cats.find(x => x.id === catId), i), v = val(c, sid, catId, i);
   const cell = document.getElementById(`c-${sid}-${catId}-${i}`);
   if (cell) {
     if (cell.classList.contains('tog')) { cell.textContent = togLabel(k, v); cell.className = 'tog v-' + v; }
@@ -1725,6 +1750,27 @@ main.addEventListener('click', e => {
     c.students.forEach(s => { if (inClass(s, i) && !val(c, s.id, att.id, i)) { setCell(c, s.id, att.id, i, 'P'); paint(s.id, att.id, i); } });
     keep(c); render();
   }
+  if (e.target.closest('[data-act="allfull"]')) {
+    const i = pickDay(c), shown = () => true;
+    const full = k => k.kind === 'att' ? 'P' : k.kind === 'check' ? 'Y' : k.kind === 'mark' ? 'O' : String(outOfAt(c, k, i) || 100);
+    let n = 0;
+    c.students.forEach(s => {
+      if (!inClass(s, i)) return;
+      const att = c.cats.find(k => k.kind === 'att'), a = att && val(c, s.id, att.id, i);
+      if (a === 'A') return; // absent students get nothing
+      c.cats.filter(shown).forEach(k => { if (!val(c, s.id, k.id, i)) { setCell(c, s.id, k.id, i, full(k)); n++; } });
+    });
+    keep(c); render(); if (typeof flashMsg === 'function') flashMsg(n ? `Filled ${n} empty box${n > 1 ? 'es' : ''} with full marks for Day ${i + 1}. Tap any score to change it.` : 'Nothing to fill: every box for today already has a mark.');
+  }
+});
+main.addEventListener('change', e => {
+  const t = e.target.closest('[data-dayout]'); if (!t) return;
+  const c = cur(), k = c.cats.find(x => x.id === t.dataset.dayout); if (!k) return;
+  const i = pickDay(c), n = +t.value;
+  c.dayOut ||= {}; c.dayOut[k.id] ||= {};
+  if (n > 0 && String(n) !== String(k.outOf)) c.dayOut[k.id][i] = n; else delete c.dayOut[k.id][i];
+  if (!Object.keys(c.dayOut[k.id]).length) delete c.dayOut[k.id];
+  keep(c); render();
 });
 // Swipe left or right on the cards to change the lesson (iPad).
 let swipe = null;
