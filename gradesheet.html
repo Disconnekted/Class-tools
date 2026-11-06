@@ -503,7 +503,7 @@ const PATH_C = () => [ATT(), A('Participation', { outOf: 10 }), A('Vocabulary Te
 const UX = (label, labels) => ({ label, type: 'units', n: labels.length, labels });
 const SPEECH_C = () => [ATT(), A('Word Test', { outOf: 10, due: 'w' }), A('Summary'), A('Presentation', { due: 'p' }), A('Participation', { outOf: 10 })];
 const DEBATE_C = () => [ATT(), A('Word Test', { outOf: 10, due: 'w' }), A('Essay', { due: 'e' }), A('Debate', { due: 'p' }), A('Participation', { outOf: 10 })];
-const INTE_C = (summary) => [ATT(), A('Word Test', { outOf: 10, due: 'w' }), A('Monthly Test', { due: 'm' }), A('Participation', { outOf: 10 }), summary === 'score' ? A('Summary') : A('Summary Handed In', { kind: 'check' })];
+const INTE_C = (summary, due = '') => [ATT(), A('Word Test', { outOf: 10, due: 'w' }), A('Monthly Test', { due: 'm' }), A('Participation', { outOf: 10 }), summary === 'score' ? A('Summary', { due }) : A('Summary Handed In', { kind: 'check', due })];
 const LAYOUTS = {
   speech: [
     { lv: ['V1'], sem: 'A', sheet: 'V1 SPEECH SEM A', cats: SPEECH_C, monthly: 'MONTHLY REPORT', extras: () => [UX('Online', seqU(14))] },
@@ -526,7 +526,7 @@ const LAYOUTS = {
     { lv: ['V1', 'V2', 'V3'], sem: 'B', sheet: 'V1-V3 INTE SEM B', cats: () => INTE_C('check'), monthly: '', extras: () => [UX('Shadowing', seqU(12)), UX('Word test', seqU(24))] },
     { lv: ['O1'], sem: 'A', sheet: 'O1A INTE', cats: () => INTE_C('check'), monthly: '', extras: () => [UX('Shadowing', partsU(12)), UX('Vocab', seqU(12))] },
     { lv: ['O1'], sem: 'B', sheet: 'O1B INTE', cats: () => INTE_C('check'), monthly: '', extras: () => [UX('Shadowing', partsU(12)), UX('Vocabulary', partsU(12))] },
-    { lv: ['O2', 'O3'], sheet: '0203 INTEGRATED', cats: () => INTE_C('check'), monthly: '', extras: () => [UX('Shadowing', partsU(10)), UX('Vocabulary', partsU(10))] },
+    { lv: ['O2', 'O3'], sheet: '0203 INTEGRATED', cats: () => INTE_C('check', 's'), monthly: '', extras: () => [UX('Shadowing', partsU(10)), UX('Vocabulary', partsU(10))] },
     { sheet: 'E2-E3 INTE SEM B', cats: () => INTE_C('check'), monthly: '', extras: () => [UX('Shadowing', seqU(12)), UX('Word test', seqU(24))] },
   ],
   // L-level Language Arts (Pathways books), from "Legendary Leader LA Grade Sheet" (Leader 1, Leader 2, Kudos; semesters A and B)
@@ -572,7 +572,7 @@ const templateOf = (c, key) => templateFor(key || c.subject, c.level || levelOf(
 const uLab = (x, u) => (x.labels && x.labels[u]) || String(u + 1);
 const hasMonthly = c => c.monthly !== '';
 const SUBJ_ORDER = ['debate', 'speech', 'integrated', 'speaking', 'writing', 'phonics', 'grammar', 'toefl', 'langarts'];
-const DUE_NAMES = { '': 'Any day', w: 'Word test days', m: 'Monthly test days', e: 'Essay days', p: 'Presentation / debate days' };
+const DUE_NAMES = { '': 'Any day', s: 'Every lesson but Day 1 and monthly tests', w: 'Word test days', m: 'Monthly test days', e: 'Essay days', p: 'Presentation / debate days' };
 const KIND_NAMES = { score: 'Score', att: 'Attendance ✓ L A', check: 'Handed in ✓ ✗', mark: 'Circle ○ Triangle △ X ✗' };
 const MARK_PCT = { O: 100, T: 50, X: 0 };
 const NDAYS = 24, MONTHS = [[0, 8], [8, 16], [16, 24]];
@@ -818,7 +818,7 @@ function startCloud(d) {
 
 /* Documents from the online save arrive read-only, so every class gets its own editable copy.
    (Without this, taps that change a score fail silently.) */
-const editable = cls => { const c = newOrder(newTotals(JSON.parse(JSON.stringify(cls)))); if (c && c.subject === 'pathways') { c.subject = 'langarts'; c._migrated = true; } return c; };
+const editable = cls => { const c = newDue(newOrder(newTotals(JSON.parse(JSON.stringify(cls))))); if (c && c.subject === 'pathways') { c.subject = 'langarts'; c._migrated = true; } return c; };
 /* 2026-11: the school's real totals (participation /10, word tests /10, Pathways and Language Arts /20,
    Writing and Grammar /100, TOEFL vocabulary /25 plus idioms /10). Saved classes get them once; a column
    that already has marks keeps its old total so those marks still mean the same. */
@@ -845,6 +845,14 @@ function newTotals(c) {
 function newOrder(c) {
   if (!c || c.orderV >= 1 || !Array.isArray(c.cats)) return c;
   c.cats = evalOrder(c.cats); c.orderV = 1; c._migrated = true;
+  return c;
+}
+// O2/O3 Integrated: summaries are due every lesson except Day 1 and monthly test days (saved classes get it once).
+function newDue(c) {
+  if (!c || c.dueV >= 1 || !Array.isArray(c.cats)) return c;
+  if (c.subject === 'integrated' && ['O2', 'O3'].includes(c.level || levelOf(c.name)))
+    c.cats.forEach(k => { if (/summary/i.test(k.label) && !k.due) k.due = 's'; });
+  c.dueV = 1; c._migrated = true;
   return c;
 }
 function openTeacher(id) {
@@ -1012,7 +1020,11 @@ function dayHead(c, syl, i) {
   return `<th class="day m${monthOf(i) + 1}" title="${esc(title)}">${i + 1}${tags ? `<span class="tag">${esc(tags)}</span>` : ''}</th>`;
 }
 const monthOf = i => i < 8 ? 0 : i < 16 ? 1 : 2;
-function isDue(cat, syl, i) { return !!(cat.due && syl && syl.d[i] && syl.d[i][2].includes(cat.due)); }
+// due 's' (O2/O3 Integrated summaries): handed in every lesson except Day 1 and monthly test days.
+function isDue(cat, syl, i) {
+  if (cat.due === 's') return i > 0 && !(syl && syl.d[i] && syl.d[i][2].includes('m'));
+  return !!(cat.due && syl && syl.d[i] && syl.d[i][2].includes(cat.due));
+}
 
 function sheetHTML(c, syl) {
   const days = [...Array(NDAYS).keys()];
@@ -1762,7 +1774,7 @@ main.addEventListener('click', e => {
   if (e.target.closest('[data-act="allfull"]')) {
     // Only what happens that day: attendance, participation and whatever the syllabus has due.
     const i = pickDay(c), syl = syllabusFor(c);
-    const shown = k => k.kind === 'att' || /particip/i.test(k.label) || (!!syl && isDue(k, syl, i));
+    const shown = k => k.kind === 'att' || /particip/i.test(k.label) || isDue(k, syl, i);
     const full = k => k.kind === 'att' ? 'P' : k.kind === 'check' ? 'Y' : k.kind === 'mark' ? 'O' : String(outOfAt(c, k, i) || 100);
     let n = 0;
     c.students.forEach(s => {
