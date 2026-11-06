@@ -1211,15 +1211,16 @@ const has = (r, key) => r.some(c => COLS[key].some(p => p.test(c)));
 const isHeader = r => has(r, 'eng') || has(r, 'kor') || (has(r, 'cls') && has(r, 'subj'));
 function parseRows(rows) {
   rows = rows.map(r => (r || []).map(clean));
-  const groups = new Map(); groups.subjects = new Map(); groups.rooms = new Map();
+  const groups = new Map(); groups.subjects = new Map(); groups.rooms = new Map(); groups.hrs = new Map();
   const add = (cn, n) => { if (!groups.has(cn)) groups.set(cn, []); if (n !== undefined) groups.get(cn).push(n); };
   if (!rows.some(isHeader)) { rows.forEach(r => { const n = r.find(x => x); if (n && !/^▶/.test(n)) add('', n); }); return groups; }
-  let eng = -1, kor = -1, cls = -1, subj = -1, room = -1, currentCls = '';
+  let eng = -1, kor = -1, cls = -1, subj = -1, room = -1, hr = -1, currentCls = '';
   for (const r of rows) {
     const filled = r.filter(x => x); if (!filled.length) continue;
     if (isHeader(r)) {
       eng = findCol(r, COLS.eng); kor = findCol(r, COLS.kor); cls = findCol(r, COLS.cls); subj = findCol(r, COLS.subj);
       room = r.findIndex(x => /^(class\s*)?room(\s*(no\.?|number|#))?$|^교실$|^강의실$/i.test(x)); if ([eng, kor, cls, subj].includes(room)) room = -1;
+      hr = r.findIndex(x => /^(hr|h\.r\.?|homeroom(\s*teacher)?|담임(\s*선생님)?)$/i.test(x)); if ([eng, kor, cls, subj, room].includes(hr)) hr = -1;
       if (eng === kor) kor = -1;
       if (kor < 0) kor = r.findIndex((x, i) => i !== eng && /^(student\s*)?name$|^korean/i.test(x));
       continue;
@@ -1229,6 +1230,7 @@ function parseRows(rows) {
     const rowClass = cls >= 0 && r[cls] ? r[cls] : currentCls;
     if (subj >= 0 && r[subj] && rowClass) groups.subjects.set(rowClass, r[subj]);
     if (room >= 0 && r[room] && rowClass) groups.rooms.set(rowClass, r[room]);
+    if (hr >= 0 && r[hr] && rowClass) groups.hrs.set(rowClass, r[hr]);
     if (eng < 0 && kor < 0) { if (cls >= 0 && CLASS_TOKEN.test(rowClass)) add(rowClass); continue; }
     let e = eng >= 0 ? r[eng] || '' : '', k = kor >= 0 ? r[kor] || '' : '';
     if ((!e || /^\d+$/.test(e)) && !k) e = r.find(x => NAME_PAIR.test(x)) || r.find(x => /^[ㄱ-힣]{2,5}$/.test(x) && !/학교$/.test(x)) || e;
@@ -1276,15 +1278,16 @@ function rowsFromHTML(html) {
 const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
 /* The Prep Station passes a class's room either as a "Room" column or as a line "#ROOM<tab>V2-3<tab>203". */
 function roomLines(text, groups) {
-  groups.rooms ||= new Map();
-  String(text || '').split(/\r?\n/).forEach(l => { const m = l.match(/^#ROOM\t([^\t]*)\t(.*)$/); if (m && clean(m[2])) groups.rooms.set(clean(m[1]), clean(m[2])); });
+  groups.rooms ||= new Map(); groups.hrs ||= new Map();
+  String(text || '').split(/\r?\n/).forEach(l => { const m = l.match(/^#(ROOM|HR)\t([^\t]*)\t(.*)$/); if (m && clean(m[3])) groups[m[1] === 'HR' ? 'hrs' : 'rooms'].set(clean(m[2]), clean(m[3])); });
   return groups;
 }
-function roomFor(groups, raw, nm) {
-  if (!groups.rooms || !groups.rooms.size) return '';
-  if (groups.rooms.has(raw)) return groups.rooms.get(raw);
-  for (const [k, v] of groups.rooms) if (shortClass(k).toLowerCase() === nm.toLowerCase()) return v;
-  return groups.size === 1 && groups.rooms.size === 1 ? [...groups.rooms.values()][0] : ''; // one class, one room: names may be written differently
+function roomFor(groups, raw, nm, key = 'rooms') {
+  const map = groups[key];
+  if (!map || !map.size) return '';
+  if (map.has(raw)) return map.get(raw);
+  for (const [k, v] of map) if (shortClass(k).toLowerCase() === nm.toLowerCase()) return v;
+  return groups.size === 1 && map.size === 1 ? [...map.values()][0] : ''; // one class, one room: names may be written differently
 }
 function applyGroups(groups) {
   if (!me) { showWho(); return; }
@@ -1296,6 +1299,7 @@ function applyGroups(groups) {
     if (!c) { c = newClass(nm, groups.subjects.get(raw) || ''); classes.push(c); }
     else if (!c.subject && groups.subjects.has(raw)) setSubject(c, subjectKey(groups.subjects.get(raw)));
     const rm = roomFor(groups, raw, nm); if (rm) c.room = rm;
+    const hrName = roomFor(groups, raw, nm, 'hrs'); if (hrName) c.hr = hrName;
     if (groups.weekday !== undefined) c.days = [2, 4].includes(groups.weekday) ? 'Tues / Thurs' : groups.weekday === 5 ? 'Fri' : 'Mon / Wed';
     names.forEach(n => {
       const p = splitName(n), s = student(p.eng, p.kor);

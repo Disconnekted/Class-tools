@@ -1,5 +1,5 @@
 // Offline copy of the gradesheet. A new version of the files changes VERSION, so iPads update on their next open.
-const VERSION = 'gs-f1d46fb052';
+const VERSION = 'gs-d57b246e4f';
 const FILES = ["./", "index.html", "gradesheet.html", "name-tags.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png", "libs/jspdf.umd.min.js", "libs/xlsx.full.min.js", "libs/pdf.min.js", "libs/pdf.worker.min.js", "libs/qrcode.js", "libs/jsQR.js"];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
