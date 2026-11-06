@@ -1593,7 +1593,7 @@ function dayHTML(c, syl) {
     </div>
     <div class="daystrip" aria-label="Jump to a lesson">${[...Array(NDAYS).keys()].map(j => `<button type="button" data-day="${j}" class="m${monthOf(j) + 1}${marked(j) ? ' done' : ''}" aria-current="${j === i}">${j + 1}</button>`).join('')}</div>
     ${!c.start && !c.example ? `<p class="nudge">📅 Set the <b>Day 1 date</b> so this opens on today's lesson: <input type="date" data-setstart aria-label="Day 1 date"></p>` : ''}
-    <div class="row dayacts"><button type="button" class="primary" data-act="allpresent">✓ Everyone present</button><button type="button" data-act="allfull" title="Everyone here gets ✓, ○ and full marks in every empty box for today, in every column. Boxes you already filled stay as they are.">💯 100% everyone</button>${c.cats.filter(isWordCat).map(k => `<label class="dayout" title="Change this if today's test has a different number of questions. Only Day ${i + 1} changes.">${esc(k.label)} out of <input type="number" inputmode="numeric" min="1" max="200" data-dayout="${esc(k.id)}" value="${esc(outOfAt(c, k, i))}" placeholder="${esc(k.outOf || '')}"></label>`).join('')}<span class="hint">then tap anyone late or absent</span></div>`;
+    <div class="row dayacts"><button type="button" class="primary" data-act="allpresent">✓ Everyone present</button><button type="button" data-act="allfull" title="Everyone here gets full marks for what is done today: attendance, participation and anything due today. Boxes you already filled stay as they are. Boxes you already filled stay as they are.">💯 100% everyone</button>${c.cats.filter(isWordCat).map(k => `<label class="dayout" title="Change this if today's test has a different number of questions. Only Day ${i + 1} changes.">${esc(k.label)} out of <input type="number" inputmode="numeric" min="1" max="200" data-dayout="${esc(k.id)}" value="${esc(outOfAt(c, k, i))}" placeholder="${esc(k.outOf || '')}"></label>`).join('')}<span class="hint">then tap anyone late or absent</span></div>`;
   if (!c.students.length) return h + '<p class="hint">No students yet. Paste the class list on the left.</p>';
   h += '<div class="cards">';
   const away = c.students.filter(s => !inClass(s, i));
@@ -1751,7 +1751,9 @@ main.addEventListener('click', e => {
     keep(c); render();
   }
   if (e.target.closest('[data-act="allfull"]')) {
-    const i = pickDay(c), shown = () => true;
+    // Only what happens that day: attendance, participation and whatever the syllabus has due.
+    const i = pickDay(c), syl = syllabusFor(c);
+    const shown = k => k.kind === 'att' || /particip/i.test(k.label) || (!!syl && isDue(k, syl, i));
     const full = k => k.kind === 'att' ? 'P' : k.kind === 'check' ? 'Y' : k.kind === 'mark' ? 'O' : String(outOfAt(c, k, i) || 100);
     let n = 0;
     c.students.forEach(s => {
