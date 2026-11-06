@@ -989,7 +989,7 @@ function render() {
           ${thumbHTML('scored')}
           <div class="prevside">
             <div class="seg sendfmt" role="group" aria-label="What to send"><button type="button" data-fmt="pdf" aria-pressed="${sendFmt === 'pdf'}">PDF with scores</button><button type="button" data-fmt="xlsx" aria-pressed="${sendFmt === 'xlsx'}">Excel</button><button type="button" data-fmt="both" aria-pressed="${sendFmt === 'both'}">Both</button></div>
-            <div class="outrow"><button type="button" class="primary" data-act="send-email">✉ Email</button><button type="button" class="primary" data-act="send-slack"># Slack</button><button type="button" data-act="pdf-full">⤓ PDF with scores</button><button type="button" data-act="print-full">🖨 Print</button><button type="button" data-act="reports" title="One page per student: scores, averages and notes">📄 Student reports</button></div>
+            <div class="outrow"><button type="button" class="primary" data-act="send-email">✉ Email</button><button type="button" class="primary" data-act="send-slack"># Slack</button><button type="button" class="primary" data-act="topia" title="Copy the scores for the TOPIA Weekly Report page">⇪ Topia</button><button type="button" data-act="pdf-full">⤓ PDF with scores</button><button type="button" data-act="print-full">🖨 Print</button><button type="button" data-act="reports" title="One page per student: scores, averages and notes">📄 Student reports</button></div>
           </div>
         </div>
         <div id="sendOut"></div>
@@ -2555,6 +2555,107 @@ classes = [exampleClass()]; current = classes[0].id; render();
 setSync('Connecting…');
 const useDb = window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
 Promise.resolve(useDb).catch(() => null).then(d => { if (d) startCloud(d); else { standaloneMode(); startLocal(); importFromLink(); if (new URLSearchParams(location.search).get('send') === 'ipad' && me) ipadModal(); } });
+</script>
+<script>
+/* ---------- Copy for TOPIA: moves scores into the TOPIA Weekly Report page ----------
+   "⇪ Topia" copies the class's scores as text. On the TOPIA Weekly Report page, the
+   "Gradesheet → Topia" bookmark (topia-fill.html) takes that text and fills the boxes.
+
+   TOPIA_ITEMS is the column mapping. Change it here when the gradesheet or TOPIA changes.
+   Each line says which TOPIA "Evaluation Item" rows (topia) take which gradesheet columns (from).
+   Both are case-insensitive patterns; | means "or". A gradesheet column goes to the first line that
+   matches it. If two columns land in the same TOPIA row on the same day, their average is used.
+   Scores travel as percentages and the bookmark scales them to TOPIA's "Perfect Score"
+   (so 9/10 participation becomes 9 on a /10 row, and 17/20 on a word test becomes 85 on a /100 row).
+   Columns that are only ticks (✓ ✗) are left out unless the line says checks: true. */
+const TOPIA_ITEMS = [
+  { topia: 'participation', from: 'participation' },
+  { topia: 'writing|essay', from: 'writing|essay|summary' },
+  { topia: 'vocab|word', from: 'word|vocab' },
+  { topia: 'idiom', from: 'idiom' },
+  { topia: 'presentation|speech', from: 'presentation' },
+  { topia: 'debate', from: 'debate' },
+  { topia: 'monthly', from: 'monthly' },
+  { topia: 'unit test', from: 'unit test' },
+];
+const TOPIA_HELP = IPAD_HOME.replace(/gradesheet\.html$/, 'topia-fill.html');
+
+function topiaPct(c, k, v, i) {
+  if (v === '' || v == null) return null;
+  if (k.kind === 'mark') return v in MARK_PCT ? MARK_PCT[v] : null;
+  if (k.kind === 'check') return v === 'Y' ? 100 : v === 'N' ? 0 : null;
+  if (k.kind !== 'score') return null;
+  const p = pct(v, outOfAt(c, k, i));
+  return p === null ? null : Math.round(p * 10) / 10;
+}
+// The text the bookmark reads: one header line, then JSON.
+function topiaPayload(c, from = 0, to = NDAYS) {
+  const lines = [];
+  c.cats.forEach(k => {
+    if (k.kind === 'att') return;
+    const L = TOPIA_ITEMS.find(m => new RegExp(m.from, 'i').test(k.label || ''));
+    if (!L || (k.kind === 'check' && !L.checks)) return;
+    let line = lines.find(x => x.topia === L.topia);
+    if (!line) lines.push(line = { topia: L.topia, cols: [] });
+    line.cols.push(k);
+  });
+  const att = c.cats.find(k => k.kind === 'att');
+  const days = [];
+  for (let i = from; i < to; i++) days.push({ n: i + 1, date: dateFor(c, i) });
+  const students = c.students.map(s => {
+    const items = {};
+    lines.forEach(line => {
+      const vals = days.map(d => {
+        const i = d.n - 1;
+        if (!inClass(s, i)) return null;
+        if (att && ((c.scores[s.id] || {})[att.id] || [])[i] === 'A') return null;
+        const ps = line.cols.map(k => topiaPct(c, k, ((c.scores[s.id] || {})[k.id] || [])[i], i)).filter(p => p !== null);
+        return ps.length ? Math.round(ps.reduce((a, b) => a + b, 0) / ps.length * 10) / 10 : null;
+      });
+      if (vals.some(v => v !== null)) items[line.topia] = vals;
+    });
+    return { eng: s.eng, kor: s.kor, items };
+  }).filter(s => Object.keys(s.items).length);
+  const data = { v: 1, cls: c.name, subject: SUBJECTS[c.subject] ? SUBJECTS[c.subject].name : '', days, items: lines.map(l => ({ topia: l.topia, from: l.cols.map(k => k.label) })), students };
+  return { text: 'GRADESHEET→TOPIA v1\n' + JSON.stringify(data), data };
+}
+function topiaCard(c) {
+  const box = document.getElementById('sendOut');
+  const marked = [...Array(NDAYS).keys()].filter(i => c.students.some(s => c.cats.some(k => k.kind !== 'att' && (((c.scores[s.id] || {})[k.id] || [])[i] ?? '') !== '')));
+  const last = marked.length ? marked[marked.length - 1] : 0;
+  const opt = sel => [...Array(NDAYS).keys()].map(i => `<option value="${i}" ${i === sel ? 'selected' : ''}>Day ${i + 1}${dateFor(c, i) ? ' (' + esc(dateFor(c, i)) + ')' : ''}</option>`).join('');
+  box.innerHTML = `<div class="sendcard" id="topiaCard">
+    <p class="hint"><b>1.</b> Press <b>Copy for TOPIA</b>. <b>2.</b> On the TOPIA <b>Weekly Report</b> page for ${esc(c.name)}, click the <b>Gradesheet → Topia</b> bookmark and paste. <b>3.</b> Check the yellow boxes, then press <b>Register</b> on TOPIA.</p>
+    <div class="row"><label class="f">From<select id="topiaFrom">${opt(0)}</select></label><label class="f">To<select id="topiaTo">${opt(last)}</select></label></div>
+    <p class="hint" id="topiaSum"></p>
+    <div class="outrow"><button type="button" class="primary" data-act="topia-copy">Copy for TOPIA</button><a class="hint" href="${esc(TOPIA_HELP)}" target="_blank" rel="noopener">Get the bookmark (once per computer)</a></div>
+    <textarea id="topiaText" rows="3" readonly hidden></textarea>
+  </div>`;
+  const upd = () => {
+    const a = +document.getElementById('topiaFrom').value, b = +document.getElementById('topiaTo').value;
+    const { data } = topiaPayload(c, Math.min(a, b), Math.max(a, b) + 1);
+    const n = data.students.reduce((t, s) => t + Object.values(s.items).reduce((u, v) => u + v.filter(x => x !== null).length, 0), 0);
+    document.getElementById('topiaSum').textContent = data.items.length
+      ? `${n} scores for ${data.students.length} students. Goes to TOPIA as: ${data.items.map(l => `${l.from.join(' + ')} → ${l.topia.split('|')[0].replace(/^./, x => x.toUpperCase())}`).join(' · ')}.`
+      : 'None of this class\'s columns go to TOPIA.';
+  };
+  box.querySelectorAll('#topiaFrom,#topiaTo').forEach(s => s.addEventListener('change', upd));
+  upd();
+  box.scrollIntoView({ block: 'nearest' });
+}
+async function topiaCopy(btn) {
+  const c = cur(), a = +document.getElementById('topiaFrom').value, b = +document.getElementById('topiaTo').value;
+  const { text } = topiaPayload(c, Math.min(a, b), Math.max(a, b) + 1);
+  const ta = document.getElementById('topiaText'); ta.value = text;
+  try { await navigator.clipboard.writeText(text); btn.textContent = 'Copied. Now open TOPIA'; }
+  catch (e) { ta.hidden = false; ta.removeAttribute('readonly'); ta.focus(); ta.select(); btn.textContent = 'Selected: press Ctrl+C (⌘C)'; }
+  setTimeout(() => btn.textContent = 'Copy for TOPIA', 4000);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  if (b.dataset.act === 'topia') { const c = cur(); if (c) topiaCard(c); }
+  else if (b.dataset.act === 'topia-copy') topiaCopy(b);
+});
 </script>
 
 <script>
