@@ -9,6 +9,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="author" content="Joseph McLaren">
 <title>Name Tag Generator</title>
+<meta name="theme-color" content="#7A1701">
+<meta name="apple-mobile-web-app-title" content="Name Tags">
 <style>
   :root {
     --maroon: #7A1701;
@@ -101,6 +103,8 @@
   .picklist label input { margin: 0; }
   .picklist select { width: auto; padding: 0 2px; font-size: 12px; margin-left: auto; }
   .picklist .none { font-size: 12.5px; color: var(--muted); }
+  .row > .timebox { flex: 0 0 34%; }
+  .timetoggle.on { background: var(--maroon) !important; color: var(--cream) !important; border-color: var(--maroon) !important; }
   .dayhead { display: flex; align-items: flex-end; gap: 4px; }
   .dayhead label { flex: 1; }
   .dayhead .daychip { font-size: 11px; padding: 1px 6px; margin-bottom: 3px; white-space: nowrap; }
@@ -298,10 +302,6 @@
   html.dark #tour-tip .tour-next { background: var(--cream); color: var(--maroon); border-color: var(--cream); }
 
   /* "All done" button: appears in the header after printing; clicking it throws confetti and shows a cheer. */
-  /* Offline file only: a button that sends teachers to the website, where the tool can be installed as an app. */
-  #app-btn { font-size: 13px; background: transparent; color: var(--cream); border: 1px dashed rgba(251,237,197,.6); border-radius: 999px; padding: 6px 12px; }
-  #app-btn:hover { background: rgba(255,255,255,.12); }
-  html.dark #app-btn { background: transparent; color: var(--cream); }
   #yay-btn { background: rgba(251,237,197,.12); color: var(--cream); border: 1px solid rgba(251,237,197,.5); border-radius: 999px; padding: 6px 13px; font-weight: bold;
     animation: yay-in .5s ease-out; }
   #yay-btn:hover { background: rgba(251,237,197,.24); }
@@ -378,7 +378,6 @@
   <h1 data-i18n="title">Name Tag Generator</h1>
   <span class="byline">by Joseph McLaren</span>
   <span class="spacer"></span>
-  <button id="app-btn" onclick="appInfo()" hidden data-i18n="appBtn" data-i18n-title="appTitle" title="Install the tool on this computer as an app">💻 Get the desktop app</button>
   <button id="help" class="icon lang" onclick="tourStart()" data-i18n-title="helpTitle" title="How to use this tool" aria-label="How to use this tool">?</button>
   <button id="lang" class="icon lang" onclick="toggleLang()"></button>
   <button id="theme" class="icon" onclick="toggleTheme()" title="Dark mode" aria-label="Dark mode"></button>
@@ -427,7 +426,7 @@
       <ol class="hint steps">
         <li><span data-i18n="li1"><b>One time only:</b> show your bookmarks bar (Ctrl+Shift+B), then drag this button onto it:</span>
           <a id="bookmarklet" class="bookmarklet" href="#" onclick="return false" title="Drag me to your bookmarks bar" data-i18n="bm" data-i18n-title="bmTitle">Copy students</a></li>
-        <li data-i18n="li2">On the TOPIA <b>Attendance</b> page (the list of your classes for a day), click <b>Copy students</b> in your bookmarks bar. It opens each class's list by itself and closes it again with Cancel. It never presses Save.</li>
+        <li data-i18n="li2">On the TOPIA <b>Attendance</b> page (the list of your classes for a day), click <b>Copy students</b> in your bookmarks bar. It reads every class's students at once. If that ever fails, it opens each class's list by itself and closes it again with Cancel. It never presses Save.</li>
         <li data-i18n="li3">When it's finished, click <b>Copy for name tags</b> in the red box.</li>
         <li data-i18n="li4">Come back here, click the box below and press <b>Ctrl+V</b>. Every class and student comes in at once, with the days filled in.</li>
         <li data-i18n="li5">Classes that meet on other days? Change the date on the TOPIA page and repeat. New classes are added, and days like <i>Mon / Wed</i> build up automatically.</li>
@@ -448,7 +447,7 @@
         <label><input type="radio" name="printmode" value="reprint"><span data-i18n="reprint">Reprint some students</span></label>
       </div>
       <p class="hint" id="reprint-hint" hidden data-i18n="reprintHint">Tick the students who need a new tag (a new student, or a lost tag). Only those tags print, packed together on as few pages as possible. Need two of someone? Change ×1 to ×2 next to their name. <a href="#" onclick="clearPicks();return false">Untick everyone</a></p>
-      <p class="hint" data-i18n="hint3">Pick the subject and days, and untick classes you don't need. Use ×2 or ×3 next to a class to print extra copies of each tag. Names come from TOPIA. A student missing? Type their name in the box under the class and click Add.</p>
+      <p class="hint" data-i18n="hint3">Pick the subject and days (add a class time if you like, it prints before the days; the Time button turns times on or off), and untick classes you don't need. Use ×2 or ×3 next to a class to print extra copies of each tag. Names come from TOPIA. A student missing? Type their name in the box under the class and click Add.</p>
       <datalist id="subjects">
         <option>Debate</option><option>Grammar</option><option>Integrated</option><option>Language Arts</option>
         <option>Phonics</option><option>Speaking</option><option>Writing</option>
@@ -480,7 +479,7 @@ let nextId = 1;
 const KO = {
   title: '이름표 만들기', helpTitle: '사용법 안내',
   privacy: '🔒 공용 컴퓨터: 반 목록은 내 이름으로 저장됩니다. 다 쓰면 위의 <b>바꾸기</b>를 누르세요. 30분 동안 사용하지 않아도 자동으로 로그아웃됩니다.',
-  print: '이름표 인쇄', yay: '다 했어요!', appBtn: '💻 데스크톱 앱 받기', appTitle: '이 컴퓨터에 앱으로 설치하기', undo: '↶ 되돌리기', undoTitle: '마지막 변경 되돌리기 (Ctrl+Z)', redo: '↷ 다시 하기', redoTitle: '되돌린 변경 다시 하기 (Ctrl+Y)',
+  print: '이름표 인쇄', yay: '다 했어요!', undo: '↶ 되돌리기', undoTitle: '마지막 변경 되돌리기 (Ctrl+Z)', redo: '↷ 다시 하기', redoTitle: '되돌린 변경 다시 하기 (Ctrl+Y)',
   d1: '1. 기본 정보',
   teacherLbl: '내 이름 (이름표 오른쪽 아래)', teacherPh: '예: Eugene',
   schoolLbl: '학원 이름 (왼쪽 아래)',
@@ -495,14 +494,14 @@ const KO = {
   topiaHint: '학생은 <i>학생 복사</i> 버튼으로 TOPIA 출석 페이지에서 바로 가져옵니다.',
   li1: '<b>처음 한 번만:</b> 북마크바를 표시하고(Ctrl+Shift+B) 이 버튼을 북마크바로 끌어다 놓으세요:',
   bm: '학생 복사', bmTitle: '북마크바로 끌어다 놓으세요',
-  li2: 'TOPIA <b>출석</b> 페이지(그날의 반 목록)에서 북마크바의 <b>학생 복사</b>를 누르세요. 반마다 명단을 차례로 열고 취소로 다시 닫습니다. 저장은 절대 누르지 않습니다.',
+  li2: 'TOPIA <b>출석</b> 페이지(그날의 반 목록)에서 북마크바의 <b>학생 복사</b>를 누르세요. 모든 반의 학생을 한 번에 읽습니다. 안 되면 반마다 명단을 차례로 열고 취소로 다시 닫습니다. 저장은 절대 누르지 않습니다.',
   li3: '다 끝나면 빨간 상자의 <b>Copy for name tags · 이름표용 복사</b>를 누르세요.',
   li4: '이 페이지로 돌아와 아래 칸을 누르고 <b>Ctrl+V</b>를 누르세요. 모든 반과 학생이 요일까지 채워져 한 번에 들어옵니다.',
   li5: '다른 요일에 수업하는 반이 있나요? TOPIA 페이지에서 날짜를 바꾸고 다시 하세요. 새 반이 추가되고 <i>Mon / Wed</i> 같은 요일이 자동으로 쌓입니다.',
   d3: '3. 반별 확인',
   printAll: '모든 반 인쇄', reprint: '일부 학생만 다시 인쇄',
   reprintHint: '새 이름표가 필요한 학생(새 학생, 잃어버린 이름표)을 체크하세요. 체크한 이름표만 최대한 적은 장수에 모아 인쇄됩니다. 두 장이 필요하면 이름 옆의 ×1을 ×2로 바꾸세요. <a href="#" onclick="clearPicks();return false">모두 체크 해제</a>',
-  hint3: '과목과 요일을 고르고, 필요 없는 반은 체크를 해제하세요. 반 옆의 ×2, ×3으로 이름표를 여러 장 인쇄할 수 있습니다. 이름은 TOPIA에서 가져옵니다. 빠진 학생이 있으면 반 아래 칸에 이름을 입력하고 추가를 누르세요.',
+  hint3: '과목과 요일을 고르고 (원하면 수업 시간도 넣으세요. 요일 앞에 인쇄되며, 시간 버튼으로 켜고 끕니다), 필요 없는 반은 체크를 해제하세요. 반 옆의 ×2, ×3으로 이름표를 여러 장 인쇄할 수 있습니다. 이름은 TOPIA에서 가져옵니다. 빠진 학생이 있으면 반 아래 칸에 이름을 입력하고 추가를 누르세요.',
 };
 const isKo = () => state.lang === 'ko';
 const L = (en, ko) => isKo() ? ko : en;
@@ -1017,7 +1016,7 @@ function showMsg(text, ok) {
 }
 
 function newClass(name) {
-  return { id: nextId++, name: name || '', subject: '', days: '', teacher: '', include: true, copies: 1, names: [] };
+  return { id: nextId++, name: name || '', subject: '', time: '', days: '', teacher: '', include: true, copies: 1, names: [] };
 }
 
 /* ---------- class colours ----------
@@ -1095,6 +1094,7 @@ const COLS = {
   kor: [/한글\s*이름|국문\s*이름|한국\s*이름|korean/i, /^(학생\s*)?(이름|성명|학생명)$/],
   cls: [/^반\s*명$|^반$|반\s*이름|^클래스$|^수업\s*명$/, /^class(\s*name)?$/i],
   subj: [/^subject$/i, /^과목(\s*명)?$/],
+  time: [/^(class\s*)?time$/i, /^(수업\s*)?시간$/],
 };
 const NAME_PAIR = /^(.*?[A-Za-z].*?)\s*[(（]\s*([ㄱ-힣][ㄱ-힣\s]*)\s*[)）]$/;
 const CLASS_TOKEN = /([A-Za-z]{1,3}\d+[_-]\d+(?:\([^)]*\))?)/;
@@ -1106,6 +1106,7 @@ function parseRows(rows) {
   rows = rows.map(r => (r || []).map(clean));
   const groups = new Map();
   groups.subjects = new Map();
+  groups.times = new Map();
   const add = (className, name) => {
     if (!groups.has(className)) groups.set(className, []);
     if (name !== undefined) groups.get(className).push(name);
@@ -1115,13 +1116,13 @@ function parseRows(rows) {
     rows.forEach(r => { const n = r.find(c => c); if (n && !/^▶/.test(n)) add('', n); });
     return groups;
   }
-  let eng = -1, kor = -1, cls = -1, subj = -1, current = '';
+  let eng = -1, kor = -1, cls = -1, subj = -1, time = -1, current = '';
   for (const r of rows) {
     const filled = r.filter(c => c);
     if (!filled.length) continue;
     // A header row (each pasted table may have its own) tells us which columns hold what.
     if (isHeader(r)) {
-      eng = findCol(r, COLS.eng); kor = findCol(r, COLS.kor); cls = findCol(r, COLS.cls); subj = findCol(r, COLS.subj);
+      eng = findCol(r, COLS.eng); kor = findCol(r, COLS.kor); cls = findCol(r, COLS.cls); subj = findCol(r, COLS.subj); time = findCol(r, COLS.time);
       if (eng === kor) kor = -1;
       if (kor < 0) kor = r.findIndex((c, i) => i !== eng && /^(student\s*)?name$|^korean/i.test(c)); // e.g. Name next to English Name
       continue;
@@ -1132,6 +1133,7 @@ function parseRows(rows) {
     if (sec) { const t = sec[1].match(CLASS_TOKEN); current = t ? t[1] : clean(sec[1]).split(/\s+/).slice(0, 2).join(' '); continue; }
     const rowClass = cls >= 0 && r[cls] ? r[cls] : current;
     if (subj >= 0 && r[subj] && rowClass) groups.subjects.set(rowClass, r[subj]);
+    if (time >= 0 && r[time] && rowClass) groups.times.set(rowClass, r[time]);
     if (eng < 0 && kor < 0) { if (cls >= 0 && CLASS_TOKEN.test(rowClass)) add(rowClass); continue; } // class list only
     let e = eng >= 0 ? r[eng] || '' : '', k = kor >= 0 ? r[kor] || '' : '';
     // TOPIA writes names as "Sam(김시율)"; find that cell even if the header and cells don't line up.
@@ -1258,18 +1260,58 @@ function copyStudentsBookmarklet() {
     }
     return best;
   };
+  var readAll = async function () {
+    try {
+      var tok = (D.cookie.match(/(?:^|; )__TP_ACCESS_TOKEN=([^;]+)/) || [])[1];
+      if (!tok) return null;
+      var now = new Date(), day = dateEl && dateEl.value ? dateEl.value : new Date(now - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+      var get = async function (path) {
+        var res = await fetch('https://front-api.topiaenglishzone.co.kr/v1/t/class/attendance' + path + '?searchDate=' + encodeURIComponent(day),
+          { headers: { Authorization: 'Bearer ' + decodeURIComponent(tok) } });
+        if (!res.ok) throw new Error('http ' + res.status);
+        return res.json();
+      };
+      var found = {}, order = [];
+      var walk = function (v, d) {
+        if (!v || typeof v !== 'object' || d > 6) return;
+        if (Array.isArray(v)) { v.forEach(function (x) { walk(x, d + 1); }); return; }
+        if (typeof v.classId === 'number' && typeof v.className === 'string' && v.className && !found[v.classId]) { found[v.classId] = v.className; order.push(v.classId); }
+        Object.keys(v).forEach(function (k) { walk(v[k], d + 1); });
+      };
+      say('Reading your classes&hellip;' + ko('반 목록을 읽는 중&hellip;'));
+      walk(await get(''), 0);
+      if (order.length !== buttons.length) return null;
+      var list = await Promise.all(order.map(async function (id) {
+        var j = await get('/' + id), info = j && j.data && j.data.info;
+        if (!info || !Array.isArray(info.studentObjList)) throw new Error('no list');
+        return { name: info.className || found[id], students: info.studentObjList.length,
+          count: null,
+          lines: ['English Name\tKorean Name'].concat(info.studentObjList.map(function (s) { return clean(s.nameE) + '\t' + clean(s.nameK); })) };
+      }));
+      var pos = function (r) { for (var k = 0; k < buttons.length; k++) if (sameClass(buttons[k].name, r.name)) return k; return buttons.length; };
+      return list.sort(function (a, b) { return pos(a) - pos(b); });
+    } catch (e) { return null; }
+  };
+  var clean = function (s) { return String(s || '').replace(/[\t\r\n]+/g, ' ').trim(); };
   (async function () {
     var report = [], total = 0, short = 0;
-    for (var i = 0; i < buttons.length; i++) {
-      var r = await readClass(buttons[i], 'Reading class ' + (i + 1) + ' of ' + buttons.length + ': <b>' + buttons[i].name + '</b>',
-        '반 읽는 중 (' + (i + 1) + '/' + buttons.length + '): <b>' + buttons[i].name + '</b>');
-      out.push('▶ ' + buttons[i].name);
+    var list = await readAll();
+    if (!list) {
+      list = [];
+      for (var i = 0; i < buttons.length; i++) {
+        var r = await readClass(buttons[i], 'Reading class ' + (i + 1) + ' of ' + buttons.length + ': <b>' + buttons[i].name + '</b>',
+          '반 읽는 중 (' + (i + 1) + '/' + buttons.length + '): <b>' + buttons[i].name + '</b>');
+        r.name = buttons[i].name; list.push(r);
+      }
+    }
+    list.forEach(function (r) {
+      out.push('▶ ' + r.name);
       r.lines.forEach(function (l) { out.push(l); });
       total += r.students;
       var full = r.count === null || r.students >= r.count;
       if (!full) short++;
-      report.push((full ? '&#10003; ' : '&#9888; ') + buttons[i].name + ': ' + r.students + (r.count !== null ? ' of ' + r.count : '') + ' students');
-    }
+      report.push((full ? '&#10003; ' : '&#9888; ') + r.name + ': ' + r.students + (r.count !== null ? ' of ' + r.count : '') + ' students');
+    });
     var text = out.join('\n');
     say((short ? '<b>' + short + ' class' + (short > 1 ? 'es are' : ' is') + ' missing students.</b> Close this and click Copy students again, or add them by hand.' +
         ko('<b>' + short + '개 반에 빠진 학생이 있습니다.</b> 이 창을 닫고 학생 복사를 다시 누르거나 직접 추가하세요.')
@@ -1337,7 +1379,7 @@ function sameStudent(a, b) {
 function applyGroups(groups) {
   let students = 0;
   const fresh = [];
-  const subjects = groups.subjects || new Map();
+  const subjects = groups.subjects || new Map(), times = groups.times || new Map();
   for (const [raw, names] of groups) {
     const nm = shortClass(raw);
     let c = state.classes.find(x => x.name === nm && nm);
@@ -1355,6 +1397,8 @@ function applyGroups(groups) {
       c.names = [...names, ...keep];
     }
     if (subjects.has(raw) && !c.subject) c.subject = clean(subjects.get(raw));
+    // The class time from TOPIA's Time column fills an empty Time box (a time typed by the teacher is kept).
+    if (times.has(raw) && !clean(c.time)) c.time = classTime(times.get(raw));
     // Each pasted day adds its weekday, so Monday + Wednesday pastes give "Mon / Wed".
     if (groups.weekday !== undefined && (!c.days || c.daysAuto)) {
       c.weekdays = [...new Set([...(c.weekdays || []), groups.weekday])].sort((a, b) => (a || 7) - (b || 7));
@@ -1375,6 +1419,14 @@ function applyGroups(groups) {
     : L(`Imported ${cls} with their subjects. This list has no student names, so add them to each class below.`,
         `${n}개 반과 과목을 가져왔습니다. 이 명단에는 학생 이름이 없으니 아래 각 반에 이름을 추가하세요.`), true);
   renderClasses(); render();
+}
+
+// "16:00~16:50" or "4:00 PM - 4:50 PM" -> "4:00": the start time only, afternoon hours written the short way.
+function classTime(t) {
+  const m = String(t || '').match(/(\d{1,2})\s*[:：.]\s*(\d{2})/);
+  if (!m) return clean(t);
+  const h = +m[1];
+  return `${h > 12 ? h - 12 : h}:${m[2]}`;
 }
 
 function parseDelimited(text) {
@@ -1423,6 +1475,7 @@ function renderClasses() {
         <span class="nb-btns"><button class="small" data-act="ticknew">${L('Reprint these', '이 학생들 인쇄')}</button><button class="small" data-act="dismissnew">${L('Dismiss', '닫기')}</button></span></div>` : ''}
       <div class="row">
         <div><label>${L('Subject', '과목')}<span class="dotwrap">${subDot(c)}</span></label>${subjectHTML(c)}</div>
+        <div class="timebox"${showTime() ? '' : ' hidden'}><label>${L('Time (optional)', '시간 (선택)')}</label><input type="text" data-f="time" value="${esc(c.time || '')}" placeholder="${L('e.g. 4:00', '예: 4:00')}"></div>
       </div>
       <div class="row">
         <div><div class="dayhead"><label>${L('Days', '요일')}</label>${DAY_CHOICES.map(d => `<button class="small daychip${clean(c.days) === d ? ' on' : ''}" data-act="days" data-v="${d}">${d}</button>`).join('')}</div>
@@ -1441,13 +1494,19 @@ function renderClasses() {
 // Above the class boxes: how many classes will print, with buttons to tick all or none.
 function renderClassBar() {
   const bar = document.getElementById('classbar'), all = state.classes.filter(c => !c.demo);
-  bar.hidden = state.reprint || all.length < 2;
+  const ticks = !state.reprint && all.length >= 2;
+  bar.hidden = !all.length;
   if (bar.hidden) return;
-  const n = all.filter(c => c.include).length;
-  bar.innerHTML = `<span>${L(`Printing <b>${n} of ${all.length}</b> classes`, `<b>${all.length}개 중 ${n}개</b> 반 인쇄`)}</span>` +
-    `<button class="small" data-all="1">${L('Tick all', '모두 체크')}</button><button class="small" data-all="0">${L('Untick all', '모두 해제')}</button>`;
+  const n = all.filter(c => c.include).length, on = showTime();
+  // "Time" is one on/off button: on, each tag shows its class time before the days; off, just the days.
+  bar.innerHTML = (ticks ? `<span>${L(`Printing <b>${n} of ${all.length}</b> classes`, `<b>${all.length}개 중 ${n}개</b> 반 인쇄`)}</span>` +
+    `<button class="small" data-all="1">${L('Tick all', '모두 체크')}</button><button class="small" data-all="0">${L('Untick all', '모두 해제')}</button>` : '') +
+    `<button class="small timetoggle${on ? ' on' : ''}" data-time aria-pressed="${on}" title="${on ? L('Class times are on the tags. Click to leave them off.', '이름표에 수업 시간이 나옵니다. 누르면 뺍니다.')
+      : L('Class times are off. Click to put them on the tags.', '수업 시간이 빠져 있습니다. 누르면 이름표에 넣습니다.')}">${on ? '✓ ' : ''}${L('Time', '시간')}</button>`;
 }
+const showTime = () => state.showTime !== false;
 document.getElementById('classbar').addEventListener('click', e => {
+  if (e.target.closest('[data-time]')) { state.showTime = !showTime(); renderClasses(); render(); return; }
   const b = e.target.closest('[data-all]'); if (!b) return;
   state.classes.forEach(c => { c.include = b.dataset.all === '1'; });
   renderClasses(); render();
@@ -1671,9 +1730,10 @@ function tagHTML(c, name, ci) {
   const cls = [c.name, c.subject].filter(Boolean).join(' ');
   const teacher = clean(c.teacher) || clean(state.teacher);
   const n = nameHTML(name);
+  const when = [showTime() ? clean(c.time) : '', clean(c.days)].filter(Boolean).join(' '); // time first, e.g. "4:00 Mon / Wed"; time is optional
   const inner = `
     <div class="name" style="font-size:${nameSize(n.text)}pt">${n.html}</div>
-    <div class="mid" style="font-size:${midSize(cls, c.days)}pt"><span>${esc(cls)}</span><span>${esc(c.days)}</span></div>
+    <div class="mid" style="font-size:${midSize(cls, when)}pt"><span>${esc(cls)}</span><span>${esc(when)}</span></div>
     <div class="foot"><span class="school">${esc(state.style === 'topia' ? state.school.replace(/^TOPIA$/i, 'TOPIΛ') : state.school)}</span><span class="teacher">${esc(teacher)}</span></div>`;
   const cc = classColor(c);
   const attrs = `data-cid="${c.id}" class="tag${cc ? ' cc' : ''}${c.id === activeId ? ' active' : ''}"` +
@@ -1836,15 +1896,6 @@ window.addEventListener('afterprint', () => {
 
 /* The "All done!" button. It shows in the header once the tags have gone to the printer (or the print
    file was saved) and stays until the teacher signs out. Clicking it sprays confetti and shows a cheer. */
-/* Offline file only: the browser can't install a file opened from the computer, so this explains
-   how to install the website version instead. */
-const APP_URL = 'https://disconnekted.github.io/Name-tag-generator-/';
-if (location.protocol === 'file:') document.getElementById('app-btn').hidden = false;
-function appInfo() {
-  showNotice(L('<b>Get the desktop app</b><br>1. Click <b>Open the website</b> below (use Chrome or Edge).<br>2. Click the install icon at the right end of the address bar, or ⋮ menu → <i>Cast, save and share</i> → <i>Install page as app</i>.<br>3. The tool gets its own icon on your computer and works without the internet.',
-    '<b>데스크톱 앱 받기</b><br>1. 아래 <b>웹사이트 열기</b>를 누르세요 (Chrome 또는 Edge).<br>2. 주소창 오른쪽 끝의 설치 아이콘을 누르거나, ⋮ 메뉴 → <i>전송, 저장, 공유</i> → <i>페이지를 앱으로 설치</i>를 누르세요.<br>3. 컴퓨터에 아이콘이 생기고 인터넷 없이도 쓸 수 있습니다.'),
-    [[L('Open the website', '웹사이트 열기'), () => { window.open(APP_URL, '_blank', 'noopener'); hideNotice(); }], [L('Close', '닫기'), hideNotice]], 'app');
-}
 function showYay() { const b = document.getElementById('yay-btn'); if (b) b.hidden = false; }
 function hideYay() { const b = document.getElementById('yay-btn'); if (b) b.hidden = true; closeYay(); }
 const CHEERS = [
@@ -1968,8 +2019,8 @@ const TOUR = [
     en: ['2. Add your students', 'Drag the red Copy students button to your bookmarks bar once. After that, click it on the TOPIA attendance page, come back, and press Ctrl+V in the box here.'],
     ko: ['2. 학생 추가', '빨간 학생 복사 버튼을 북마크바로 한 번만 끌어다 놓으세요. 그다음부터는 TOPIA 출석 페이지에서 누르고, 돌아와서 여기 칸에 Ctrl+V를 누르면 됩니다.'] },
   { sel: ['#classes .class-card', '#p-check'],
-    en: ['3. Check each class', 'Every class gets a box. Fill in the subject and click Mon / Wed or Tues / Thurs (or type the days). Untick a class to leave it out, or pick ×2 / ×3 for extra copies.'],
-    ko: ['3. 반별 확인', '반마다 상자가 하나씩 생깁니다. 과목을 넣고 Mon / Wed나 Tues / Thurs를 누르거나 직접 입력하세요. 체크를 해제하면 그 반은 빠지고, ×2 / ×3으로 여러 장 인쇄할 수 있습니다.'] },
+    en: ['3. Check each class', 'Every class gets a box. Fill in the subject and click Mon / Wed or Tues / Thurs (or type the days). Add a class time if you like; it prints before the days. Untick a class to leave it out, or pick ×2 / ×3 for extra copies.'],
+    ko: ['3. 반별 확인', '반마다 상자가 하나씩 생깁니다. 과목을 넣고 Mon / Wed나 Tues / Thurs를 누르거나 직접 입력하세요. 수업 시간은 선택이며 요일 앞에 인쇄됩니다. 체크를 해제하면 그 반은 빠지고, ×2 / ×3으로 여러 장 인쇄할 수 있습니다.'] },
   { sel: '.print-mode',
     en: ['Only need a few tags?', 'Switch to Reprint some students and tick just the ones who need a new tag. When you import a class again, new students are flagged for you.'],
     ko: ['몇 장만 필요할 때', '일부 학생만 다시 인쇄로 바꾸고 새 이름표가 필요한 학생만 체크하세요. 반 명단을 다시 가져오면 새 학생이 자동으로 표시됩니다.'] },
