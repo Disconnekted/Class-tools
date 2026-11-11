@@ -3,7 +3,7 @@
 <title>Class Gradesheet</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: a slim class rail on the left, the sheet itself as the main surface (blue month bands like the paper copy),
    with the score chart and paper/Excel copies in a strip under the sheet. */
@@ -1671,13 +1671,37 @@ function topiaPayload(c, i) {
   return '#GS-TOPIA ' + JSON.stringify({ cls: c.name, day: i + 1, rows });
 }
 function topiaFillBookmarklet() {
-  const go = function (txt) {
+  const sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+  const until = async function (f, ms) { for (let t = 0; t < (ms || 8000); t += 150) { const v = f(); if (v) return v; await sleep(150); } return null; };
+  const vis = function (el) { return !!(el && el.offsetParent); };
+  const norm = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9가-힣]/g, ''); };
+  const setSelect = function (s, v) { Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, v); s.dispatchEvent(new Event('input', { bubbles: true })); s.dispatchEvent(new Event('change', { bubbles: true })); };
+  const sels = function () { return Array.from(document.querySelectorAll('select')).filter(vis); };
+  const sessionSel = function () { return sels().find(function (s) { return Array.from(s.options).some(function (o) { return /회차/.test(o.text); }); }); };
+  const classSel = function () { return sels().find(function (s) { return Array.from(s.options).some(function (o) { return /_\d+\s*\(/.test(o.text); }); }); };
+  const clsKey = function (t) { return norm(String(t).split('(')[0]); };
+  const grp = function (l) { return /particip/i.test(l) ? 'participation' : /writ|essay|summary/i.test(l) ? 'writing' : /word|vocab|idiom/i.test(l) ? 'vocab' : /present|debate|speech/i.test(l) ? 'presentation' : /monthly/i.test(l) ? 'monthly' : ''; };
+  const run = async function (txt) {
     if (!txt || txt.indexOf('#GS-TOPIA') !== 0) { alert('Copy the scores in the gradesheet first (Copy Day N for TOPIA).'); return; }
     let data; try { data = JSON.parse(txt.slice(10)); } catch (e) { alert('Those copied scores could not be read. Copy them again.'); return; }
-    const inputs = Array.from(document.querySelectorAll('input[name^="infoList."]')).filter(function (x) { return x.offsetParent; });
-    if (!inputs.length) { alert('Open Weekly Report, click Register and pick the 회차 first.'); return; }
-    const norm = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9가-힣]/g, ''); };
-    const grp = function (l) { return /particip/i.test(l) ? 'participation' : /writ|essay|summary/i.test(l) ? 'writing' : /word|vocab|idiom/i.test(l) ? 'vocab' : /present|debate|speech/i.test(l) ? 'presentation' : /monthly/i.test(l) ? 'monthly' : ''; };
+    let ss = sessionSel();
+    if (!ss) {
+      const cs = classSel();
+      if (cs && clsKey(cs.options[cs.selectedIndex].text) !== clsKey(data.cls)) {
+        const o = Array.from(cs.options).find(function (x) { return clsKey(x.text) === clsKey(data.cls); });
+        if (!o) { alert('TOPIA has no class called ' + data.cls + '. Pick the class here, then click the bookmark again.'); return; }
+        setSelect(cs, o.value); await sleep(1500);
+      }
+      const reg = await until(function () { return Array.from(document.querySelectorAll('button')).find(function (b) { return vis(b) && /^\s*(register|등록)\s*$/i.test(b.innerText); }); }, 5000);
+      if (!reg) { alert('Open TOPIA → Weekly Report first, then click the bookmark.'); return; }
+      reg.click(); ss = await until(sessionSel);
+      if (!ss) { alert('The Register form did not open. Click Register, then the bookmark again.'); return; }
+    }
+    const want = Array.from(ss.options).find(function (o) { return parseInt(o.text, 10) === data.day; });
+    if (!want) { alert('TOPIA has no ' + data.day + '회차 for this class yet.'); return; }
+    if (ss.value !== want.value) { setSelect(ss, want.value); await sleep(900); }
+    const inputs = (await until(function () { const a = Array.from(document.querySelectorAll('input[name^="infoList."]')).filter(vis); return a.length ? a : null; })) || [];
+    if (!inputs.length) { alert('No score boxes found on the Register form.'); return; }
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
     let who = '', filled = 0; const seen = {}, missing = [];
     inputs.forEach(function (inp) {
@@ -1690,17 +1714,16 @@ function topiaFillBookmarklet() {
       if (!row) { if (who && !seen[who]) { seen[who] = 1; missing.push(who.replace(/\s+/g, ' ').trim()); } return; }
       seen[who] = 1;
       const p = row.g[grp(label)]; if (p == null) return;
-      const v = Math.round(p * perfect / 100);
-      setter.call(inp, String(v)); inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true }));
+      setter.call(inp, String(Math.round(p * perfect / 100))); inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true }));
       inp.style.background = '#fff4b8'; filled++;
     });
-    const sel = Array.from(document.querySelectorAll('select')).filter(function (s) { return s.offsetParent && /회차/.test(s.options[s.selectedIndex] ? s.options[s.selectedIndex].text : ''); })[0];
-    const picked = sel ? parseInt(sel.options[sel.selectedIndex].text, 10) : 0;
-    const warn = picked && picked !== data.day ? '\n\n⚠ These are Day ' + data.day + ' scores but ' + picked + '회차 is selected. Pick ' + data.day + '회차 and click the bookmark again.' : '';
-    alert('Filled ' + filled + ' boxes from ' + data.cls + ' Day ' + data.day + ' (shown in yellow).' + (missing.length ? '\nNot in the gradesheet: ' + missing.join(', ') : '') + warn + '\n\nCheck them, then press Save.');
+    let box = document.getElementById('gsTopiaNote');
+    if (!box) { box = document.createElement('div'); box.id = 'gsTopiaNote'; box.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:99999;background:#fff4b8;color:#222;border:2px solid #c9a400;border-radius:10px;padding:12px 16px;font:15px/1.4 sans-serif;max-width:560px;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer'; box.title = 'Click to close'; box.onclick = function () { box.remove(); }; document.body.appendChild(box); }
+    box.textContent = '✓ Filled ' + filled + ' boxes: ' + data.cls + ', ' + data.day + '회차 (yellow).' + (missing.length ? ' Not in the gradesheet: ' + missing.join(', ') + '.' : '') + ' Check them, then press Save.';
+    setTimeout(function () { if (box.isConnected) box.remove(); }, 15000);
   };
-  if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(go, function () { go(prompt('Paste the scores copied from the gradesheet:') || ''); });
-  else go(prompt('Paste the scores copied from the gradesheet:') || '');
+  const ask = function () { run(prompt('Paste the scores copied from the gradesheet:') || ''); };
+  if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(run, ask); else ask();
 }
 const TOPIA_BM = 'javascript:' + encodeURIComponent('(' + topiaFillBookmarklet.toString() + ')()');
 document.addEventListener('click', async e => {
@@ -1708,9 +1731,114 @@ document.addEventListener('click', async e => {
   const c = cur(), i = pickDay(c), t = topiaPayload(c, i), m = b.parentNode.querySelector('.topiamsg');
   const n = JSON.parse(t.slice(10)).rows.length;
   if (!n) { m.hidden = false; m.textContent = 'No scores on this day yet.'; return; }
-  try { await navigator.clipboard.writeText(t); m.textContent = `Copied ${n} student${n > 1 ? 's' : ''}. Now click "Fill from gradesheet" on TOPIA's Register form (${i + 1}회차).`; }
+  try { await navigator.clipboard.writeText(t); m.innerHTML = `Copied ${n} student${n > 1 ? 's' : ''}. Now click <b>Fill from gradesheet</b> on <a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">TOPIA's Weekly Report ↗</a>.`; }
   catch (er) { m.textContent = "Couldn't copy here. Open the gradesheet in Chrome or Safari and try again."; }
   m.hidden = false;
+});
+/* Online homework: the "Online homework from TOPIA" bookmark reads TOPIA's 온라인 단어 학습 page (each unit's
+   View list) and copies it; "Paste online homework" ticks the matching unit boxes. Done = Word Study O,
+   Matching Game O and at least one Practice Test. Ticks are only added, never removed. */
+function topiaHomeworkBookmarklet() {
+  var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+  var vis = function (e) { return e && e.offsetParent !== null; };
+  function note(html, keep) {
+    var box = document.getElementById('gsTopiaNote');
+    if (!box) { box = document.createElement('div'); box.id = 'gsTopiaNote'; box.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:99999;background:#fff4b8;color:#222;border:2px solid #c9a400;border-radius:10px;padding:12px 16px;font:15px/1.4 sans-serif;max-width:560px;box-shadow:0 6px 20px rgba(0,0,0,.25)'; document.body.appendChild(box); }
+    box.innerHTML = html; return box;
+  }
+  function table() { return Array.prototype.find.call(document.querySelectorAll('table'), function (t) { return vis(t) && /Complete/.test(t.innerText) && /Unit/.test(t.innerText); }); }
+  async function waitFor(fn, ms) { for (var t = 0; t < (ms || 6000); t += 150) { var v = fn(); if (v) return v; await sleep(150); } return null; }
+  function popup() { return Array.prototype.find.call(document.querySelectorAll('.popup, [class*=popup]'), function (p) { return vis(p) && /Word Study/.test(p.innerText) && p.querySelector('table'); }); }
+  async function run() {
+    if (!/onlineword/.test(location.pathname)) { note('Open TOPIA → 온라인학습방 → <b>온라인 단어 학습</b>, pick the class, then click this bookmark again.'); return; }
+    var t = await waitFor(table); if (!t) { note('Could not find the unit list on this page.'); return; }
+    var cls = '', units = {}, seenPages = {}, total = 0;
+    for (var guard = 0; guard < 20; guard++) {
+      t = table();
+      var rows = Array.prototype.slice.call(t.tBodies[0].rows);
+      for (var ri = 0; ri < rows.length; ri++) {
+        var cells = rows[ri].cells; if (cells.length < 9) continue;
+        var unit = parseInt(cells[6].innerText, 10); cls = cls || cells[2].innerText.trim();
+        if (!unit || units[unit]) continue;
+        var view = rows[ri].querySelector('a,button'); if (!view) continue;
+        note('Reading online homework… unit ' + unit);
+        view.click();
+        var p = await waitFor(popup, 5000); if (!p) continue;
+        var list = [];
+        Array.prototype.forEach.call(p.querySelector('table').tBodies[0].rows, function (r) {
+          var c = Array.prototype.map.call(r.cells, function (x) { return x.innerText.trim(); });
+          if (c.length < 4 || !/\d/.test(c[0])) return;
+          var m = c[1].match(/^(.*?)\s*\((.*?)\)\s*$/) || [0, c[1], ''];
+          var tests = c.slice(4).filter(function (v) { return /\d+\s*\/\s*\d+/.test(v); }).map(function (v) { var a = v.split('/'); return Math.round(100 * parseFloat(a[0]) / parseFloat(a[1])); });
+          list.push({ eng: m[1].trim(), kor: (m[2] || '').trim(), study: c[2] === 'O', game: c[3] === 'O', tries: tests.length, best: tests.length ? Math.max.apply(null, tests) : null });
+        });
+        units[unit] = list; total++;
+        var close = Array.prototype.find.call(p.querySelectorAll('a,button'), function (b) { return /^(Close|닫기)$/.test(b.textContent.trim()) && vis(b); });
+        if (close) close.click();
+        await waitFor(function () { return !popup(); }, 3000);
+      }
+      var pg = t.parentElement.querySelector('.pagenation');
+      var cur = pg && Array.prototype.find.call(pg.querySelectorAll('a,button'), function (a) { return /^\d+$/.test(a.textContent.trim()) && /on|active|current/.test(a.className + ' ' + (a.parentElement.className || '')); });
+      seenPages[cur ? cur.textContent.trim() : '1'] = 1;
+      var next = pg && Array.prototype.find.call(pg.querySelectorAll('a,button'), function (a) { var n = a.textContent.trim(); return /^\d+$/.test(n) && !seenPages[n]; });
+      if (!next) break;
+      seenPages[next.textContent.trim()] = 1;
+      var first = t.tBodies[0].rows[0].innerText;
+      next.click();
+      await waitFor(function () { var tt = table(); return tt && tt.tBodies[0].rows[0] && tt.tBodies[0].rows[0].innerText !== first; }, 6000);
+    }
+    var text = '#GS-ONLINE ' + JSON.stringify({ cls: cls, units: units });
+    var box = note('✓ Read <b>' + total + '</b> units of online word study for <b>' + cls + '</b>. <button id="gsHwCopy" style="font:inherit;padding:4px 10px;margin-left:6px">Copy for gradesheet</button> <a href="#" id="gsHwX" style="margin-left:8px">close</a><div style="font-size:13px;margin-top:6px">Then open the class in the gradesheet and press <b>Paste online homework</b>.</div>');
+    window.__gsOnline = text;
+    box.querySelector('#gsHwX').onclick = function (e) { e.preventDefault(); box.remove(); };
+    box.querySelector('#gsHwCopy').onclick = function () {
+      var done = function () { box.querySelector('#gsHwCopy').textContent = '✓ Copied'; };
+      (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(done, function () { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); });
+    };
+    try { await navigator.clipboard.writeText(text); box.querySelector('#gsHwCopy').textContent = '✓ Copied (copy again)'; } catch (e) {}
+  }
+  run().catch(function (e) { note('Something went wrong: ' + e.message); });
+}
+const TOPIA_HW_BM = 'javascript:' + encodeURIComponent('(' + topiaHomeworkBookmarklet.toString() + ')()');
+function hwTarget(c) {
+  const xs = (c.extras || []).filter(x => x.type === 'units');
+  return xs.find(x => /online/i.test(x.label)) || xs.find(x => /word|vocab/i.test(x.label)) || null;
+}
+function applyOnline(c, data) {
+  const x = hwTarget(c); if (!x) return { err: 'This class has no online homework boxes.' };
+  const labs = x.labels || [...Array(x.n).keys()].map(u => String(u + 1));
+  const nm = s => String(s || '').toLowerCase().replace(/[^a-z0-9가-힣]/g, '');
+  let ticks = 0; const missing = new Set(), notDone = {};
+  Object.keys(data.units || {}).forEach(u => {
+    const n = +u; let idx = labs.indexOf(String(n)); if (idx < 0) idx = n - 1;
+    if (idx < 0 || idx >= labs.length) return;
+    (data.units[u] || []).forEach(r => {
+      const s = c.students.find(s => r.kor && nm(s.kor) === nm(r.kor)) || c.students.find(s => r.eng && nm(s.eng) === nm(r.eng));
+      if (!s) { missing.add(r.eng || r.kor); return; }
+      const done = r.study && r.game && r.tries > 0;
+      if (!done) { (notDone[s.eng || s.kor] ||= []).push(labs[idx]); return; }
+      c.extra[s.id] ||= {};
+      const list = Array.isArray(c.extra[s.id][x.id]) ? c.extra[s.id][x.id] : [];
+      if (!list.includes(idx + 1)) { c.extra[s.id][x.id] = [...list, idx + 1].sort((a, b) => a - b); ticks++; }
+    });
+  });
+  return { x, ticks, missing: [...missing], notDone };
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-act="hwpaste"]'); if (!b) return;
+  const c = cur(), m = b.parentNode.querySelector('.topiamsg'); m.hidden = false;
+  let t = ''; try { t = await navigator.clipboard.readText(); } catch (er) {}
+  if (!/^#GS-ONLINE /.test(t || '')) t = prompt('Paste what the "Online homework from TOPIA" bookmark copied:') || '';
+  if (!/^#GS-ONLINE /.test(t)) { m.textContent = 'Nothing to paste. Use the Online homework from TOPIA bookmark first (ⓘ).'; return; }
+  let data; try { data = JSON.parse(t.slice(11)); } catch (er) { m.textContent = 'That copy looks broken. Copy it again on TOPIA.'; return; }
+  const nm = s => String(s || '').toLowerCase().replace(/\(.*$/, '').replace(/[^a-z0-9]/g, '');
+  if (data.cls && nm(data.cls) && nm(c.name) && nm(data.cls) !== nm(c.name) && !confirm(`This copy is for ${data.cls}, but this class is ${c.name}. Use it anyway?`)) { m.textContent = 'Cancelled.'; return; }
+  const r = applyOnline(c, data);
+  if (r.err) { m.textContent = r.err; return; }
+  keep(c); render();
+  const m2 = document.querySelector('.topiarow .topiamsg'); if (!m2) return; m2.hidden = false;
+  const nd = Object.entries(r.notDone).map(([n, u]) => `${esc(n)} (${u.map(esc).join(', ')})`);
+  m2.innerHTML = `✓ Ticked ${r.ticks} new ${esc(r.x.label)} box${r.ticks === 1 ? '' : 'es'}.` + (nd.length ? ` Not finished: ${nd.join('; ')}.` : '') + (r.missing.length ? ` Not in this class: ${r.missing.map(esc).join(', ')}.` : '');
 });
 function dayHTML(c, syl) {
   const i = pickDay(c), d = syl && syl.d[i];
@@ -1747,8 +1875,8 @@ function dayHTML(c, syl) {
     h += `<div class="dnote"><span class="lab">Notes</span>${noteBoxHTML(c, s.id)}</div>${open ? `<div class="cardfoot"><button type="button" class="small" data-act="report">📄 Report</button>${leaveTools(c, s)}</div>` : ''}<button type="button" class="linkbtn morebtn" data-more aria-expanded="${open}">${open ? 'Less ▴' : `More for ${esc(s.eng || s.kor)}${extra ? ` (${extra})` : ''} ▾`}</button></article>`;
   });
   h += '</div>';
-  h += `<div class="topiarow"><button type="button" class="small" data-act="topia">⇪ Copy Day ${i + 1} for TOPIA</button><button type="button" class="info" data-info="topiahelp" aria-label="How to send scores to TOPIA">ⓘ</button><span class="topiamsg hint" hidden></span>
-    <div class="hint infotext" id="topiahelp" hidden>Send these scores to TOPIA's Weekly Report: <b>1.</b> Tap Copy. <b>2.</b> In TOPIA open Weekly Report → Register and pick the same 회차 (${i + 1}회차). <b>3.</b> Click the <a class="bm" href="${esc(TOPIA_BM)}" onclick="event.preventDefault()" title="Drag me to your bookmarks bar">Fill from gradesheet</a> bookmark. (First time: drag that button to your bookmarks bar.) <b>4.</b> Check the boxes and press Save in TOPIA. Word tests are sent as a percentage of TOPIA's total.</div></div>`;
+  h += `<div class="topiarow"><button type="button" class="small" data-act="topia">⇪ Copy Day ${i + 1} for TOPIA</button><button type="button" class="info" data-info="topiahelp" aria-label="How to send scores to TOPIA">ⓘ</button>${hwTarget(c) ? `<button type="button" class="small" data-act="hwpaste">⇩ Paste online homework</button>` : ''}<span class="topiamsg hint" hidden></span>
+    <div class="hint infotext" id="topiahelp" hidden>Send these scores to TOPIA's Weekly Report: <b>1.</b> Tap Copy. <b>2.</b> On TOPIA's Weekly Report page, click the <a class="bm" href="${esc(TOPIA_BM)}" onclick="event.preventDefault()" title="Drag me to your bookmarks bar">Fill from gradesheet</a> bookmark: it picks the class, opens Register, chooses ${i + 1}회차 and fills the boxes. <b>3.</b> Check them and press Save. First time only: drag that button to your bookmarks bar. Scores are sent as a share of TOPIA's totals (8/9 → 89/100).${hwTarget(c) ? `<br><br><b>Online homework:</b> on TOPIA open 온라인학습방 → 온라인 단어 학습, pick the class and click the <a class="bm" href="${esc(TOPIA_HW_BM)}" onclick="event.preventDefault()" title="Drag me to your bookmarks bar">Online homework from TOPIA</a> bookmark. It reads every unit and copies it. Then tap <b>Paste online homework</b> here: a unit is ticked when Word Study, Matching Game and a Practice Test are done.` : ''}</div></div>`;
   if (away.length) h += `<p class="hint">Not in this class on Day ${i + 1}: ${away.map(s => `${esc(s.eng || s.kor)} (${esc(statusText(s))})`).join(', ')}. Use Whole sheet to bring a student back.</p>`;
   return h;
 }
