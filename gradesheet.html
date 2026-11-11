@@ -391,6 +391,9 @@ details.panel.fold:not([open]){gap:0}
 .dayacts .dayout input[data-dayout]{width:4.2em!important;flex:none;font-size:16px;padding:6px;text-align:center}
 .mtday{margin-top:8px}
 .mtday .mtmsg{flex-basis:100%;margin:0}
+.topiarow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px}
+.topiarow .infotext{flex-basis:100%}
+.topiarow a.bm{display:inline-block;padding:2px 10px;border:1px solid var(--accent);border-radius:999px;font-weight:700;text-decoration:none;color:var(--accent);cursor:grab}
 </style>
 
 </head><body>
@@ -1650,6 +1653,65 @@ document.addEventListener('click', async e => {
   catch (er) { say(er && er.message === 'missing' ? 'Not found: keep the "files" folder next to gradesheet.html.' : "Couldn't print that file."); }
   finally { b.disabled = false; b.textContent = label; }
 });
+/* ---------- TOPIA Weekly Report ----------
+   "Copy for TOPIA" puts the day's scores on the clipboard as percentages per evaluation group. The
+   "Fill from gradesheet" bookmark, clicked on TOPIA's Register form, matches students by name and items by
+   group, fills the boxes as a share of TOPIA's perfect score, and leaves Save to the teacher. */
+const topiaGroup = l => /particip/i.test(l) ? 'participation' : /writ|essay|summary/i.test(l) ? 'writing' : /word|vocab|idiom/i.test(l) ? 'vocab' : /present|debate|speech/i.test(l) ? 'presentation' : /monthly/i.test(l) ? 'monthly' : '';
+function topiaPayload(c, i) {
+  const rows = c.students.filter(s => inClass(s, i)).map(s => {
+    const g = {};
+    c.cats.forEach(k0 => {
+      const k = catAt(c, k0, i), grp = topiaGroup(k.label), v = val(c, s.id, k.id, i); if (!grp || !v || g[grp] != null) return;
+      const p = k.kind === 'mark' ? MARK_PCT[v] : k.kind === 'score' ? pct(v, k.outOf) : null;
+      if (p != null && !isNaN(p)) g[grp] = Math.round(p * 10) / 10;
+    });
+    return { eng: s.eng || '', kor: s.kor || '', g };
+  }).filter(r => Object.keys(r.g).length);
+  return '#GS-TOPIA ' + JSON.stringify({ cls: c.name, day: i + 1, rows });
+}
+function topiaFillBookmarklet() {
+  const go = function (txt) {
+    if (!txt || txt.indexOf('#GS-TOPIA') !== 0) { alert('Copy the scores in the gradesheet first (Copy Day N for TOPIA).'); return; }
+    let data; try { data = JSON.parse(txt.slice(10)); } catch (e) { alert('Those copied scores could not be read. Copy them again.'); return; }
+    const inputs = Array.from(document.querySelectorAll('input[name^="infoList."]')).filter(function (x) { return x.offsetParent; });
+    if (!inputs.length) { alert('Open Weekly Report, click Register and pick the 회차 first.'); return; }
+    const norm = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9가-힣]/g, ''); };
+    const grp = function (l) { return /particip/i.test(l) ? 'participation' : /writ|essay|summary/i.test(l) ? 'writing' : /word|vocab|idiom/i.test(l) ? 'vocab' : /present|debate|speech/i.test(l) ? 'presentation' : /monthly/i.test(l) ? 'monthly' : ''; };
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    let who = '', filled = 0; const seen = {}, missing = [];
+    inputs.forEach(function (inp) {
+      const tr = inp.closest('tr'), cells = tr ? Array.from(tr.cells) : [], n = cells.length;
+      if (n >= 5) who = cells[n - 4].innerText;
+      else for (let r = tr.previousElementSibling; r; r = r.previousElementSibling) { const nc = r.querySelector('td.col_name'); if (nc) { who = nc.innerText; break; } if (r.querySelector('input')) break; }
+      const label = n >= 3 ? cells[n - 3].innerText : '', perfect = parseFloat(n >= 2 ? cells[n - 2].innerText : '') || 100;
+      const parts = who.split(/[\n()]+/).map(norm).filter(Boolean);
+      const row = data.rows.find(function (r) { return (r.kor && parts.indexOf(norm(r.kor)) >= 0) || (r.eng && parts.indexOf(norm(r.eng)) >= 0); });
+      if (!row) { if (who && !seen[who]) { seen[who] = 1; missing.push(who.replace(/\s+/g, ' ').trim()); } return; }
+      seen[who] = 1;
+      const p = row.g[grp(label)]; if (p == null) return;
+      const v = Math.round(p * perfect / 100);
+      setter.call(inp, String(v)); inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true }));
+      inp.style.background = '#fff4b8'; filled++;
+    });
+    const sel = Array.from(document.querySelectorAll('select')).filter(function (s) { return s.offsetParent && /회차/.test(s.options[s.selectedIndex] ? s.options[s.selectedIndex].text : ''); })[0];
+    const picked = sel ? parseInt(sel.options[sel.selectedIndex].text, 10) : 0;
+    const warn = picked && picked !== data.day ? '\n\n⚠ These are Day ' + data.day + ' scores but ' + picked + '회차 is selected. Pick ' + data.day + '회차 and click the bookmark again.' : '';
+    alert('Filled ' + filled + ' boxes from ' + data.cls + ' Day ' + data.day + ' (shown in yellow).' + (missing.length ? '\nNot in the gradesheet: ' + missing.join(', ') : '') + warn + '\n\nCheck them, then press Save.');
+  };
+  if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(go, function () { go(prompt('Paste the scores copied from the gradesheet:') || ''); });
+  else go(prompt('Paste the scores copied from the gradesheet:') || '');
+}
+const TOPIA_BM = 'javascript:' + encodeURIComponent('(' + topiaFillBookmarklet.toString() + ')()');
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-act="topia"]'); if (!b) return;
+  const c = cur(), i = pickDay(c), t = topiaPayload(c, i), m = b.parentNode.querySelector('.topiamsg');
+  const n = JSON.parse(t.slice(10)).rows.length;
+  if (!n) { m.hidden = false; m.textContent = 'No scores on this day yet.'; return; }
+  try { await navigator.clipboard.writeText(t); m.textContent = `Copied ${n} student${n > 1 ? 's' : ''}. Now click "Fill from gradesheet" on TOPIA's Register form (${i + 1}회차).`; }
+  catch (er) { m.textContent = "Couldn't copy here. Open the gradesheet in Chrome or Safari and try again."; }
+  m.hidden = false;
+});
 function dayHTML(c, syl) {
   const i = pickDay(c), d = syl && syl.d[i];
   const tagWords = { w: 'word test', m: 'monthly test', e: 'essay', p: 'presentation' };
@@ -1685,6 +1747,8 @@ function dayHTML(c, syl) {
     h += `<div class="dnote"><span class="lab">Notes</span>${noteBoxHTML(c, s.id)}</div>${open ? `<div class="cardfoot"><button type="button" class="small" data-act="report">📄 Report</button>${leaveTools(c, s)}</div>` : ''}<button type="button" class="linkbtn morebtn" data-more aria-expanded="${open}">${open ? 'Less ▴' : `More for ${esc(s.eng || s.kor)}${extra ? ` (${extra})` : ''} ▾`}</button></article>`;
   });
   h += '</div>';
+  h += `<div class="topiarow"><button type="button" class="small" data-act="topia">⇪ Copy Day ${i + 1} for TOPIA</button><button type="button" class="info" data-info="topiahelp" aria-label="How to send scores to TOPIA">ⓘ</button><span class="topiamsg hint" hidden></span>
+    <div class="hint infotext" id="topiahelp" hidden>Send these scores to TOPIA's Weekly Report: <b>1.</b> Tap Copy. <b>2.</b> In TOPIA open Weekly Report → Register and pick the same 회차 (${i + 1}회차). <b>3.</b> Click the <a class="bm" href="${esc(TOPIA_BM)}" onclick="event.preventDefault()" title="Drag me to your bookmarks bar">Fill from gradesheet</a> bookmark. (First time: drag that button to your bookmarks bar.) <b>4.</b> Check the boxes and press Save in TOPIA. Word tests are sent as a percentage of TOPIA's total.</div></div>`;
   if (away.length) h += `<p class="hint">Not in this class on Day ${i + 1}: ${away.map(s => `${esc(s.eng || s.kor)} (${esc(statusText(s))})`).join(', ')}. Use Whole sheet to bring a student back.</p>`;
   return h;
 }
