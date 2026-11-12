@@ -1689,13 +1689,13 @@ function topiaFillBookmarklet() {
       const cs = classSel();
       if (cs && clsKey(cs.options[cs.selectedIndex].text) !== clsKey(data.cls)) {
         const o = Array.from(cs.options).find(function (x) { return clsKey(x.text) === clsKey(data.cls); });
-        if (!o) { alert('TOPIA has no class called ' + data.cls + '. Pick the class here, then click the bookmark again.'); return; }
+        if (!o) { alert('TOPIA has no class called ' + data.cls + '. Pick the class here, then try again.'); return; }
         setSelect(cs, o.value); await sleep(1500);
       }
       const reg = await until(function () { return Array.from(document.querySelectorAll('button')).find(function (b) { return vis(b) && /^\s*(register|등록)\s*$/i.test(b.innerText); }); }, 5000);
       if (!reg) { alert('Open TOPIA → Weekly Report first, then click the bookmark.'); return; }
       reg.click(); ss = await until(sessionSel);
-      if (!ss) { alert('The Register form did not open. Click Register, then the bookmark again.'); return; }
+      if (!ss) { alert('The Register form did not open. Click Register, then try again.'); return; }
     }
     const want = Array.from(ss.options).find(function (o) { return parseInt(o.text, 10) === data.day; });
     if (!want) { alert('TOPIA has no ' + data.day + '회차 for this class yet.'); return; }
@@ -1753,7 +1753,7 @@ function topiaHomeworkBookmarklet() {
     return box;
   }
   var tk = document.cookie.match(/__TP_ACCESS_TOKEN=([^;]+)/);
-  if (!tk || !/topiaenglishzone/.test(location.hostname)) { if (win) win.close(); note('Log in to TOPIA (www.topiaenglishzone.co.kr) first, then click this bookmark again.'); return; }
+  if (!tk || !/topiaenglishzone/.test(location.hostname)) { if (win) win.close(); note('Log in to TOPIA (www.topiaenglishzone.co.kr) first, then try again.'); return; }
   var AH = { headers: { Authorization: 'Bearer ' + decodeURIComponent(tk[1]) } };
   // TOPIA's server is slow, so at most 6 requests run at once and a failed one is tried again.
   var busy = 0, waiting = [];
@@ -1906,7 +1906,7 @@ function onlineGo(data) {
   const t = setInterval(() => { if (me) { clearInterval(t); setTimeout(go, 300); } }, 700); // waits until a teacher is picked
 }
 async function onlineToken(tok) {
-  let data; try { data = await unsqueeze(tok); } catch (e) { onlineBanner('That online homework link is damaged. Click the TOPIA bookmark again.'); return; }
+  let data; try { data = await unsqueeze(tok); } catch (e) { onlineBanner('That online homework link is damaged. Read it from TOPIA again.'); return; }
   if (data && data.app === 'gs-online') onlineGo(data);
 }
 function onlineFromLink() {
