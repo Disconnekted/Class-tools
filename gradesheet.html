@@ -399,6 +399,86 @@ details.panel.fold:not([open]){gap:0}
 .topiarow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px}
 .topiarow .infotext{flex-basis:100%}
 .topiarow a.bm,.rail a.bm{display:inline-block;padding:2px 10px;border:1px solid var(--accent);border-radius:999px;font-weight:700;text-decoration:none;color:var(--accent);cursor:grab}
+
+/* ---- Compact look (2026-11-13): slimmer header, rail as a class bar on iPad, tighter sheet and cards ---- */
+body{font-size:14.5px}
+.wrap{padding-block:12px 48px;gap:10px}
+header.top h1{font-size:clamp(20px,2.3vw,25px)}
+header.top .tools button,header.top .tools .btn{padding:6px 11px;font-size:13.5px}
+.tbtn{min-width:36px;justify-content:center}
+.panel{padding:12px 14px;gap:8px;border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+.main{gap:10px}
+.layout{grid-template-columns:190px minmax(0,1fr);gap:12px}
+.classhead{gap:6px 12px}
+.classhead .title h2{font-size:clamp(20px,2.2vw,25px)}
+details.fold>summary{padding:3px 0;font-size:13.5px}
+.viewbar{border-radius:9px}
+.viewbar button{padding:7px 14px;font-size:14px}
+/* iPad and narrower: the class list becomes a bar of chips above the sheet */
+@media (max-width:1300px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .rail{position:static;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .rail h2{display:none}
+  .clist{display:flex;gap:6px;overflow-x:auto;flex:1 1 300px;min-width:0;padding-bottom:2px}
+  .clist button{width:auto;flex:0 0 auto;gap:8px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--sheet)}
+  .clist button b{font-size:15px}
+  .clist button[aria-current=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);box-shadow:none}
+  .clist button[aria-current=true] small{color:inherit;opacity:.85}
+  #addBox{flex:0 0 auto;padding:8px 12px}
+  #addBox[open]{flex-basis:100%}
+  #importMsg{flex-basis:100%}
+  .clist button br{display:none}
+  .clist button span small{margin-left:6px}
+}
+.cards{align-items:start}
+.tbtn{font-size:15px!important;padding:6px 10px!important}
+:root[lang=ko] .line .lab,:root[lang=ko] table.gs .c-cat{letter-spacing:0}
+/* the sheet */
+.sheetwrap{max-height:calc(100vh - 170px);border-radius:12px}
+table.gs{font-size:12px}
+table.gs thead tr.r1 th{height:22px}
+table.gs thead tr.r2 th{top:22px;height:30px}
+table.gs thead tr.r3 th{top:52px;height:20px}
+table.gs .c-no{width:26px;min-width:26px;color:var(--muted)}
+table.gs .c-name{left:26px;width:118px;min-width:118px;padding:3px 6px}
+table.gs .c-cat{left:144px;width:110px;min-width:110px;padding:0 6px;font-size:10.5px;letter-spacing:.02em;white-space:normal;line-height:1.05}
+table.gs .c-name input[data-sf]{font-size:14.5px!important}
+.nm-eng{font-size:14.5px}
+.nm-kor{font-size:12px}
+.nm-avg{margin-top:2px;font-size:11px}
+.nm-tools{margin-top:2px}
+table.gs .day{width:34px;min-width:34px}
+table.gs .avg{width:46px;min-width:46px}
+table.gs .mon{width:38px;min-width:38px}
+table.gs .xtra{min-width:120px}
+table.gs tbody tr.first td{border-top:2px solid var(--line)}
+@media (pointer:coarse){
+  table.gs th,table.gs td{height:34px}
+  table.gs .day{width:40px;min-width:40px}
+  table.gs td button.cell.sc,table.gs td button.tog{height:33px;font-size:14px}
+  .units button{min-width:28px;height:28px}
+}
+/* Day by day */
+.daynav{gap:8px}
+.daynav .big{font-size:22px;min-width:46px;min-height:44px}
+.daytitle b{font-size:22px}
+.daytitle b+span{font-size:13.5px}
+.daystrip button{min-width:36px;min-height:36px;font-size:14px}
+.dayacts{gap:6px}
+.cards{grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.scard{padding:10px 12px;gap:4px;border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+.scard header{padding-bottom:4px;border-bottom:1px solid var(--grid);margin-bottom:2px}
+.scard header b{font-size:19px}
+.line{gap:6px;padding:1px 2px}
+.line .lab{font-size:11.5px;letter-spacing:.03em}
+.seg button{min-height:40px;padding:0 11px;font-size:14px}
+.scorebtn{min-height:40px;min-width:100px;font-size:17px}
+.dnote{padding-top:6px;gap:3px}
+.dnote>.lab{font-size:11.5px}
+.nlist li{font-size:13px;padding:0 0 0 8px;border-radius:7px}
+.nlist li button{min-height:32px;min-width:34px;font-size:18px}
+.morebtn{font-size:13px;padding:2px 0}
+.topiarow{margin-top:10px}
 </style>
 
 </head><body>
@@ -2324,6 +2404,92 @@ main.addEventListener('submit', e => {
   undoNote = null; setLines(c, sid, lines); redrawNotes(c, sid);
   const again = document.querySelector(`.notebox[data-nsid="${CSS.escape(sid)}"] [data-newnote]`); if (again) again.focus();
 });
+/* Light / dark switch and 한국어 / English switch (top bar). Both are remembered on this device.
+   Korean works by swapping the page's own English words for Korean ones as they appear, so every
+   view stays the same code. Student names, notes and class names are never touched. */
+(function () {
+  const root = document.documentElement;
+  const get = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const set = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const tools = document.querySelector('header.top .tools');
+  const themeB = document.createElement('button'), langB = document.createElement('button');
+  themeB.type = langB.type = 'button'; themeB.className = langB.className = 'tbtn';
+  tools.insertBefore(langB, tools.firstChild); tools.insertBefore(themeB, tools.firstChild);
+
+  let ko = get('gradesheet.lang') === 'ko';
+  const dark = () => root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  const paintTheme = () => { themeB.textContent = dark() ? '☀︎' : '☾'; themeB.title = dark() ? (ko ? '라이트 모드' : 'Light mode') : (ko ? '다크 모드' : 'Dark mode'); themeB.setAttribute('aria-label', themeB.title); };
+  const t0 = get('gradesheet.theme'); if (t0 === 'dark' || t0 === 'light') root.dataset.theme = t0;
+  themeB.onclick = () => { const next = dark() ? 'light' : 'dark'; root.dataset.theme = next; set('gradesheet.theme', next); paintTheme(); };
+  paintTheme();
+
+  const KO = {
+    'Class': '학급', 'Gradesheet': '성적표', 'My classes': '내 반', '+ Add students': '+ 학생 추가', 'Import': '가져오기', 'Choose file': '파일 선택',
+    '+ Add a class by hand': '+ 반 직접 추가', 'Copy students': '학생 복사', 'Saved on this computer': '이 기기에 저장됨', '⋯ More': '⋯ 더보기',
+    'Day by day': '일별', 'Whole sheet': '전체 보기', 'Colour key': '색상 안내', 'Columns': '항목', 'Details': '세부 정보', '✎ Details': '✎ 세부 정보',
+    'Attendance': '출석', 'Participation': '참여도', 'Word Test': '단어 시험', 'Monthly Test': '월말 평가', 'Summary Handed In': '요약 제출',
+    'Essay': '에세이', 'Writing': '작문', 'Presentation': '발표', 'Debate': '토론', 'Speech': '스피치', 'Integrated': '통합', 'Speaking': '스피킹',
+    'Phonics': '파닉스', 'Grammar': '문법', 'TOEFL Reading': '토플 리딩', 'Language Arts': '랭귀지 아츠', 'Vocabulary Test': '단어 시험', 'Vocabulary': '단어',
+    'Idioms Test': '숙어 시험', 'Shadowing': '쉐도잉', 'Online': '온라인', 'Online homework': '온라인 숙제', 'Monthly report': '월별 리포트', 'Notes': '메모',
+    'Avg': '평균', 'No': '번호', 'Name': '이름', 'Date': '날짜', 'Day': '회차', 'Change date': '날짜 변경', 'Score': '점수', 'Kind': '종류', 'Out of': '만점', 'out of': '만점',
+    '✓ Everyone present': '✓ 전원 출석', '100% everyone': '전원 100%', 'Clear all': '모두 지우기', 'Word Test out of': '단어 시험 만점',
+    'then tap anyone late or absent': '그다음 지각·결석 학생을 누르세요', '✓ Here': '✓ 출석', 'Late': '지각', 'Absent': '결석', '✓ In': '✓ 제출', '✗ Not in': '✗ 미제출',
+    'Tap to score': '눌러서 점수 입력', '+ Note': '+ 메모', 'Add': '추가', 'Done ▴': '닫기 ▴', 'Close': '닫기', 'Delete': '삭제', 'Keep': '유지', 'Remove': '제거',
+    '+ Add a student': '+ 학생 추가', 'Class notes': '반 메모', 'Send or print': '보내기 · 인쇄', 'Blank sheets · PDF · Email · Slack': '빈 양식 · PDF · 이메일 · 슬랙',
+    'Delete this class…': '이 반 삭제…', '% Score chart': '% 점수표', 'Score chart': '점수표', '⇩ Paste online homework': '⇩ 온라인 숙제 붙여넣기',
+    'Fill from gradesheet': '성적표에서 채우기', 'Online homework from TOPIA': 'TOPIA 온라인 숙제', 'TOPIA Helper': 'TOPIA 도우미',
+    '⤓ Back up': '⤓ 백업', '⤒ Restore': '⤒ 복원', '📱 Send to iPad': '📱 iPad로 보내기', '📥 Receive from PC': '📥 PC에서 받기', 'Name tags': '이름표', 'Name tags ↗': '이름표 ↗',
+    'Copy classes for name tags': '이름표용 반 목록 복사', '📄 Student reports': '📄 학생 리포트', '🖨 Print': '🖨 인쇄', '✉ Email': '✉ 이메일', '⤓ PDF with scores': '⤓ 점수 포함 PDF',
+    'PDF with scores': '점수 포함 PDF', 'Blank gradesheets': '빈 성적표', 'Download blank sheet (PDF)': '빈 양식 다운로드 (PDF)', 'Every subject (PDF)': '모든 과목 (PDF)', 'Excel': '엑셀',
+    'Subject': '과목', 'Semester': '학기', 'Days': '수업 요일', 'Day 1 date': '1회차 날짜', 'Room': '강의실', 'HR': '담임', 'Homeroom': '담임', 'Mon / Wed': '월 / 수', 'Tues / Thurs': '화 / 목', 'Fri': '금',
+    'Who is marking?': '누가 채점하나요?', 'No scores yet': '아직 점수 없음', 'Columns ': '항목 ', 'Start': '시작', 'Example class': '예시 반', 'Joins on': '합류일', 'Any day': '아무 날',
+    'Online homework:': '온라인 숙제:', 'On a PC?': 'PC에서 쓰시나요?', 'Names': '이름', 'No names': '이름 없음', 'Both': '둘 다', 'Highlight': '강조',
+    'Homework missing': '숙제 안 함', 'Book not brought': '책 안 가져옴', 'Great participation': '참여 우수', 'Needs to memorize': '암기 필요', 'Talked in class': '수업 중 잡담',
+    'Retest needed': '재시험 필요', 'Called parents': '학부모 연락', '+ Homework missing': '+ 숙제 안 함', '+ Book not brought': '+ 책 안 가져옴', '+ Late': '+ 지각',
+    '+ Great participation': '+ 참여 우수', '+ Needs to memorize': '+ 암기 필요', '+ Talked in class': '+ 수업 중 잡담', '+ Retest needed': '+ 재시험 필요', '+ Called parents': '+ 학부모 연락',
+    'Previous lesson': '이전 수업', 'Next lesson': '다음 수업', 'Jump to a lesson': '수업으로 이동', 'Type or dictate a note': '메모 입력 또는 받아쓰기', 'Paste here (Ctrl+V)': '여기에 붙여넣기 (Ctrl+V)',
+    'Light mode': '라이트 모드', 'Dark mode': '다크 모드',
+    'Scores are saved on this device as you type. Now and then use ⋯ More → Back up to keep a copy.': '점수는 입력하는 대로 이 기기에 저장됩니다. 가끔 ⋯ 더보기 → 백업으로 사본을 남겨 두세요.'
+  };
+  const RULES = [
+    [/^Day (\d+)$/, '$1회차'], [/^Day (\d+) date$/, '$1회차 날짜'], [/^⇪ Copy Day (\d+) for TOPIA$/, '⇪ $1회차 TOPIA용 복사'],
+    [/^More for (.+?)( \(\d+\))? ▾$/, '$1 더보기$2 ▾'], [/^Less ▴$/, '접기 ▴'], [/^(.+) class$/, '$1 반'], [/^(.+) students$/, '$1 학생'],
+    [/^Send (.+)'s gradesheet$/, '$1 성적표 보내기'], [/^Overall (\d+%)$/, '전체 $1'], [/^Participation \/(\d+)$/, '참여도 /$1'], [/^Word Test \/(\d+)$/, '단어 시험 /$1'],
+    [/^Vocabulary Test \/(\d+)$/, '단어 시험 /$1'], [/^Sem ([AB])$/, '$1학기']
+  ];
+  const SKIP = '.tbtn,.nlist,.nsum,td.c-name,.scard header,#clist,script,style,textarea,.nundo,#gsTopiaNote,.foot.raw';
+  const tr = s => {
+    const t = s.trim(); if (!t) return null;
+    let k = KO[t]; if (k === undefined) for (const [re, to] of RULES) { if (re.test(t)) { k = t.replace(re, to); break; } }
+    if (k === undefined && t.includes(' · ')) { const parts = t.split(' · ').map(x => tr(x)); if (parts.some(Boolean)) k = t.split(' · ').map((x, i) => parts[i] ? parts[i].trim() : x).join(' · '); }
+    return k === undefined ? null : s.replace(t, k);
+  };
+  function apply(node) {
+    const w = document.createTreeWalker(node, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+    for (let n = node; n; n = w.nextNode()) {
+      if (n.nodeType === 1) {
+        if (n.closest && n.closest(SKIP)) continue;
+        for (const a of ['placeholder', 'title', 'aria-label']) {
+          const key = '__en_' + a, v = n.getAttribute && n.getAttribute(a); if (v == null) continue;
+          if (n[key] === undefined || (v !== n[key] && v !== n[key + 'ko'])) n[key] = v;
+          const k = ko ? tr(n[key]) : null; const want = k || n[key]; n[key + 'ko'] = k;
+          if (v !== want) n.setAttribute(a, want);
+        }
+      } else if (n.nodeType === 3) {
+        const p = n.parentElement; if (!p || p.closest(SKIP)) continue;
+        if (n.__en === undefined || (n.nodeValue !== n.__en && n.nodeValue !== n.__ko)) n.__en = n.nodeValue;
+        const k = ko ? tr(n.__en) : null; n.__ko = k;
+        const want = k || n.__en; if (n.nodeValue !== want) n.nodeValue = want;
+      }
+    }
+  }
+  let queued = false;
+  const mo = new MutationObserver(() => { if (!ko || queued) return; queued = true; requestAnimationFrame(() => { queued = false; mo.disconnect(); apply(document.body); watch(); }); });
+  const watch = () => mo.observe(document.body, { childList: true, subtree: true, characterData: true });
+  const paintLang = () => { langB.textContent = ko ? 'EN' : '한'; langB.title = ko ? 'English' : '한국어로 보기'; langB.setAttribute('aria-label', langB.title); root.lang = ko ? 'ko' : 'en'; };
+  langB.onclick = () => { ko = !ko; set('gradesheet.lang', ko ? 'ko' : 'en'); mo.disconnect(); apply(document.body); paintLang(); paintTheme(); if (ko) watch(); };
+  paintLang(); if (ko) { apply(document.body); watch(); }
+})();
 </script>
 <script>
 /* ---------- paper copy (PDF), drawn to match the printed Integrated Class sheet ---------- */
