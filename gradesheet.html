@@ -3,7 +3,7 @@
 <title>Class Gradesheet</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;700&display=swap">
 <style>
 /* Layout: a slim class rail on the left, the sheet itself as the main surface (blue month bands like the paper copy),
    with the score chart and paper/Excel copies in a strip under the sheet. */
@@ -13,8 +13,8 @@
   --accent:#1f6fb0; --accent-ink:#ffffff;
   --ok:#1f7a4c; --ok-soft:#dff2e7; --warn:#946200; --warn-soft:#fbefd2; --bad:#b0281b; --bad-soft:#fbe3df;
   --due:#fff4cf;
-  --f-display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
-  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --f-display:"Barlow Semi Condensed","Arial Narrow","Noto Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI","Noto Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -479,6 +479,23 @@ table.gs tbody tr.first td{border-top:2px solid var(--line)}
 .nlist li button{min-height:32px;min-width:34px;font-size:18px}
 .morebtn{font-size:13px;padding:2px 0}
 .topiarow{margin-top:10px}
+
+/* ---- Polish pass (2026-11-13) ---- */
+.classhead .title{display:flex;align-items:center}
+.classhead>.viewbar{margin-left:auto;align-self:center}
+.dayacts{position:sticky;top:0;z-index:20;background:var(--sheet);padding:8px 0;margin:0 -2px;box-shadow:0 6px 8px -8px rgba(16,24,40,.25)}
+table.gs td button.cell.sc.lo{color:var(--bad);font-weight:700}
+.todaybtn{font:600 13px var(--f-body);margin:2px 0}
+.daytitle{gap:0}
+#undoBtn{border-color:var(--accent);color:var(--accent)}
+#undoBtn[hidden]{display:none}
+.scard{transition:box-shadow .15s}
+.scard:has(.seg button.v-A[aria-pressed=true]){background:linear-gradient(var(--bad-soft),var(--bad-soft)) top/100% 3px no-repeat,var(--sheet)}
+.scard:has(.seg button.v-L[aria-pressed=true]){background:linear-gradient(var(--warn),var(--warn)) top/100% 3px no-repeat,var(--sheet)}
+.example-flag{border:1px solid color-mix(in srgb,var(--warn) 30%,transparent)}
+.msg.ok{border:1px solid color-mix(in srgb,var(--ok) 25%,transparent)}
+::selection{background:var(--band1-soft)}
+button:not(:disabled):active{transform:translateY(1px)}
 </style>
 
 </head><body>
@@ -487,7 +504,7 @@ table.gs tbody tr.first td{border-top:2px solid var(--line)}
   <header class="top">
     <h1>Class <span>Gradesheet</span></h1>
     <div class="tools">
-      <span class="sync" id="sync"></span>
+      <button type="button" id="undoBtn" hidden title="Undo the last change (Ctrl+Z)" onclick="undoLast()">↶ Undo</button><span class="sync" id="sync"></span>
       <button type="button" id="whoBtn" hidden></button>
       <div class="more"><button type="button" id="moreBtn" aria-haspopup="true" aria-expanded="false">⋯ More</button>
       <div class="menu" id="moreMenu" hidden role="menu">
@@ -1015,12 +1032,13 @@ function render() {
   const syl = syllabusFor(c);
   const subj = SUBJECTS[c.subject];
   main.innerHTML = `
-  ${c.example ? `<p class="example-flag"><b>Example class</b> (not saved). Tap <b>+ Add students</b> on the left to start with your own class.</p>` : ''}
+  ${c.example ? `<p class="example-flag"><b>Example class</b> (not saved). Tap <b>+ Add students</b> to start with your own class.</p>` : ''}
   <section class="panel">
     <div class="classhead">
       <div class="title">
         <h2>${esc(c.name)} ${esc(subj ? subj.name : '')} class</h2>
       </div>
+      <div class="viewbar" role="tablist" aria-label="View"><button type="button" role="tab" data-view="day" aria-selected="${view === 'day'}">Day by day</button><button type="button" role="tab" data-view="sheet" aria-selected="${view === 'sheet'}">Whole sheet</button></div>
       <details class="fold" data-ui="details"${uiOpen('details') || !subj ? ' open' : ''}>
         <summary><span class="fold-t">${esc([subj ? subj.name : 'No subject yet', 'Sem ' + (c.sem || 'B'), c.days, c.room ? 'Room ' + c.room : ''].filter(Boolean).join(' · '))}</span> <span class="fold-edit">✎ Details</span></summary>
         <p class="hint">${syl ? `Syllabus: ${esc(syl.t)}, ${syl.s === 'AB' ? 'both semesters' : (syl.s || 'B') + ' semester'} (${syl.d.length} days). Highlighted cells are the days a column is due.` : subj ? `No ${c.sem === 'A' ? 'A' : 'B'}-semester syllabus for ${esc(levelOf(c.name) || 'this level')} ${esc(subj.name)}, so no days are highlighted.` : 'Pick the subject to set the columns.'}${subj && subj.suggested ? ' Your old gradesheet had no tab for this subject, so these columns are suggested.' : ''}</p>
@@ -1049,7 +1067,6 @@ function render() {
         <p class="hint infotext" id="colhelp" hidden>Set “out of” and each score shows as a % with the score chart. Attendance, hand-in and ○△✗ cells change with a tap.</p>
       </div>
     </details>
-    <div class="viewbar" role="tablist" aria-label="View"><button type="button" role="tab" data-view="day" aria-selected="${view === 'day'}">Day by day</button><button type="button" role="tab" data-view="sheet" aria-selected="${view === 'sheet'}">Whole sheet</button></div>
     ${view === 'day' ? dayHTML(c, syl) : `<details class="fold keyfold" data-ui="key"${openAttr('key')}><summary><span class="fold-t">Colour key</span></summary><div class="legend"><span><i style="background:var(--band1)"></i>Month 1 &amp; 3</span><span><i style="background:var(--band2)"></i>Month 2</span><span><i style="background:var(--due)"></i>Due that day (from the syllabus)</span><span>W word test · U unit test · M monthly test · E essay · P presentation/debate</span></div></details>
     <div class="sheetwrap" id="sheetwrap">${sheetHTML(c, syl)}</div>`}
     <div class="foldrow">
@@ -1146,7 +1163,7 @@ function sheetHTML(c, syl) {
       days.forEach(i => {
         const v = vals[i] || '';
         const cls = `day${monthOf(i) === 1 ? ' m2' : ''}${isDue(k, syl, i) ? ' due' : ''}${inClass(s, i) ? '' : ' off'}`;
-        if (k.kind === 'score') h += `<td class="${cls}"><button type="button" class="cell sc" data-i="${i}" id="c-${esc(s.id)}-${esc(k.id)}-${i}" aria-label="${esc(s.eng || s.kor)} ${esc(k.label)} day ${i + 1}" title="${esc(cellTitle(v, catAt(c, k, i)))}">${esc(v)}</button></td>`;
+        if (k.kind === 'score') h += `<td class="${cls}"><button type="button" class="cell sc${(p => p !== null && p < 60 ? ' lo' : '')(pct(v, catAt(c, k, i).outOf))}" data-i="${i}" id="c-${esc(s.id)}-${esc(k.id)}-${i}" aria-label="${esc(s.eng || s.kor)} ${esc(k.label)} day ${i + 1}" title="${esc(cellTitle(v, catAt(c, k, i)))}">${esc(v)}</button></td>`;
         else h += `<td class="${cls}"><button type="button" class="tog v-${esc(v)}" data-i="${i}" aria-label="${esc(s.eng || s.kor)} ${esc(k.label)} day ${i + 1}">${togLabel(k, v)}</button></td>`;
       });
       h += `<td class="avg">${st ? esc(st.text) : ''}</td>`;
@@ -1204,10 +1221,30 @@ document.getElementById('main').addEventListener('submit', e => {
 /* ---------- editing ---------- */
 const main = document.getElementById('main');
 function rowCtx(el) { const tr = el.closest('tr[data-sid]'); if (!tr) return null; const c = cur(); return { c, sid: tr.dataset.sid, cat: c.cats.find(k => k.id === tr.dataset.cat) }; }
+/* Undo: every score change the teacher makes is remembered (the last 30 actions; a button like
+   "Everyone present" counts as one action). ↶ Undo in the top bar, or Ctrl/⌘+Z, puts it back. */
+const undoStack = []; let undoGroup = null, userActed = false;
+['pointerdown', 'keydown'].forEach(t => addEventListener(t, () => { userActed = true; }, { capture: true }));
 function setCell(c, sid, catId, i, v) {
   c.scores[sid] ||= {}; c.scores[sid][catId] ||= [];
+  const old = c.scores[sid][catId][i];
+  if (userActed && !c.example && (old || '') !== (v || '')) {
+    if (!undoGroup) { undoGroup = { cid: c.id, ch: [] }; undoStack.push(undoGroup); if (undoStack.length > 30) undoStack.shift(); setTimeout(() => { undoGroup = null; showUndo(); }, 0); }
+    undoGroup.ch.push([sid, catId, i, old]);
+  }
   c.scores[sid][catId][i] = v;
 }
+function showUndo() { const b = document.getElementById('undoBtn'); if (b) b.hidden = !undoStack.length; }
+function undoLast() {
+  const g = undoStack.pop(); showUndo(); if (!g) return;
+  const c = classes.find(x => x.id === g.cid); if (!c) return;
+  g.ch.slice().reverse().forEach(([sid, k, i, old]) => { ((c.scores[sid] || {})[k] || [])[i] = old; });
+  if (current !== c.id) current = c.id;
+  keep(c); render(); flashMsg(g.ch.length > 1 ? `Undone (${g.ch.length} boxes)` : 'Undone');
+}
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !e.target.closest('input,textarea,select,[contenteditable]') && undoStack.length) { e.preventDefault(); undoLast(); }
+});
 function refreshStats(sid) {
   // Update the averages for one student without redrawing the sheet (keeps the cursor where it is).
   const c = cur(), s = c.students.find(x => x.id === sid);
@@ -1652,6 +1689,7 @@ let view = 'day';
 const dayAt = {}; // class id -> day index shown in Day by day
 const NOTE_CHIPS = ['Homework missing', 'Book not brought', 'Late', 'Great participation', 'Needs to memorize', 'Talked in class', 'Retest needed', 'Called parents'];
 const todayMD = () => { const d = new Date(); return `${d.getMonth() + 1}/${d.getDate()}`; };
+function todayIdx(c) { const k = dayAt[c.id]; delete dayAt[c.id]; const t = pickDay(c); if (k === undefined) delete dayAt[c.id]; else dayAt[c.id] = k; return t; }
 function pickDay(c) {
   if (dayAt[c.id] !== undefined) return dayAt[c.id];
   const t = todayMD();
@@ -2188,7 +2226,7 @@ function dayHTML(c, syl) {
   const marked = j => c.students.some(s => c.cats.some(k => val(c, s.id, k.id, j)));
   let h = `<div class="daynav">
       <button type="button" class="big" data-day="${i - 1}" ${i ? '' : 'disabled'} aria-label="Previous lesson">‹</button>
-      <div class="daytitle"><b>Day ${i + 1}</b>${dateFor(c, i) ? ` <span>${esc(dateFor(c, i))}</span>` : ''}${what ? `<small>${esc(what)}</small>` : ''}</div>
+      <div class="daytitle"><b>Day ${i + 1}</b>${c.start && todayIdx(c) !== i ? `<button type="button" class="linkbtn todaybtn" data-today>Today ↩</button>` : ''}${dateFor(c, i) ? ` <span>${esc(dateFor(c, i))}</span>` : ''}${what ? `<small>${esc(what)}</small>` : ''}</div>
       <button type="button" class="big" data-day="${i + 1}" ${i < NDAYS - 1 ? '' : 'disabled'} aria-label="Next lesson">›</button>
     </div>
     <div class="daystrip" aria-label="Jump to a lesson">${[...Array(NDAYS).keys()].map(j => `<button type="button" data-day="${j}" class="m${monthOf(j) + 1}${marked(j) ? ' done' : ''}" aria-current="${j === i}">${j + 1}</button>`).join('')}</div>
@@ -2313,6 +2351,7 @@ main.addEventListener('click', e => {
   if (vb) { view = vb.dataset.view; closePad(); render(); return; }
   const dj = e.target.closest('[data-day]');
   if (dj) { dayAt[c.id] = Math.max(0, Math.min(NDAYS - 1, +dj.dataset.day)); closePad(); render(); return; }
+  if (e.target.closest('[data-today]')) { delete dayAt[c.id]; closePad(); render(); return; }
   const sc = e.target.closest('.cell.sc');
   if (sc) { const r = rowCtx(sc); openPad(r.sid, r.cat.id, +sc.dataset.i); return; }
   const card = e.target.closest('.scard');
@@ -2449,10 +2488,21 @@ main.addEventListener('submit', e => {
     '+ Great participation': '+ 참여 우수', '+ Needs to memorize': '+ 암기 필요', '+ Talked in class': '+ 수업 중 잡담', '+ Retest needed': '+ 재시험 필요', '+ Called parents': '+ 학부모 연락',
     'Previous lesson': '이전 수업', 'Next lesson': '다음 수업', 'Jump to a lesson': '수업으로 이동', 'Type or dictate a note': '메모 입력 또는 받아쓰기', 'Paste here (Ctrl+V)': '여기에 붙여넣기 (Ctrl+V)',
     'Light mode': '라이트 모드', 'Dark mode': '다크 모드',
+    '↶ Undo': '↶ 되돌리기', 'Undone': '되돌렸습니다', 'Today ↩': '오늘 ↩', 'Connecting…': '연결 중…', 'Saved online': '온라인에 저장됨',
+    'Pick your name to open your classes. New here? Type your name below.': '이름을 골라 내 반을 여세요. 처음이면 아래에 이름을 입력하세요.',
+    'No names yet. Type yours below to start.': '아직 이름이 없습니다. 아래에 이름을 입력해 시작하세요.', 'Your name, e.g. Joseph': '이름 (예: Joseph)',
+    'Example class': '예시 반', '(not saved). Tap': '(저장 안 됨).', 'to start with your own class.': '을 눌러 내 반을 시작하세요.',
+    'so this opens on today\'s lesson:': '— 설정하면 오늘 수업이 바로 열립니다:', '📅 Set the': '📅', 'Seven students a page, with the score chart along the bottom. Open the PDF and print it.': '한 장에 7명, 아래에 점수표가 들어갑니다. PDF를 열어 인쇄하세요.',
+    'Preview loading…': '미리보기 불러오는 중…', '⤢ Tap to enlarge': '⤢ 눌러서 크게 보기', 'Month 1 & 3': '1·3월차', 'Month 2': '2월차', 'Due that day (from the syllabus)': '그날 마감 (강의계획서 기준)',
+    '+ Add a column': '+ 항목 추가', 'Choose…': '선택…', 'Names': '이름', 'Gradesheet ': '성적표 ', 'Warm-up': '워밍업', 'Essay days': '에세이 날', 'Word test days': '단어 시험 날',
+    'Monthly test days': '월말 평가 날', 'Presentation / debate days': '발표·토론 날', 'Every lesson but Day 1 and monthly tests': '1회차·월말 평가 제외 매 수업',
+    'Handed in ✓ ✗': '제출 ✓ ✗', 'Circle ○ Triangle △ X ✗': '동그라미 ○ 세모 △ 엑스 ✗', 'Attendance ✓ L A': '출석 ✓ L A',
+    'then tap anyone late or absent ': '그다음 지각·결석 학생을 누르세요 ',
     'Scores are saved on this device as you type. Now and then use ⋯ More → Back up to keep a copy.': '점수는 입력하는 대로 이 기기에 저장됩니다. 가끔 ⋯ 더보기 → 백업으로 사본을 남겨 두세요.'
   };
   const RULES = [
-    [/^Day (\d+)$/, '$1회차'], [/^Day (\d+) date$/, '$1회차 날짜'], [/^⇪ Copy Day (\d+) for TOPIA$/, '⇪ $1회차 TOPIA용 복사'],
+    [/^Day (\d+)$/, '$1회차'], [/^Found (\d+) students? in (\d+) class(?:es)?; (\d+) new\. Check each class's subject and Day 1 date\.$/, '$2개 반에서 학생 $1명을 찾았습니다 (새 학생 $3명). 각 반의 과목과 1회차 날짜를 확인하세요.'],
+    [/^Undone \((\d+) boxes\)$/, '되돌렸습니다 ($1칸)'], [/^Delete (.+) and all its scores\?$/, '$1 반과 모든 점수를 삭제할까요?'], [/^Quick notes for (.+)$/, '$1 빠른 메모'], [/^Day (\d+) date$/, '$1회차 날짜'], [/^⇪ Copy Day (\d+) for TOPIA$/, '⇪ $1회차 TOPIA용 복사'],
     [/^More for (.+?)( \(\d+\))? ▾$/, '$1 더보기$2 ▾'], [/^Less ▴$/, '접기 ▴'], [/^(.+) class$/, '$1 반'], [/^(.+) students$/, '$1 학생'],
     [/^Send (.+)'s gradesheet$/, '$1 성적표 보내기'], [/^Overall (\d+%)$/, '전체 $1'], [/^Participation \/(\d+)$/, '참여도 /$1'], [/^Word Test \/(\d+)$/, '단어 시험 /$1'],
     [/^Vocabulary Test \/(\d+)$/, '단어 시험 /$1'], [/^Sem ([AB])$/, '$1학기']
