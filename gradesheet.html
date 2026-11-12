@@ -1755,7 +1755,18 @@ function topiaHomeworkBookmarklet() {
   var tk = document.cookie.match(/__TP_ACCESS_TOKEN=([^;]+)/);
   if (!tk || !/topiaenglishzone/.test(location.hostname)) { if (win) win.close(); note('Log in to TOPIA (www.topiaenglishzone.co.kr) first, then click this bookmark again.'); return; }
   var AH = { headers: { Authorization: 'Bearer ' + decodeURIComponent(tk[1]) } };
-  var get = function (p) { return fetch(API + p, AH).then(function (r) { return r.json(); }).catch(function () { return null; }); };
+  // TOPIA's server is slow, so at most 6 requests run at once and a failed one is tried again.
+  var busy = 0, waiting = [];
+  var slot = function () { return new Promise(function (r) { if (busy < 6) { busy++; r(); } else waiting.push(r); }); };
+  var free = function () { var n = waiting.shift(); if (n) n(); else busy--; };
+  var get = async function (p) {
+    for (var t = 0; t < 3; t++) {
+      await slot();
+      try { var r = await fetch(API + p, AH); if (r.ok) { var j = await r.json(); free(); return j; } } catch (e) {}
+      free(); await new Promise(function (r) { setTimeout(r, 1500 * (t + 1)); });
+    }
+    return null;
+  };
   // John's rule: Word Study and Matching Game done, plus tests 1, 2 and 3 each 80% or higher (rounded down), or all 5 tests done.
   function judge(st) {
     var t = {}; (st.pretestList || []).forEach(function (p) { t[p.studyTypeNum] = p; });
@@ -1781,24 +1792,45 @@ function topiaHomeworkBookmarklet() {
     var out = [], nUnits = 0;
     await Promise.all(cls.map(async function (c) {
       var subs = (c.subjectList || []).map(function (s) { return String(s.sourceSubjectId); });
+      var units = {}, shadow = {};
+      await Promise.all([(async function () {
       var list = [];
       for (var pg = 1; pg < 10; pg++) { var j = await get('online-contents/onlineword?classId=' + c.classId + '&limit=100&page=' + pg), d = j && j.data; if (!d) break; list = list.concat(d.list || []); if (!d.hasNextPage) break; }
       list = list.filter(function (u) { return subs.indexOf(String(u.sourceSubjectObj && u.sourceSubjectObj.id)) >= 0 && u.countObj && u.countObj.participantCount > 0; });
-      var units = {};
       await Promise.all(list.map(async function (u) {
         var j = await get('online-contents/onlineword/' + c.classId + '/' + u.sourceSubjectObj.id + '/' + u.unitNum), L = j && j.data && j.data.list; if (!L) return;
         var p = [], f = [];
         L.forEach(function (st) { var s = st.studentObj || {}, nm = [String(s.nameE || '').trim(), String(s.nameK || '').trim()], why = judge(st); if (why) f.push(nm.concat(why)); else p.push(nm); });
-        units[u.unitNum] = { name: u.unitName, p: p, f: f }; nUnits++; note('Reading online homework from TOPIA… ' + nUnits + ' units so far');
+        units[u.unitNum] = { name: u.unitName, p: p, f: f }; nUnits++; note('Reading online homework from TOPIA… ' + nUnits + ' so far');
       }));
-      out.push({ cls: c.className, subj: (c.subjectList || []).map(function (s) { return s.subjectName || s.name || ''; }).join('/'), units: units });
+      })(), (async function () {
+      // Shadowing lives in the Homework (과제평가) grid: score 2 = done (O), 0 or 1 = not done.
+      var today = new Date().toISOString().slice(0, 10);
+      await Promise.all(subs.map(async function (sid) {
+        var j = await get('class/homework/list?classId=' + c.classId + '&sourceSubjectId=' + sid), L = j && j.data && j.data.list;
+        if (!L || !Array.isArray(L.studentInfolist)) return;
+        L.studentInfolist.forEach(function (st) {
+          var nm = [String(st.nameE || '').trim(), String(st.nameK || '').trim()];
+          (st.homeworkList || []).forEach(function (h) {
+            var o = h.onlineHomeworkInfo && h.onlineHomeworkInfo.shadowing, v = h.onlineHomeworkScoreInfo && h.onlineHomeworkScoreInfo.shadowing;
+            if (!o || v == null || v === '') return;
+            var d = String(h.classDate || '').slice(0, 10), k = o.unitNum + '|' + (o.unitDay || '');
+            var u = shadow[k] || (shadow[k] = { u: String(o.unitNum), d: o.unitDay || '', date: d, name: o.name || '', p: [], f: [] });
+            if (d && d < u.date) u.date = d;
+            if (String(v) === '2') u.p.push(nm); else if (d && d < today) u.f.push(nm.concat('shadowing not done'));
+          });
+        });
+      }));
+      })()]);
+      nUnits += Object.keys(shadow).length;
+      out.push({ shadow: shadow, cls: c.className, subj: (c.subjectList || []).map(function (s) { return s.subjectName || s.name || ''; }).join('/'), units: units });
     }));
     var data = { app: 'gs-online', at: new Date().toISOString().slice(0, 10), classes: out };
     window.__gsOnlineData = data;
     var link = GS + '#online=' + await squeeze(data), text = '#GS-ONLINE ' + JSON.stringify(data);
     var copy = function (b) { var ok = function () { if (b) b.textContent = '✓ Copied'; }; (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(ok, function () { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); ok(); } catch (e) {} ta.remove(); }); };
-    if (win) { win.location.href = link; note('✓ Read ' + nUnits + ' units in ' + out.length + ' classes. The gradesheet opened in a new tab and ticked them.'); return; }
-    var box = note('✓ Read ' + nUnits + ' units in ' + out.length + ' classes. <button data-c style="font:inherit;padding:4px 10px">Copy</button> then tap <b>Paste online homework</b> in the gradesheet app, or <a href="' + link + '" target="_blank">open the gradesheet here</a>.');
+    if (win) { win.location.href = link; note('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes. The gradesheet opened in a new tab and ticked them.'); return; }
+    var box = note('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes. <button data-c style="font:inherit;padding:4px 10px">Copy</button> then tap <b>Paste online homework</b> in the gradesheet app, or <a href="' + link + '" target="_blank">open the gradesheet here</a>.');
     box.querySelector('[data-c]').onclick = function () { copy(this); };
     try { await navigator.clipboard.writeText(text); box.querySelector('[data-c]').textContent = '✓ Copied'; } catch (e) {}
   }
@@ -1809,31 +1841,48 @@ function hwTarget(c) {
   const xs = (c.extras || []).filter(x => x.type === 'units');
   return xs.find(x => /online/i.test(x.label)) || xs.find(x => /word|vocab/i.test(x.label)) || null;
 }
+const shTarget = c => (c.extras || []).find(x => x.type === 'units' && /shadow/i.test(x.label)) || null;
 const clsKey = s => String(s || '').toLowerCase().replace(/\(.*$/, '').replace(/[^a-z0-9]/g, '');
 const nmKey = s => String(s || '').toLowerCase().replace(/[^a-z0-9가-힣]/g, '');
-function applyOnline(c, units) {
-  const x = hwTarget(c); if (!x) return null;
+// Ticks one unit-box column from a list of {label candidates, n, p: passed names, f: [name, why]}.
+function tickUnits(c, x, items, kind) {
   const labs = x.labels || [...Array(x.n).keys()].map(u => String(u + 1));
   const find = ([e, k]) => c.students.find(s => k && nmKey(s.kor) === nmKey(k)) || c.students.find(s => e && nmKey(s.eng) === nmKey(e));
   let ticks = 0; const notDone = [];
-  Object.keys(units || {}).forEach(u => {
-    const n = +u; let idx = labs.indexOf(String(n)); if (idx < 0) idx = n - 1;
+  items.forEach(it => {
+    let idx = -1; for (const l of it.try) { idx = labs.indexOf(String(l)); if (idx >= 0) break; }
+    if (idx < 0 && it.n > 0) idx = it.n - 1;
     if (idx < 0 || idx >= labs.length) return;
-    (units[u].p || []).forEach(r => {
+    (it.p || []).forEach(r => {
       const s = find(r); if (!s) return;
       c.extra[s.id] ||= {};
       const list = Array.isArray(c.extra[s.id][x.id]) ? c.extra[s.id][x.id] : [];
       if (!list.includes(idx + 1)) { c.extra[s.id][x.id] = [...list, idx + 1].sort((a, b) => a - b); ticks++; }
     });
-    (units[u].f || []).forEach(r => { const s = find(r); if (s) notDone.push(`${s.eng || s.kor} ${labs[idx]}: ${r[2]}`); });
+    (it.f || []).forEach(r => { const s = find(r); if (s) notDone.push(`${s.eng || s.kor} ${kind} ${labs[idx]}: ${r[2]}`); });
   });
-  return { x, ticks, notDone };
+  return { ticks, notDone };
+}
+function applyOnline(c, d) {
+  const x = hwTarget(c), y = shTarget(c); if (!x && !y) return null;
+  let ticks = 0, notDone = [];
+  if (x && d.units) {
+    const items = Object.keys(d.units).map(u => ({ try: [d.units[u].name, u], n: +u, p: d.units[u].p, f: d.units[u].f }));
+    const r = tickUnits(c, x, items, 'words'); ticks += r.ticks; notDone = notDone.concat(r.notDone);
+  }
+  if (y && d.shadow) {
+    // Shadowing boxes are labelled 1.2 (O level), U3D1 (Language Arts) or 1, 2, 3…: try those, else the lesson's order.
+    const items = Object.values(d.shadow).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0)
+      .map((s, i) => ({ try: [s.u, 'U' + s.u + 'D' + s.d], n: i + 1, p: s.p, f: s.f }));
+    const r = tickUnits(c, y, items, 'shadowing'); ticks += r.ticks; notDone = notDone.concat(r.notDone);
+  }
+  return { ticks, notDone };
 }
 function applyOnlineAll(data) {
   const res = [];
   (data.classes || []).forEach(d => {
     const c = classes.find(c => !c.example && clsKey(c.name) && clsKey(c.name) === clsKey(d.cls)); if (!c) return;
-    const r = applyOnline(c, d.units); if (!r) return;
+    const r = applyOnline(c, d); if (!r) return;
     if (r.ticks) keep(c);
     res.push({ c, ...r });
   });
@@ -1843,7 +1892,7 @@ function onlineReport(res, data) {
   if (!res.length) return `No class here matches TOPIA's (${(data.classes || []).map(d => esc(d.cls)).join(', ')}). Class names need to match, e.g. V2_1.`;
   const total = res.reduce((a, r) => a + r.ticks, 0);
   return `<h3>Online homework from TOPIA</h3><p>✓ Ticked ${total} new box${total === 1 ? '' : 'es'}${data.at ? ' (TOPIA ' + esc(data.at) + ')' : ''}: ` + res.map(r => `${esc(r.c.name)} ${r.ticks}`).join(' · ') + '</p>' +
-    (res.some(r => r.notDone.length) ? `<details><summary>Not passed yet (${res.reduce((a, r) => a + r.notDone.length, 0)})</summary>${res.filter(r => r.notDone.length).map(r => `<p><b>${esc(r.c.name)}</b>: ${r.notDone.map(esc).join('; ')}</p>`).join('')}<p class="hint">Pass = Word Study and Matching Game done, plus tests 1–3 each 80% or more, or all 5 tests done.</p></details>` : '');
+    (res.some(r => r.notDone.length) ? `<details><summary>Not passed yet (${res.reduce((a, r) => a + r.notDone.length, 0)})</summary>${res.filter(r => r.notDone.length).map(r => `<p><b>${esc(r.c.name)}</b>: ${r.notDone.map(esc).join('; ')}</p>`).join('')}<p class="hint">Words pass = Word Study and Matching Game done, plus tests 1–3 each 80% or more, or all 5 tests done. Shadowing passes when TOPIA shows it done (O).</p></details>` : '');
 }
 function onlineBanner(html) {
   let box = document.getElementById('onlineBanner');
@@ -1910,8 +1959,8 @@ function dayHTML(c, syl) {
     h += `<div class="dnote"><span class="lab">Notes</span>${noteBoxHTML(c, s.id)}</div>${open ? `<div class="cardfoot"><button type="button" class="small" data-act="report">📄 Report</button>${leaveTools(c, s)}</div>` : ''}<button type="button" class="linkbtn morebtn" data-more aria-expanded="${open}">${open ? 'Less ▴' : `More for ${esc(s.eng || s.kor)}${extra ? ` (${extra})` : ''} ▾`}</button></article>`;
   });
   h += '</div>';
-  h += `<div class="topiarow"><button type="button" class="small" data-act="topia">⇪ Copy Day ${i + 1} for TOPIA</button><button type="button" class="info" data-info="topiahelp" aria-label="How to send scores to TOPIA">ⓘ</button>${hwTarget(c) ? `<button type="button" class="small" data-act="hwpaste">⇩ Paste online homework</button>` : ''}<span class="topiamsg hint" hidden></span>
-    <div class="hint infotext" id="topiahelp" hidden>Send these scores to TOPIA's Weekly Report: <b>1.</b> Tap Copy. <b>2.</b> On TOPIA's Weekly Report page, click the <a class="bm" href="${esc(TOPIA_BM)}" onclick="event.preventDefault()" title="Drag me to your bookmarks bar">Fill from gradesheet</a> bookmark: it picks the class, opens Register, chooses ${i + 1}회차 and fills the boxes. <b>3.</b> Check them and press Save. First time only: drag that button to your bookmarks bar. Scores are sent as a share of TOPIA's totals (8/9 → 89/100).${hwTarget(c) ? `<br><br><b>Online homework:</b> on any TOPIA page, click the <a class="bm" href="${esc(TOPIA_HW_BM)}" onclick="event.preventDefault()" title="Drag me to your bookmarks bar">Online homework from TOPIA</a> bookmark. It reads all your classes and opens the gradesheet, which ticks the passed units by itself. On iPad it copies instead: tap <b>Paste online homework</b> here. Pass = Word Study and Matching Game done, plus tests 1–3 each 80% or more, or all 5 tests done.` : ''}</div></div>`;
+  h += `<div class="topiarow"><button type="button" class="small" data-act="topia">⇪ Copy Day ${i + 1} for TOPIA</button><button type="button" class="info" data-info="topiahelp" aria-label="How to send scores to TOPIA">ⓘ</button>${hwTarget(c) || shTarget(c) ? `<button type="button" class="small" data-act="hwpaste">⇩ Paste online homework</button>` : ''}<span class="topiamsg hint" hidden></span>
+    <div class="hint infotext" id="topiahelp" hidden>Send these scores to TOPIA's Weekly Report: <b>1.</b> Tap Copy. <b>2.</b> On TOPIA's Weekly Report page, click the <a class="bm" href="${esc(TOPIA_BM)}" onclick="event.preventDefault()" title="Drag me to your bookmarks bar">Fill from gradesheet</a> bookmark: it picks the class, opens Register, chooses ${i + 1}회차 and fills the boxes. <b>3.</b> Check them and press Save. First time only: drag that button to your bookmarks bar. Scores are sent as a share of TOPIA's totals (8/9 → 89/100).${hwTarget(c) || shTarget(c) ? `<br><br><b>Online homework:</b> on any TOPIA page, click the <a class="bm" href="${esc(TOPIA_HW_BM)}" onclick="event.preventDefault()" title="Drag me to your bookmarks bar">Online homework from TOPIA</a> bookmark. It reads all your classes and opens the gradesheet, which ticks passed word units and shadowing by itself. On iPad it copies instead: tap <b>Paste online homework</b> here. Words pass = Word Study and Matching Game done, plus tests 1–3 each 80% or more, or all 5 tests done. Shadowing passes when TOPIA shows it done.` : ''}</div></div>`;
   if (away.length) h += `<p class="hint">Not in this class on Day ${i + 1}: ${away.map(s => `${esc(s.eng || s.kor)} (${esc(statusText(s))})`).join(', ')}. Use Whole sheet to bring a student back.</p>`;
   return h;
 }
