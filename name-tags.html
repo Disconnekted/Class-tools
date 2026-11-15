@@ -2166,6 +2166,14 @@ load(); // signs the same teacher back in after a reload, otherwise asks who's u
   const st = document.createElement('style');
   st.textContent = 'body{padding-bottom:72px}a.prepback.prepback,a.prepback.prepback:visited,a.prepback.prepback:hover{color:#fff!important}.prepback{position:fixed;left:16px;bottom:16px;z-index:8550;background:#7a1c0c;color:#fff;font:600 15px/1 Arial,sans-serif;padding:12px 16px;border-radius:999px;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}@media print{.prepback{display:none}}';
   document.head.appendChild(st); document.body.appendChild(bar);
+  // the class list from Class Prep goes in by itself once a teacher is signed in (and any tour is closed)
+  const take = () => { try { const h = JSON.parse(localStorage.getItem('prep.tagsHandoff') || 'null'); if (!h || Date.now() - h.at > 30 * 60 * 1000) return null; return h.t; } catch (e) { return null; } };
+  if (take()) { const iv = setInterval(() => {
+    const box = document.getElementById('paste'); if (!currentId || tourAt >= 0 || !box) return;
+    clearInterval(iv); const t = take(); try { localStorage.removeItem('prep.tagsHandoff'); } catch (e) {} if (!t) return;
+    const dt = new DataTransfer(); dt.setData('text/plain', t);
+    box.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  }, 400); setTimeout(() => clearInterval(iv), 30 * 60 * 1000); }
   let timer = null;
   window.addEventListener('afterprint', () => {
     setTimeout(() => {
