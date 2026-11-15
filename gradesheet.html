@@ -286,6 +286,8 @@ button.danger{background:var(--bad);border-color:var(--bad);color:var(--sheet)}
 .pimg img{width:100%;height:100%;object-fit:contain;display:block}
 .pimg i{font:400 12.5px var(--f-body);color:#5a6579;padding:10px;text-align:center}
 .pimg.stale{opacity:.45}
+.pimg:not(:has(img)){background:var(--grid)}
+.pimg:not(:has(img)) i{color:var(--muted)}
 .pcap{display:flex;justify-content:space-between;gap:8px;padding:5px 9px;font:700 12px var(--f-body);color:var(--accent);border-top:1px solid var(--grid)}
 .pcap span+span{color:var(--muted);font-weight:400}
 .pview[hidden]{display:none}
@@ -547,7 +549,7 @@ table.gs tr.r1 th.day input:focus{background:var(--sheet);color:var(--ink);outli
 <div class="modal" id="who" hidden>
   <div class="box" role="dialog" aria-modal="true" aria-labelledby="whoTitle">
     <h2 id="whoTitle">Who is marking?</h2>
-    <p class="hint">Pick your name to open your classes. New here? Type your name below.</p>
+    <p class="hint" id="whoHint">Pick your name to open your classes. New here? Type your name below.</p>
     <div class="who-list" id="whoList"></div>
     <form class="row" id="whoForm"><input id="whoName" placeholder="Your name, e.g. Joseph" autocomplete="off"><button class="primary" type="submit">Start</button></form>
     <p class="msg bad" id="whoMsg" hidden></p>
@@ -991,7 +993,8 @@ function showWho() { document.getElementById('who').hidden = false; renderWho();
 function renderWho() {
   document.getElementById('whoList').innerHTML = teachers.length
     ? teachers.map(t => `<button type="button" data-tid="${esc(t.id)}">${esc(t.name)}</button>`).join('')
-    : '<p class="hint">No names yet. Type yours below to start.</p>';
+    : '';
+  document.getElementById('whoHint').textContent = teachers.length ? 'Pick your name to open your classes. New here? Type your name below.' : 'Type your name to start.';
 }
 document.getElementById('whoList').addEventListener('click', e => { const b = e.target.closest('[data-tid]'); if (b) openTeacher(b.dataset.tid); });
 document.getElementById('whoForm').addEventListener('submit', async e => {
@@ -2483,7 +2486,7 @@ main.addEventListener('submit', e => {
     'then tap anyone late or absent': '그다음 지각·결석 학생을 누르세요', '✓ Here': '✓ 출석', 'Late': '지각', 'Absent': '결석', '✓ In': '✓ 제출', '✗ Not in': '✗ 미제출',
     'Tap to score': '눌러서 점수 입력', '+ Note': '+ 메모', 'Add': '추가', 'Done ▴': '닫기 ▴', 'Close': '닫기', 'Delete': '삭제', 'Keep': '유지', 'Remove': '제거',
     '+ Add a student': '+ 학생 추가', 'Class notes': '반 메모', 'Send or print': '보내기 · 인쇄', 'Blank sheets · PDF · Email · Slack': '빈 양식 · PDF · 이메일 · 슬랙',
-    'Delete this class…': '이 반 삭제…', '% Score chart': '% 점수표', 'Score chart': '점수표', 'Send as': '보낼 형식', 'Disruptive': '수업 방해', 'Sent outside': '밖으로 내보냄', 'Retest': '재시험', 'No book': '책 없음', '+ Disruptive': '+ 수업 방해', '+ Sent outside': '+ 밖으로 내보냄', '+ Retest': '+ 재시험', '+ No book': '+ 책 없음', 'Switch': '전환', "On TOPIA's Attendance page click": 'TOPIA 출석 페이지에서', ', then paste here.': '을(를) 누른 뒤 여기에 붙여넣으세요.', 'No students yet. Tap + Add students at the top to paste the class list.': '아직 학생이 없습니다. 위의 + 학생 추가를 눌러 명단을 붙여넣으세요.', 'No students yet. Tap + Add students at the top, or + Add a student below.': '아직 학생이 없습니다. 위의 + 학생 추가 또는 아래의 + 학생 추가를 누르세요.', 'Tap + Add students at the top to paste your class list, or add a class by hand.': '위의 + 학생 추가를 눌러 명단을 붙여넣거나 반을 직접 추가하세요.', 'No class yet': '아직 반이 없습니다', 'Tap to change this date': '눌러서 날짜 변경', 'Tap a date to change it if a lesson moved': '수업이 옮겨지면 날짜를 눌러 바꾸세요', '⇩ Paste online homework': '⇩ 온라인 숙제 붙여넣기',
+    'Delete this class…': '이 반 삭제…', '% Score chart': '% 점수표', 'Score chart': '점수표', 'Send as': '보낼 형식', 'Type your name to start.': '이름을 입력해 시작하세요.', 'Disruptive': '수업 방해', 'Sent outside': '밖으로 내보냄', 'Retest': '재시험', 'No book': '책 없음', '+ Disruptive': '+ 수업 방해', '+ Sent outside': '+ 밖으로 내보냄', '+ Retest': '+ 재시험', '+ No book': '+ 책 없음', 'Switch': '전환', "On TOPIA's Attendance page click": 'TOPIA 출석 페이지에서', ', then paste here.': '을(를) 누른 뒤 여기에 붙여넣으세요.', 'No students yet. Tap + Add students at the top to paste the class list.': '아직 학생이 없습니다. 위의 + 학생 추가를 눌러 명단을 붙여넣으세요.', 'No students yet. Tap + Add students at the top, or + Add a student below.': '아직 학생이 없습니다. 위의 + 학생 추가 또는 아래의 + 학생 추가를 누르세요.', 'Tap + Add students at the top to paste your class list, or add a class by hand.': '위의 + 학생 추가를 눌러 명단을 붙여넣거나 반을 직접 추가하세요.', 'No class yet': '아직 반이 없습니다', 'Tap to change this date': '눌러서 날짜 변경', 'Tap a date to change it if a lesson moved': '수업이 옮겨지면 날짜를 눌러 바꾸세요', '⇩ Paste online homework': '⇩ 온라인 숙제 붙여넣기',
     'Fill from gradesheet': '성적표에서 채우기', 'Online homework from TOPIA': 'TOPIA 온라인 숙제', 'TOPIA Helper': 'TOPIA 도우미',
     '⤓ Back up': '⤓ 백업', '⤒ Restore': '⤒ 복원', '📱 Send to iPad': '📱 iPad로 보내기', '📥 Receive from PC': '📥 PC에서 받기', 'Name tags': '이름표', 'Name tags ↗': '이름표 ↗',
     'Copy classes for name tags': '이름표용 반 목록 복사', '📄 Student reports': '📄 학생 리포트', '🖨 Print': '🖨 인쇄', '✉ Email': '✉ 이메일', '⤓ PDF with scores': '⤓ 점수 포함 PDF',
@@ -3294,7 +3297,7 @@ async function printDoc(doc, title) {
 classes = [exampleClass()]; current = classes[0].id; render();
 setSync('Connecting…');
 const useDb = window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
-Promise.resolve(useDb).catch(() => null).then(d => { if (d) startCloud(d); else { standaloneMode(); startLocal(); importFromLink(); onlineFromLink(); if (new URLSearchParams(location.search).get('send') === 'ipad' && me) ipadModal(); } });
+Promise.resolve(useDb).catch(() => null).then(d => { if (d) startCloud(d); else { setSync('Saved on this device'); standaloneMode(); startLocal(); importFromLink(); onlineFromLink(); if (new URLSearchParams(location.search).get('send') === 'ipad' && me) ipadModal(); } });
 </script>
 
 <script>
