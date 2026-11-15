@@ -1960,8 +1960,23 @@ function topiaHomeworkBookmarklet() {
     var s = ''; for (var i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
     return tag + btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
+  // Progress bar plus a tiny "catch the star" game while TOPIA's slow server answers.
+  var todo = 0, done = 0, score = 0, bar, lab;
+  function progressBox() {
+    var box = note('<b>Reading online homework…</b> <span data-l></span><div style="height:8px;background:#eadf9c;border-radius:4px;margin:8px 0;overflow:hidden"><div data-b style="height:100%;width:0;background:#1f6fb0;transition:width .3s"></div></div><div data-g style="position:relative;height:120px;background:#fffbe0;border-radius:8px;overflow:hidden"><button data-s style="position:absolute;left:45%;top:35%;font-size:26px;background:none;border:0;cursor:pointer;padding:4px">⭐</button><span data-sc style="position:absolute;right:8px;bottom:6px;font-size:13px;color:#7a6a10">Catch the star! 0</span></div>');
+    bar = box.querySelector('[data-b]'); lab = box.querySelector('[data-l]');
+    var st = box.querySelector('[data-s]'), sc = box.querySelector('[data-sc]');
+    st.onclick = function () { score++; sc.textContent = (score >= 20 ? '🏆 ' : '') + 'Catch the star! ' + score; st.style.left = Math.floor(Math.random() * 85) + '%'; st.style.top = Math.floor(Math.random() * 65) + '%'; st.textContent = ['⭐', '🌟', '✨', '🍎', '📒'][score % 5]; };
+  }
+  function tick(add) { if (add) todo += add; else done++; if (!bar) return; var pc = todo ? Math.min(100, Math.round(100 * done / todo)) : 0; bar.style.width = pc + '%'; lab.textContent = pc + '% (' + done + ' of ' + todo + ')'; }
+  // Remembered on this computer (TOPIA's own storage): word units everyone has passed, and classes with no shadowing.
+  // Those are skipped next time, so later scans only ask TOPIA about what is still open.
+  var CK = 'gsOnline.v1', cache; try { cache = JSON.parse(localStorage.getItem(CK) || '{}'); } catch (e) { cache = {}; }
+  cache.u = cache.u || {}; cache.s = cache.s || {};
+  var saveCache = function () { try { localStorage.setItem(CK, JSON.stringify(cache)); } catch (e) {} };
+  var skipped = 0;
   async function run() {
-    note('Reading online homework from TOPIA…');
+    progressBox();
     var info = await get('class/info'), cls = info && info.data && info.data.list;
     if (!cls) { if (win) win.close(); note('Could not load your classes. Refresh TOPIA (log in again if asked) and try once more.'); return; }
     var out = [], nUnits = 0;
@@ -1972,18 +1987,30 @@ function topiaHomeworkBookmarklet() {
       var list = [];
       for (var pg = 1; pg < 10; pg++) { var j = await get('online-contents/onlineword?classId=' + c.classId + '&limit=100&page=' + pg), d = j && j.data; if (!d) break; list = list.concat(d.list || []); if (!d.hasNextPage) break; }
       list = list.filter(function (u) { return subs.indexOf(String(u.sourceSubjectObj && u.sourceSubjectObj.id)) >= 0 && u.countObj && u.countObj.participantCount > 0; });
-      await Promise.all(list.map(async function (u) {
-        var j = await get('online-contents/onlineword/' + c.classId + '/' + u.sourceSubjectObj.id + '/' + u.unitNum), L = j && j.data && j.data.list; if (!L) return;
+      var fresh = list.filter(function (u) {
+        var k = c.classId + '|' + u.sourceSubjectObj.id + '|' + u.unitNum, m = cache.u[k];
+        if (m && m.n === u.countObj.participantCount) { units[u.unitNum] = { name: m.name, p: m.p, f: [] }; nUnits++; skipped++; return false; }
+        return true;
+      });
+      tick(fresh.length);
+      await Promise.all(fresh.map(async function (u) {
+        var j = await get('online-contents/onlineword/' + c.classId + '/' + u.sourceSubjectObj.id + '/' + u.unitNum), L = j && j.data && j.data.list; tick(); if (!L) return;
         var p = [], f = [];
         L.forEach(function (st) { var s = st.studentObj || {}, nm = [String(s.nameE || '').trim(), String(s.nameK || '').trim()], why = judge(st); if (why) f.push(nm.concat(why)); else p.push(nm); });
-        units[u.unitNum] = { name: u.unitName, p: p, f: f }; nUnits++; note('Reading online homework from TOPIA… ' + nUnits + ' so far');
+        units[u.unitNum] = { name: u.unitName, p: p, f: f }; nUnits++;
+        if (!f.length && p.length) cache.u[c.classId + '|' + u.sourceSubjectObj.id + '|' + u.unitNum] = { n: u.countObj.participantCount, name: u.unitName, p: p };
       }));
       })(), (async function () {
       // Shadowing lives in the Homework (과제평가) grid: score 2 = done (O), 0 or 1 = not done.
       var today = new Date().toISOString().slice(0, 10);
-      await Promise.all(subs.map(async function (sid) {
-        var j = await get('class/homework/list?classId=' + c.classId + '&sourceSubjectId=' + sid), L = j && j.data && j.data.list;
+      // A class with no shadowing last time is checked again after a week (this is TOPIA's slowest page).
+      var week = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10), look = subs.filter(function (sid) { var w = cache.s[c.classId + '|' + sid]; if (w && w > week) { skipped++; return false; } return true; });
+      tick(look.length);
+      await Promise.all(look.map(async function (sid) {
+        var j = await get('class/homework/list?classId=' + c.classId + '&sourceSubjectId=' + sid), L = j && j.data && j.data.list; tick();
         if (!L || !Array.isArray(L.studentInfolist)) return;
+        var any = L.studentInfolist.some(function (st) { return (st.homeworkList || []).some(function (h) { return h.onlineHomeworkInfo && h.onlineHomeworkInfo.shadowing; }); });
+        if (any) delete cache.s[c.classId + '|' + sid]; else cache.s[c.classId + '|' + sid] = today;
         L.studentInfolist.forEach(function (st) {
           var nm = [String(st.nameE || '').trim(), String(st.nameK || '').trim()];
           (st.homeworkList || []).forEach(function (h) {
@@ -2000,12 +2027,13 @@ function topiaHomeworkBookmarklet() {
       nUnits += Object.keys(shadow).length;
       out.push({ shadow: shadow, cls: c.className, subj: (c.subjectList || []).map(function (s) { return s.subjectName || s.name || ''; }).join('/'), units: units });
     }));
+    saveCache();
     var data = { app: 'gs-online', at: new Date().toISOString().slice(0, 10), classes: out };
     window.__gsOnlineData = data;
     var link = GS + '#online=' + await squeeze(data), text = '#GS-ONLINE ' + JSON.stringify(data);
     var copy = function (b) { var ok = function () { if (b) b.textContent = '✓ Copied'; }; (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(ok, function () { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); ok(); } catch (e) {} ta.remove(); }); };
-    if (win) { win.location.href = link; note('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes. The gradesheet opened in a new tab and ticked them.'); return; }
-    var box = note('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes. <button data-c style="font:inherit;padding:4px 10px">Copy</button> then tap <b>Paste online homework</b> in the gradesheet app, or <a href="' + link + '" target="_blank">open the gradesheet here</a>.');
+    if (win) { win.location.href = link; note('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes' + (skipped ? ' (' + skipped + ' skipped: already passed or no shadowing)' : '') + '. The gradesheet opened in a new tab and ticked them.' + (score ? ' Stars caught: ' + score + '.' : '')); return; }
+    var box = note('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes' + (skipped ? ' (' + skipped + ' skipped: already passed or no shadowing)' : '') + '. <button data-c style="font:inherit;padding:4px 10px">Copy</button> then tap <b>Paste online homework</b> in the gradesheet app, or <a href="' + link + '" target="_blank">open the gradesheet here</a>.');
     box.querySelector('[data-c]').onclick = function () { copy(this); };
     try { await navigator.clipboard.writeText(text); box.querySelector('[data-c]').textContent = '✓ Copied'; } catch (e) {}
   }
