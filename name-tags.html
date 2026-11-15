@@ -2160,9 +2160,16 @@ load(); // signs the same teacher back in after a reload, otherwise asks who's u
 (function () {
   if (new URLSearchParams(location.search).get('from') !== 'prep') return;
   // signing out first keeps this teacher's classes saved but hidden from the next teacher
-  const back = () => { try { if (currentId) signOut(); } catch (e) {} location.href = 'class-prep.html?back=tags'; };
+  // go back to the exact Prep page that opened this one (its file name can differ: class-prep.html, index.html, a renamed copy)
+  const prepUrl = (() => { try { const ret = new URLSearchParams(location.search).get('ret');
+      if (ret && /^[^\/\\:?#]+\.html?$/i.test(ret)) return encodeURIComponent(ret) + '?back=tags'; } catch (e) {}
+    try { const r = document.referrer && new URL(document.referrer);
+      if (r && r.origin === location.origin && !/name-tags/i.test(r.pathname)) { r.search = '?back=tags'; r.hash = ''; return r.href; } } catch (e) {}
+    return (location.protocol === 'file:' || /github\.io$/.test(location.hostname)) ? 'class-prep.html?back=tags' : 'index.html?back=tags'; })();
+  try { if (new URLSearchParams(location.search).get('ret') || !sessionStorage.getItem('prepBackUrl')) sessionStorage.setItem('prepBackUrl', prepUrl); } catch (e) {}
+  const back = () => { try { if (currentId) signOut(); } catch (e) {} let u = prepUrl; try { u = sessionStorage.getItem('prepBackUrl') || prepUrl; } catch (e) {} location.href = u; };
   const bar = document.createElement('a');
-  bar.href = 'class-prep.html?back=tags'; bar.className = 'prepback'; bar.addEventListener('click', e => { e.preventDefault(); back(); }); bar.textContent = '← Back to Class Prep';
+  bar.href = prepUrl; bar.className = 'prepback'; bar.addEventListener('click', e => { e.preventDefault(); back(); }); bar.textContent = '← Back to Class Prep';
   const st = document.createElement('style');
   st.textContent = 'body{padding-bottom:72px}a.prepback.prepback,a.prepback.prepback:visited,a.prepback.prepback:hover{color:#fff!important}.prepback{position:fixed;left:16px;bottom:16px;z-index:8550;background:#7a1c0c;color:#fff;font:600 15px/1 Arial,sans-serif;padding:12px 16px;border-radius:999px;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}@media print{.prepback{display:none}}';
   document.head.appendChild(st); document.body.appendChild(bar);
