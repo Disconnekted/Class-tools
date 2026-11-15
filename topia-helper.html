@@ -20,18 +20,18 @@ button.primary{background:var(--accent);color:var(--accent-ink);border-color:var
 .ok{color:var(--ok);font-weight:600;margin-left:8px}
 .hint{color:var(--muted);font-size:13.5px}
 details summary{cursor:pointer;font-weight:600}
+.others{margin:4px 0 14px}.others[open] summary{margin-bottom:10px}
 .here{outline:2px solid var(--accent)}
 code{font-size:12px;word-break:break-all;color:var(--muted)}
 </style></head>
 <body><main>
 <h1>📒 TOPIA Helper</h1>
-<p class="lead">One bookmark that adds the gradesheet tools to TOPIA: copy students, fill the Weekly Report, and bring online homework into the gradesheet. Set it up once on each device. It updates itself.</p>
+<p class="lead">One bookmark for TOPIA: copy students, fill the Weekly Report, bring in online homework. Set it up once per device. Everything is inside the bookmark: nothing is loaded from anywhere else.</p>
 
 <div class="card" id="pc">
   <h2>💻 Computer (Chrome, Edge, Whale, Safari)</h2>
   <ol>
-    <li>Show the bookmarks bar: <b>Ctrl+Shift+B</b> (Mac: <b>⌘+Shift+B</b>).</li>
-    <li>Drag this button onto the bar: <a class="bm" id="bmLink" href="#" title="Drag me to your bookmarks bar">📒 TOPIA Helper</a></li>
+    <li>Drag this button onto your bookmarks bar (no bar? press <b>Ctrl+Shift+B</b>): <a class="bm" id="bmLink" href="#" title="Drag me to your bookmarks bar">📒 TOPIA Helper</a></li>
     <li>On any TOPIA page, click it.</li>
   </ol>
 </div>
@@ -41,8 +41,7 @@ code{font-size:12px;word-break:break-all;color:var(--muted)}
   <ol>
     <li><button type="button" class="primary" data-copy>Copy the bookmark</button><span class="ok" hidden>Copied</span></li>
     <li>Tap <b>Share</b> (□↑) → <b>Add Bookmark</b> → name it <b>TOPIA Helper</b> → Save.</li>
-    <li>Tap the <b>Bookmarks</b> icon (📖) → <b>Edit</b> → tap <b>TOPIA Helper</b>.</li>
-    <li>Clear the address, paste, tap <b>Done</b>.</li>
+    <li>Open <b>Bookmarks</b> (📖) → <b>Edit</b> → tap <b>TOPIA Helper</b>, replace the address with what you copied, tap <b>Done</b>.</li>
     <li>On TOPIA, tap the address bar, type <b>TOPIA Helper</b> and tap the bookmark.</li>
   </ol>
 </div>
@@ -57,26 +56,25 @@ code{font-size:12px;word-break:break-all;color:var(--muted)}
   </ol>
 </div>
 
-<div class="card">
-  <details><summary>School computer that blocks bookmarklets? Use the Chrome extension</summary>
-  <p class="hint">Download <a href="topia-helper.zip">topia-helper.zip</a>, unzip it, open <b>chrome://extensions</b>, turn on <b>Developer mode</b>, click <b>Load unpacked</b> and pick the folder. The bookmark is easier and updates itself, so try it first.</p></details>
-</div>
-<p class="hint">Nothing is saved on TOPIA until you press Save there. Your TOPIA password is never read.</p>
-<details class="hint"><summary>Show the bookmark code</summary><code id="code"></code></details>
+
+<details class="others"><summary>Other devices</summary><div id="otherBox"></div></details>
+<p class="hint">Nothing is saved on TOPIA until you press Save there.</p>
+<p class="hint">After an update, copy or drag it again to get the newest version. Bookmark size: <span id="code">loading…</span></p>
 </main>
 <script>
-const BM = "javascript:(function(){window.__gsBookmark=1;if(typeof window.__gsHelper==='function'){window.__gsBookmark=0;window.__gsHelper();return}var s=document.createElement('script');s.src='https://disconnekted.github.io/Class-tools/topia-helper.js?t='+Date.now();document.body.appendChild(s)})()";
-document.getElementById('bmLink').href = BM;
+// Self-contained: the whole helper lives in the bookmark (nothing is loaded from outside). Re-copy after updates.
+let BM = '';
+const ready = fetch('topia-helper.min.js', { cache: 'no-store' }).then(r => r.text()).then(js => { BM = 'javascript:window.__gsBookmark=1;' + encodeURI(js.trim()).replace(/#/g, '%23') + 'void 0'; paint(); });
+function paint() { document.getElementById('bmLink').href = BM; document.getElementById('code').textContent = BM.length + ' characters'; }
 document.getElementById('bmLink').addEventListener('click', e => { e.preventDefault(); alert('Drag this button to your bookmarks bar, then click it on TOPIA.'); });
-document.getElementById('code').textContent = BM;
 document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
-  const ok = b.nextElementSibling;
+  const ok = b.nextElementSibling; await ready;
   try { await navigator.clipboard.writeText(BM); } catch (e) { const t = document.createElement('textarea'); t.value = BM; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
   ok.hidden = false; setTimeout(() => { ok.hidden = true; }, 3000);
 }));
 // Put this device's steps first.
 const ua = navigator.userAgent, isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1), isAnd = /Android/.test(ua);
 const mine = document.getElementById(isIOS ? 'ipad' : isAnd ? 'android' : 'pc');
-mine.classList.add('here'); mine.parentNode.insertBefore(mine, document.querySelector('.card'));
+const box = document.getElementById('otherBox'); ['pc', 'ipad', 'android'].forEach(id => { if (id !== mine.id) box.appendChild(document.getElementById(id)); });
 </script>
 </body></html>

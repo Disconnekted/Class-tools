@@ -532,8 +532,8 @@ table.gs tr.r1 th.day input:focus{background:var(--sheet);color:var(--ink);outli
       <div class="clist" id="clist"></div>
       <details class="panel fold" data-ui="add" id="addBox">
         <summary><span class="fold-t">+ Add students</span></summary>
-        <p class="hint">On TOPIA's Attendance page click <a class="bm" data-copystudents href="#" onclick="event.preventDefault()" title="Drag me to your bookmarks bar">Copy students</a>, then paste here. <button type="button" class="info" data-info="addhelp" aria-expanded="false">ⓘ</button></p>
-        <p class="hint infotext" id="addhelp" hidden>First time only: drag the <b>Copy students</b> button to your bookmarks bar (or use the <a href="https://disconnekted.github.io/Class-tools/topia-helper.html" target="_blank" rel="noopener">TOPIA Helper</a> bookmark). It's the same one the name tag tool uses, so the list works there too. Excel cells or a class list file work as well.</p>
+        <p class="hint">On TOPIA's Attendance page tap your <b>📒 TOPIA Helper</b> bookmark → <b>Copy students</b>, then paste here. <button type="button" class="info" data-info="addhelp" aria-expanded="false">ⓘ</button></p>
+        <p class="hint infotext" id="addhelp" hidden>No bookmark yet? <a href="https://disconnekted.github.io/Class-tools/topia-helper.html" target="_blank" rel="noopener">Set up TOPIA Helper</a> once on each device. Excel cells or a class list file work too.</p>
         <div class="drop" id="drop">
           <textarea id="paste" rows="3" placeholder="Paste here (Ctrl+V)"></textarea>
           <div class="row"><button type="button" class="small primary" id="importBtn">Import</button><label class="btn small" style="padding:4px 9px;font-size:12.5px">Choose file<input type="file" id="file" accept=".xlsx,.xls,.csv,.tsv,.txt,.html,.htm" hidden></label></div>
@@ -1845,7 +1845,7 @@ function topiaFillBookmarklet(given) {
   const clsKey = function (t) { return norm(String(t).split('(')[0]); };
   const grp = function (l) { return /particip/i.test(l) ? 'participation' : /writ|essay|summary/i.test(l) ? 'writing' : /word|vocab|idiom/i.test(l) ? 'vocab' : /present|debate|speech/i.test(l) ? 'presentation' : /monthly/i.test(l) ? 'monthly' : ''; };
   const run = async function (txt) {
-    if (!txt || txt.indexOf('#GS-TOPIA') !== 0) { alert('Copy the scores in the gradesheet first (Copy Day N for TOPIA).'); return; }
+    if (!txt || txt.indexOf('#GS-TOPIA') !== 0) { alert('In the gradesheet, tap Send Day N to TOPIA first.'); return; }
     let data; try { data = JSON.parse(txt.slice(10)); } catch (e) { alert('Those copied scores could not be read. Copy them again.'); return; }
     let ss = sessionSel();
     if (!ss) {
@@ -2085,9 +2085,9 @@ document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act="hwpaste"]'); if (!b) return;
   const m = b.parentNode.querySelector('.topiamsg'); m.hidden = false;
   let t = ''; try { t = await navigator.clipboard.readText(); } catch (er) {}
-  if (!/#GS-ONLINE |#online=/.test(t || '')) t = prompt('Paste what the "Online homework from TOPIA" bookmark copied:') || '';
+  if (!/#GS-ONLINE |#online=/.test(t || '')) t = prompt('Paste what TOPIA Helper → Online homework copied:') || '';
   const lk = t.match(/#online=([jz][A-Za-z0-9_-]+)/); if (lk) { onlineToken(lk[1]); return; }
-  if (!/^#GS-ONLINE /.test(t)) { m.textContent = 'Nothing to paste. Click the Online homework from TOPIA bookmark first (ⓘ).'; return; }
+  if (!/^#GS-ONLINE /.test(t)) { m.textContent = 'Nothing to paste. On TOPIA, tap TOPIA Helper → Online homework first (ⓘ).'; return; }
   let data; try { data = JSON.parse(t.slice(11)); } catch (er) { m.textContent = 'That copy looks broken. Copy it again on TOPIA.'; return; }
   onlineGo(data);
 });
@@ -2294,7 +2294,7 @@ function dayHTML(c, syl) {
   });
   h += '</div>';
   h += `<div class="topiarow"><button type="button" class="small" data-act="topia" title="Opens TOPIA\'s Weekly Report with this day\'s scores filled in by TOPIA Helper">⇪ Send Day ${i + 1} to TOPIA</button><button type="button" class="info" data-info="topiahelp" aria-label="How to send scores to TOPIA">ⓘ</button>${hwTarget(c) || shTarget(c) ? `<button type="button" class="small" data-act="hwpaste">⇩ Paste online homework</button>` : ''}<span class="topiamsg hint" hidden></span>
-    <div class="hint infotext" id="topiahelp" hidden><b>Easiest:</b> set up the <a href="https://disconnekted.github.io/Class-tools/topia-helper.html" target="_blank" rel="noopener">TOPIA Helper bookmark</a> once on each device (PC, iPad, tablet). It adds every TOPIA tool in one button and updates itself.<br><br>Send these scores to TOPIA's Weekly Report: tap <b>Send Day N to TOPIA</b>. With TOPIA Helper the boxes fill themselves; you check and press Save. Without it: <b>1.</b> Tap Send (the scores are copied). <b>2.</b> On TOPIA's Weekly Report page, click the <a class="bm" href="${esc(TOPIA_BM)}" onclick="event.preventDefault()" title="Drag me to your bookmarks bar">Fill from gradesheet</a> bookmark: it picks the class, opens Register, chooses ${i + 1}회차 and fills the boxes. <b>3.</b> Check them and press Save. First time only: drag that button to your bookmarks bar. Scores are sent as a share of TOPIA's totals (8/9 → 89/100).${hwTarget(c) || shTarget(c) ? `<br><br><b>Online homework:</b> on any TOPIA page, click the <a class="bm" href="${esc(TOPIA_HW_BM)}" onclick="event.preventDefault()" title="Drag me to your bookmarks bar">Online homework from TOPIA</a> bookmark. It reads all your classes and opens the gradesheet, which ticks passed word units and shadowing by itself. On iPad it copies instead: tap <b>Paste online homework</b> here. Words pass = Word Study and Matching Game done, plus tests 1–3 each 80% or more, or all 5 tests done. Shadowing passes when TOPIA shows it done.` : ''}</div></div>`;
+    <div class="hint infotext" id="topiahelp" hidden>Tap <b>Send Day N to TOPIA</b>. On TOPIA, tap your <b>📒 TOPIA Helper</b> bookmark if the boxes aren't filled yet, check them and press Save. Scores go in as a share of TOPIA's totals (8/9 → 89/100).${hwTarget(c) || shTarget(c) ? `<br><br><b>Online homework:</b> on any TOPIA page tap TOPIA Helper → <b>Online homework</b>. The gradesheet ticks passed word units and shadowing by itself (on iPad, tap <b>Paste online homework</b> here). Words pass = Word Study and Matching Game done, plus tests 1–3 each 80% or more, or all 5 tests done.` : ''}<br><br>No bookmark yet? <a href="https://disconnekted.github.io/Class-tools/topia-helper.html" target="_blank" rel="noopener">Set up TOPIA Helper</a> once on each device.</div></div>`;
   if (away.length) h += `<p class="hint">Not in this class on Day ${i + 1}: ${away.map(s => `${esc(s.eng || s.kor)} (${esc(statusText(s))})`).join(', ')}. Use Whole sheet to bring a student back.</p>`;
   return h;
 }
