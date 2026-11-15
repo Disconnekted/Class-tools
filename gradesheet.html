@@ -496,6 +496,13 @@ table.gs td button.cell.sc.lo{color:var(--bad);font-weight:700}
 .msg.ok{border:1px solid color-mix(in srgb,var(--ok) 25%,transparent)}
 ::selection{background:var(--band1-soft)}
 button:not(:disabled):active{transform:translateY(1px)}
+/* Small-fixes pass (2026-11-15): one editable date row, a small % button that covers less of the sheet. */
+table.gs tr.r1 th.day input{width:100%;height:100%;border:0;border-radius:0;background:transparent;color:inherit;font:600 10.5px var(--f-mono);text-align:center;padding:0;cursor:pointer}
+table.gs tr.r1 th.day input::placeholder{color:inherit;opacity:1}
+table.gs tr.r1 th.day input:focus{background:var(--sheet);color:var(--ink);outline:2px solid var(--accent);cursor:text}
+#chartFab{padding:0;width:46px;height:46px;display:grid;place-items:center;text-align:center;font:800 19px var(--f-display);opacity:.92}
+#chartFab:hover{opacity:1}
+.seglab{font:600 12.5px var(--f-body);color:var(--muted);align-self:center;margin-right:-2px}
 </style>
 
 </head><body>
@@ -855,7 +862,7 @@ function saveLocal() {
   const all = lsGet(LOCAL_KEY) || { teachers: [], classes: {} };
   all.teachers = teachers;
   all.classes[me] = classes.filter(c => !c.example);
-  lsSet(LOCAL_KEY, all); dirty.clear(); setSync('Saved on this computer');
+  lsSet(LOCAL_KEY, all); dirty.clear(); setSync('Saved on this device');
 }
 async function flush() {
   if (writing) return;
@@ -976,7 +983,7 @@ function openTeacher(id) {
   document.getElementById('who').hidden = true;
   const t = teachers.find(x => x.id === id);
   const wb = document.getElementById('whoBtn'); wb.hidden = false; wb.innerHTML = `👤 ${esc(t ? t.name : '')} · Switch`;
-  setSync(db ? '☁ Saved online' : 'Saved on this computer');
+  setSync(db ? '☁ Saved online' : 'Saved on this device');
   classes.forEach(c => { if (c._migrated) { delete c._migrated; touch(c); } }); // save the new totals once
   render();
 }
@@ -1028,7 +1035,7 @@ function render() {
   renderList();
   const c = cur();
   const main = document.getElementById('main');
-  if (!c) { main.innerHTML = '<div class="panel"><h3>No class yet</h3><p class="hint">Paste your class list on the left, or add a class by hand.</p></div>'; return; }
+  if (!c) { main.innerHTML = '<div class="panel"><h3>No class yet</h3><p class="hint">Tap + Add students at the top to paste your class list, or add a class by hand.</p></div>'; return; }
   const syl = syllabusFor(c);
   const subj = SUBJECTS[c.subject];
   main.innerHTML = `
@@ -1054,7 +1061,7 @@ function render() {
       </details>
     </div>
     ${pendingSubj[c.id] ? switchHTML(c, pendingSubj[c.id]) : ''}
-    <details class="cols" id="colsBox"${c.openCols ? ' open' : ''}><summary><span class="fold-t">Columns</span> <span class="sumhint">${c.cats.map(k => esc(k.label)).join(' · ')}</span></summary>
+    <details class="cols" id="colsBox"${c.openCols ? ' open' : ''}><summary><span class="fold-t">Columns</span> <span class="sumhint">${c.cats.length}</span></summary>
       <div class="catrows">${c.cats.map((k, i) => `
         <div class="catrow" data-ci="${i}">
           <input aria-label="Column name" data-k="label" value="${esc(k.label)}">
@@ -1097,7 +1104,7 @@ function render() {
         <div class="prevrow">
           ${thumbHTML('scored')}
           <div class="prevside">
-            <div class="seg sendfmt" role="group" aria-label="What to send"><button type="button" data-fmt="pdf" aria-pressed="${sendFmt === 'pdf'}">PDF with scores</button><button type="button" data-fmt="xlsx" aria-pressed="${sendFmt === 'xlsx'}">Excel</button><button type="button" data-fmt="both" aria-pressed="${sendFmt === 'both'}">Both</button></div>
+            <span class="seglab">Send as</span><div class="seg sendfmt" role="group" aria-label="Send as"><button type="button" data-fmt="pdf" aria-pressed="${sendFmt === 'pdf'}">PDF</button><button type="button" data-fmt="xlsx" aria-pressed="${sendFmt === 'xlsx'}">Excel</button><button type="button" data-fmt="both" aria-pressed="${sendFmt === 'both'}">Both</button></div>
             <div class="outrow"><button type="button" class="primary" data-act="send-email">✉ Email</button><button type="button" class="primary" data-act="send-slack"># Slack</button><button type="button" data-act="pdf-full">⤓ PDF with scores</button><button type="button" data-act="print-full">🖨 Print</button><button type="button" data-act="reports" title="One page per student: scores, averages and notes">📄 Student reports</button></div>
           </div>
         </div>
@@ -1139,14 +1146,13 @@ function sheetHTML(c, syl) {
   const days = [...Array(NDAYS).keys()];
   const xs = c.extras || [];
   let h = `<table class="gs"><thead>
-    <tr class="r1"><th class="stick c-no" rowspan="3">No</th><th class="stick c-name" rowspan="3">Name</th><th class="stick c-cat">Date</th>
-      ${days.map(i => `<th class="day m${monthOf(i) + 1}">${esc(dateFor(c, i))}</th>`).join('')}
-      <th class="avg" rowspan="3">Avg</th><th colspan="3">Monthly report</th>${xs.length ? `<th colspan="${xs.length}">Online homework</th>` : ''}<th class="note" rowspan="3">Notes</th></tr>
+    <tr class="r1"><th class="stick c-no" rowspan="2">No</th><th class="stick c-name" rowspan="2">Name</th><th class="stick c-cat" title="Tap a date to change it if a lesson moved">Date</th>
+      ${days.map(i => `<th class="day m${monthOf(i) + 1}"><input id="dt${i}" data-date="${i}" value="${esc((c.dates || [])[i] || '')}" placeholder="${esc(autoDates(c)[i] || '')}" aria-label="Date for day ${i + 1}" title="Tap to change this date"></th>`).join('')}
+      <th class="avg" rowspan="2">Avg</th><th colspan="3">Monthly report</th>${xs.length ? `<th colspan="${xs.length}">Online homework</th>` : ''}<th class="note" rowspan="2">Notes</th></tr>
     <tr class="r2"><th class="stick c-cat">Day</th>${days.map(i => dayHead(c, syl, i)).join('')}
-      <th class="mon" rowspan="2">1</th><th class="mon" rowspan="2">2</th><th class="mon" rowspan="2">3</th>${xs.map(x => `<th rowspan="2" class="xtra">${esc(x.label)}</th>`).join('')}</tr>
-    <tr class="r3"><th class="stick c-cat" title="Change a date if a lesson moved">Change date</th>${days.map(i => `<th class="day"><input id="dt${i}" data-date="${i}" value="${esc((c.dates || [])[i] || '')}" placeholder="${esc(autoDates(c)[i] || '')}" aria-label="Date for day ${i + 1}"></th>`).join('')}</tr>
+      <th class="mon">1</th><th class="mon">2</th><th class="mon">3</th>${xs.map(x => `<th class="xtra">${esc(x.label)}</th>`).join('')}</tr>
   </thead><tbody>`;
-  if (!c.students.length) h += `<tr><td colspan="${NDAYS + 7 + xs.length}" style="padding:18px;text-align:left" class="hint">No students yet. Paste the class list on the left, or click “Add a student”.</td></tr>`;
+  if (!c.students.length) h += `<tr><td colspan="${NDAYS + 7 + xs.length}" style="padding:18px;text-align:left" class="hint">No students yet. Tap + Add students at the top, or + Add a student below.</td></tr>`;
   c.students.forEach((s, si) => {
     const sc = c.scores[s.id] || {};
     const ov = overall(c, s);
@@ -1478,7 +1484,9 @@ function applyGroups(groups) {
   msg.hidden = false;
   if (!groups.size) { msg.className = 'msg bad'; msg.textContent = "Couldn't find any classes or student names in that list."; if (!classes.length) classes = [exampleClass()]; return; }
   msg.className = 'msg ok';
-  msg.textContent = `Found ${students} student${students === 1 ? '' : 's'} in ${groups.size} class${groups.size === 1 ? '' : 'es'}; ${added} new. Check each class's subject and Day 1 date.`;
+  const one = groups.size === 1 ? classes.find(c => c.id === firstId) : null, pl = n => n === 1 ? '' : 's';
+  msg.textContent = (one ? `${one.name}: ${added} new student${pl(added)}` + (students > added ? `, ${students - added} already there` : '') : `${added} new student${pl(added)} in ${groups.size} classes`) + '. Check the subject and Day 1 date under Details.';
+  clearTimeout(msg._t); msg._t = setTimeout(() => { msg.hidden = true; }, 12000);
   classes.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
   current = firstId; render();
 }
@@ -1561,7 +1569,7 @@ function calcHTML() {
     <p class="hint">Set a column's “out of” and the sheet works these out for you: type 17 in a Word Test /20 cell and it counts as 85%.</p>`;
 }
 /* Always-visible Score chart button (bottom right) that opens the chart in a panel. */
-document.body.insertAdjacentHTML('beforeend', `<button type="button" id="chartFab" aria-haspopup="dialog">% Score chart</button>
+document.body.insertAdjacentHTML('beforeend', `<button type="button" id="chartFab" aria-haspopup="dialog" title="Score chart" aria-label="Score chart">%</button>
 <div id="chartPanel" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="chartTitle"><div class="cpbox"><div class="cphead"><h3 id="chartTitle">Score chart</h3><button type="button" class="small" id="chartClose">Close</button></div><div id="calc"></div></div></div>`);
 function openChart() { const p = document.getElementById('chartPanel'); document.getElementById('calc').innerHTML = calcHTML(); p.hidden = false; const i = document.getElementById('calcScore'); if (i && !matchMedia('(pointer:coarse)').matches) i.focus(); }
 function closeChart() { document.getElementById('chartPanel').hidden = true; }
@@ -2231,8 +2239,8 @@ function dayHTML(c, syl) {
     </div>
     <div class="daystrip" aria-label="Jump to a lesson">${[...Array(NDAYS).keys()].map(j => `<button type="button" data-day="${j}" class="m${monthOf(j) + 1}${marked(j) ? ' done' : ''}" aria-current="${j === i}">${j + 1}</button>`).join('')}</div>
     ${!c.start && !c.example ? `<p class="nudge">📅 Set the <b>Day 1 date</b> so this opens on today's lesson: <input type="date" data-setstart aria-label="Day 1 date"></p>` : ''}
-    <div class="row dayacts"><button type="button" class="primary" data-act="allpresent">✓ Everyone present</button><button type="button" data-act="allfull" title="Everyone here gets full marks for what is done today: attendance, participation and anything due today. Boxes you already filled stay as they are. Boxes you already filled stay as they are.">100% everyone</button><button type="button" data-act="clearday" title="Empty every box for this day, for every student. Tap twice to confirm.">Clear all</button>${c.cats.filter(isWordCat).map(k => `<label class="dayout" title="Change this if today's test has a different number of questions. Only Day ${i + 1} changes.">${esc(k.label)} out of <input type="number" inputmode="numeric" min="1" max="200" data-dayout="${esc(k.id)}" value="${esc(outOfAt(c, k, i))}" placeholder="${esc(k.outOf || '')}"></label>`).join('')}<span class="hint">then tap anyone late or absent</span></div>${monthlyHTML(c, syl, i)}`;
-  if (!c.students.length) return h + '<p class="hint">No students yet. Paste the class list on the left.</p>';
+    <div class="row dayacts"><button type="button" class="primary" data-act="allpresent">✓ Everyone present</button><button type="button" data-act="allfull" title="Everyone here gets full marks for what is done today: attendance, participation and anything due today. Boxes you already filled stay as they are.">100% everyone</button><button type="button" data-act="clearday" title="Empty every box for this day, for every student. Tap twice to confirm.">Clear all</button>${c.cats.filter(isWordCat).map(k => `<label class="dayout" title="Change this if today's test has a different number of questions. Only Day ${i + 1} changes.">${esc(k.label)} out of <input type="number" inputmode="numeric" min="1" max="200" data-dayout="${esc(k.id)}" value="${esc(outOfAt(c, k, i))}" placeholder="${esc(k.outOf || '')}"></label>`).join('')}${marked(i) ? '' : '<span class="hint">then tap anyone late or absent</span>'}</div>${monthlyHTML(c, syl, i)}`;
+  if (!c.students.length) return h + '<p class="hint">No students yet. Tap + Add students at the top to paste the class list.</p>';
   h += '<div class="cards">';
   const away = c.students.filter(s => !inClass(s, i));
   c.students.filter(s => inClass(s, i)).forEach(s => {
@@ -2464,7 +2472,7 @@ main.addEventListener('submit', e => {
 
   const KO = {
     'Class': '학급', 'Gradesheet': '성적표', 'My classes': '내 반', '+ Add students': '+ 학생 추가', 'Import': '가져오기', 'Choose file': '파일 선택',
-    '+ Add a class by hand': '+ 반 직접 추가', 'Copy students': '학생 복사', 'Saved on this computer': '이 기기에 저장됨', '⋯ More': '⋯ 더보기',
+    '+ Add a class by hand': '+ 반 직접 추가', 'Copy students': '학생 복사', 'Saved on this device': '이 기기에 저장됨', 'Saved on this computer': '이 기기에 저장됨', '⋯ More': '⋯ 더보기',
     'Day by day': '일별', 'Whole sheet': '전체 보기', 'Colour key': '색상 안내', 'Columns': '항목', 'Details': '세부 정보', '✎ Details': '✎ 세부 정보',
     'Attendance': '출석', 'Participation': '참여도', 'Word Test': '단어 시험', 'Monthly Test': '월말 평가', 'Summary Handed In': '요약 제출',
     'Essay': '에세이', 'Writing': '작문', 'Presentation': '발표', 'Debate': '토론', 'Speech': '스피치', 'Integrated': '통합', 'Speaking': '스피킹',
@@ -2475,7 +2483,7 @@ main.addEventListener('submit', e => {
     'then tap anyone late or absent': '그다음 지각·결석 학생을 누르세요', '✓ Here': '✓ 출석', 'Late': '지각', 'Absent': '결석', '✓ In': '✓ 제출', '✗ Not in': '✗ 미제출',
     'Tap to score': '눌러서 점수 입력', '+ Note': '+ 메모', 'Add': '추가', 'Done ▴': '닫기 ▴', 'Close': '닫기', 'Delete': '삭제', 'Keep': '유지', 'Remove': '제거',
     '+ Add a student': '+ 학생 추가', 'Class notes': '반 메모', 'Send or print': '보내기 · 인쇄', 'Blank sheets · PDF · Email · Slack': '빈 양식 · PDF · 이메일 · 슬랙',
-    'Delete this class…': '이 반 삭제…', '% Score chart': '% 점수표', 'Score chart': '점수표', '⇩ Paste online homework': '⇩ 온라인 숙제 붙여넣기',
+    'Delete this class…': '이 반 삭제…', '% Score chart': '% 점수표', 'Score chart': '점수표', 'Send as': '보낼 형식', 'Switch': '전환', "On TOPIA's Attendance page click": 'TOPIA 출석 페이지에서', ', then paste here.': '을(를) 누른 뒤 여기에 붙여넣으세요.', 'No students yet. Tap + Add students at the top to paste the class list.': '아직 학생이 없습니다. 위의 + 학생 추가를 눌러 명단을 붙여넣으세요.', 'No students yet. Tap + Add students at the top, or + Add a student below.': '아직 학생이 없습니다. 위의 + 학생 추가 또는 아래의 + 학생 추가를 누르세요.', 'Tap + Add students at the top to paste your class list, or add a class by hand.': '위의 + 학생 추가를 눌러 명단을 붙여넣거나 반을 직접 추가하세요.', 'No class yet': '아직 반이 없습니다', 'Tap to change this date': '눌러서 날짜 변경', 'Tap a date to change it if a lesson moved': '수업이 옮겨지면 날짜를 눌러 바꾸세요', '⇩ Paste online homework': '⇩ 온라인 숙제 붙여넣기',
     'Fill from gradesheet': '성적표에서 채우기', 'Online homework from TOPIA': 'TOPIA 온라인 숙제', 'TOPIA Helper': 'TOPIA 도우미',
     '⤓ Back up': '⤓ 백업', '⤒ Restore': '⤒ 복원', '📱 Send to iPad': '📱 iPad로 보내기', '📥 Receive from PC': '📥 PC에서 받기', 'Name tags': '이름표', 'Name tags ↗': '이름표 ↗',
     'Copy classes for name tags': '이름표용 반 목록 복사', '📄 Student reports': '📄 학생 리포트', '🖨 Print': '🖨 인쇄', '✉ Email': '✉ 이메일', '⤓ PDF with scores': '⤓ 점수 포함 PDF',
@@ -2501,7 +2509,7 @@ main.addEventListener('submit', e => {
     'Scores are saved on this device as you type. Now and then use ⋯ More → Back up to keep a copy.': '점수는 입력하는 대로 이 기기에 저장됩니다. 가끔 ⋯ 더보기 → 백업으로 사본을 남겨 두세요.'
   };
   const RULES = [
-    [/^Day (\d+)$/, '$1회차'], [/^Found (\d+) students? in (\d+) class(?:es)?; (\d+) new\. Check each class's subject and Day 1 date\.$/, '$2개 반에서 학생 $1명을 찾았습니다 (새 학생 $3명). 각 반의 과목과 1회차 날짜를 확인하세요.'],
+    [/^Day (\d+)$/, '$1회차'], [/^(.+): (\d+) new students?(?:, (\d+) already there)?\. Check the subject and Day 1 date under Details\.$/, (m, c, a, b) => `${c}: 새 학생 ${a}명${b ? `, 기존 ${b}명` : ''}. 세부 정보에서 과목과 1회차 날짜를 확인하세요.`], [/^(\d+) new students? in (\d+) classes\. Check the subject and Day 1 date under Details\.$/, '$2개 반에 새 학생 $1명. 세부 정보에서 과목과 1회차 날짜를 확인하세요.'],
     [/^Undone \((\d+) boxes\)$/, '되돌렸습니다 ($1칸)'], [/^Delete (.+) and all its scores\?$/, '$1 반과 모든 점수를 삭제할까요?'], [/^Quick notes for (.+)$/, '$1 빠른 메모'], [/^Day (\d+) date$/, '$1회차 날짜'], [/^⇪ Copy Day (\d+) for TOPIA$/, '⇪ $1회차 TOPIA용 복사'],
     [/^More for (.+?)( \(\d+\))? ▾$/, '$1 더보기$2 ▾'], [/^Less ▴$/, '접기 ▴'], [/^(.+) class$/, '$1 반'], [/^(.+) students$/, '$1 학생'],
     [/^Send (.+)'s gradesheet$/, '$1 성적표 보내기'], [/^Overall (\d+%)$/, '전체 $1'], [/^Participation \/(\d+)$/, '참여도 /$1'], [/^Word Test \/(\d+)$/, '단어 시험 /$1'],
@@ -2518,7 +2526,7 @@ main.addEventListener('submit', e => {
     const w = document.createTreeWalker(node, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
     for (let n = node; n; n = w.nextNode()) {
       if (n.nodeType === 1) {
-        if (n.closest && n.closest(SKIP)) continue;
+        if (n.closest && n.closest(SKIP) && !(n.tagName === 'TEXTAREA' && !n.parentElement.closest(SKIP))) continue;
         for (const a of ['placeholder', 'title', 'aria-label']) {
           const key = '__en_' + a, v = n.getAttribute && n.getAttribute(a); if (v == null) continue;
           if (n[key] === undefined || (v !== n[key] && v !== n[key + 'ko'])) n[key] = v;
@@ -2526,7 +2534,7 @@ main.addEventListener('submit', e => {
           if (v !== want) n.setAttribute(a, want);
         }
       } else if (n.nodeType === 3) {
-        const p = n.parentElement; if (!p || p.closest(SKIP)) continue;
+        const p = n.parentElement; if (!p || (p.closest(SKIP) && !p.closest('.nm-avg'))) continue;
         if (n.__en === undefined || (n.nodeValue !== n.__en && n.nodeValue !== n.__ko)) n.__en = n.nodeValue;
         const k = ko ? tr(n.__en) : null; n.__ko = k;
         const want = k || n.__en; if (n.nodeValue !== want) n.nodeValue = want;
@@ -3261,8 +3269,7 @@ function standaloneMode() {
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
   setTimeout(backupNudge, 1500); setInterval(backupNudge, 60000);
   const tags = document.querySelector('a[title="Open the Name Tag Generator"]'); if (tags) { tags.href = 'name-tags.html'; tags.removeAttribute('target'); tags.textContent = 'Name tags'; }
-  const foot = document.querySelector('.foot');
-  if (foot) foot.textContent = 'Scores are saved on this device as you type. Now and then use ⋯ More → Back up to keep a copy.';
+  const foot = document.querySelector('.foot'); if (foot) foot.remove(); // "Saved on this device" and the More dot already say this
 }
 
 /* ---------- printing ----------
