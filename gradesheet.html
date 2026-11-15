@@ -1319,7 +1319,15 @@ main.addEventListener('change', e => {
   if (t.id === 'fDays') { c.days = t.value; keep(c); render(); return; }
   if (t.id === 'fSem') { c.sem = t.value; relayout(c, `Semester ${t.value}`); return; }
   if (t.id === 'fName' && c.subject && templateOf(c).sheet !== (c.sheet || '')) { relayout(c, `Level ${levelOf(c.name) || '?'}`); return; }
-  if (t.id === 'fStart' || t.dataset.setstart !== undefined) { c.start = t.value; delete dayAt[c.id]; keep(c); render(); return; }
+  if (t.id === 'fStart' || t.dataset.setstart !== undefined) {
+    // The first lesson day goes to every other class on the same days (Mon / Wed or Tues / Thurs) that had no date or shared this one.
+    const was = c.start || '', same = c.days && !c.example ? classes.filter(o => o !== c && !o.example && o.days === c.days && (!o.start || o.start === was)) : [];
+    c.start = t.value; delete dayAt[c.id]; keep(c);
+    same.forEach(o => { o.start = t.value; delete dayAt[o.id]; keep(o); });
+    render();
+    if (same.length && t.value) flashMsg(`Day 1 date also set for ${same.length === 1 ? same[0].name : same.length === 2 ? 'both ' + same.map(o => o.name).join(' and ') : same.length + ' other ' + c.days + ' classes'}.`);
+    return;
+  }
   if (t.id === 'fName') { render(); return; }
   const cr = t.closest('.catrow');
   if (cr && t.dataset.k) {
@@ -2540,7 +2548,7 @@ main.addEventListener('submit', e => {
     'Scores are saved on this device as you type. Now and then use ⋯ More → Back up to keep a copy.': '점수는 입력하는 대로 이 기기에 저장됩니다. 가끔 ⋯ 더보기 → 백업으로 사본을 남겨 두세요.'
   };
   const RULES = [
-    [/^Day (\d+)$/, '$1회차'], [/^📅 Opened$/, '📅 열림:'], [/^, today's class\.$/, ' (오늘 수업 반)'], [/^↩ Back to (.+)$/, '↩ $1(으)로 돌아가기'], [/^(.+): (\d+) new students?(?:, (\d+) already there)?\. Check the subject and Day 1 date under Details\.$/, (m, c, a, b) => `${c}: 새 학생 ${a}명${b ? `, 기존 ${b}명` : ''}. 세부 정보에서 과목과 1회차 날짜를 확인하세요.`], [/^(\d+) new students? in (\d+) classes\. Check the subject and Day 1 date under Details\.$/, '$2개 반에 새 학생 $1명. 세부 정보에서 과목과 1회차 날짜를 확인하세요.'],
+    [/^Day (\d+)$/, '$1회차'], [/^Day 1 date also set for (?:both )?(.+)\.$/, '$1에도 1회차 날짜를 적용했습니다.'], [/^📅 Opened$/, '📅 열림:'], [/^, today's class\.$/, ' (오늘 수업 반)'], [/^↩ Back to (.+)$/, '↩ $1(으)로 돌아가기'], [/^(.+): (\d+) new students?(?:, (\d+) already there)?\. Check the subject and Day 1 date under Details\.$/, (m, c, a, b) => `${c}: 새 학생 ${a}명${b ? `, 기존 ${b}명` : ''}. 세부 정보에서 과목과 1회차 날짜를 확인하세요.`], [/^(\d+) new students? in (\d+) classes\. Check the subject and Day 1 date under Details\.$/, '$2개 반에 새 학생 $1명. 세부 정보에서 과목과 1회차 날짜를 확인하세요.'],
     [/^Undone \((\d+) boxes\)$/, '되돌렸습니다 ($1칸)'], [/^Delete (.+) and all its scores\?$/, '$1 반과 모든 점수를 삭제할까요?'], [/^Quick notes for (.+)$/, '$1 빠른 메모'], [/^Day (\d+) date$/, '$1회차 날짜'], [/^⇪ Copy Day (\d+) for TOPIA$/, '⇪ $1회차 TOPIA용 복사'], [/^⇪ Send Day (\d+) to TOPIA$/, '⇪ $1회차 TOPIA로 보내기'],
     [/^More for (.+?)( \(\d+\))? ▾$/, '$1 더보기$2 ▾'], [/^Less ▴$/, '접기 ▴'], [/^(.+) class$/, '$1 반'], [/^(.+) students$/, '$1 학생'],
     [/^Send (.+)'s gradesheet$/, '$1 성적표 보내기'], [/^Overall (\d+%)$/, '전체 $1'], [/^Participation \/(\d+)$/, '참여도 /$1'], [/^Word Test \/(\d+)$/, '단어 시험 /$1'],
