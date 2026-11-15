@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TOPIA Helper</title>
+<style>
+:root{--bg:#f3f5f8;--card:#fff;--ink:#18233a;--muted:#5a6579;--line:#cfd6e0;--accent:#1f6fb0;--accent-ink:#fff;--ok:#1d7a46}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11161f;--card:#18202c;--ink:#e6ebf3;--muted:#9aa6b8;--line:#2f3a4b;--accent:#6cb4f0;--accent-ink:#0d1520;--ok:#5fd08e}}
+:root[data-theme="dark"]{--bg:#11161f;--card:#18202c;--ink:#e6ebf3;--muted:#9aa6b8;--line:#2f3a4b;--accent:#6cb4f0;--accent-ink:#0d1520;--ok:#5fd08e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;padding:24px 16px}
+main{max-width:640px;margin:0 auto}
+h1{font-size:24px;margin:0 0 4px}
+.lead{color:var(--muted);margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:0 0 14px}
+.card h2{font-size:16px;margin:0 0 8px}
+ol{margin:6px 0 0;padding-left:22px}li{margin:4px 0}
+.bm{display:inline-block;padding:9px 16px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-weight:700;text-decoration:none;cursor:grab}
+button{font:inherit;font-weight:600;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.ok{color:var(--ok);font-weight:600;margin-left:8px}
+.hint{color:var(--muted);font-size:13.5px}
+details summary{cursor:pointer;font-weight:600}
+.here{outline:2px solid var(--accent)}
+code{font-size:12px;word-break:break-all;color:var(--muted)}
+</style></head>
+<body><main>
+<h1>📒 TOPIA Helper</h1>
+<p class="lead">One bookmark that adds the gradesheet tools to TOPIA: copy students, fill the Weekly Report, and bring online homework into the gradesheet. Set it up once on each device. It updates itself.</p>
+
+<div class="card" id="pc">
+  <h2>💻 Computer (Chrome, Edge, Whale, Safari)</h2>
+  <ol>
+    <li>Show the bookmarks bar: <b>Ctrl+Shift+B</b> (Mac: <b>⌘+Shift+B</b>).</li>
+    <li>Drag this button onto the bar: <a class="bm" id="bmLink" href="#" title="Drag me to your bookmarks bar">📒 TOPIA Helper</a></li>
+    <li>On any TOPIA page, click it.</li>
+  </ol>
+</div>
+
+<div class="card" id="ipad">
+  <h2>📱 iPad / iPhone (Safari)</h2>
+  <ol>
+    <li><button type="button" class="primary" data-copy>Copy the bookmark</button><span class="ok" hidden>Copied</span></li>
+    <li>Tap <b>Share</b> (□↑) → <b>Add Bookmark</b> → name it <b>TOPIA Helper</b> → Save.</li>
+    <li>Tap the <b>Bookmarks</b> icon (📖) → <b>Edit</b> → tap <b>TOPIA Helper</b>.</li>
+    <li>Clear the address, paste, tap <b>Done</b>.</li>
+    <li>On TOPIA, tap the address bar, type <b>TOPIA Helper</b> and tap the bookmark.</li>
+  </ol>
+</div>
+
+<div class="card" id="android">
+  <h2>🤖 Android tablet / phone (Chrome)</h2>
+  <ol>
+    <li><button type="button" class="primary" data-copy>Copy the bookmark</button><span class="ok" hidden>Copied</span></li>
+    <li>Tap <b>⋮</b> → <b>☆</b> to bookmark this page, then <b>Edit</b>.</li>
+    <li>Name it <b>TOPIA Helper</b>, paste over the URL, save.</li>
+    <li>On TOPIA, type <b>TOPIA Helper</b> in the address bar and tap the bookmark.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <details><summary>School computer that blocks bookmarklets? Use the Chrome extension</summary>
+  <p class="hint">Download <a href="topia-helper.zip">topia-helper.zip</a>, unzip it, open <b>chrome://extensions</b>, turn on <b>Developer mode</b>, click <b>Load unpacked</b> and pick the folder. The bookmark is easier and updates itself, so try it first.</p></details>
+</div>
+<p class="hint">Nothing is saved on TOPIA until you press Save there. Your TOPIA password is never read.</p>
+<details class="hint"><summary>Show the bookmark code</summary><code id="code"></code></details>
+</main>
+<script>
+const BM = "javascript:(function(){window.__gsBookmark=1;if(typeof window.__gsHelper==='function'){window.__gsBookmark=0;window.__gsHelper();return}var s=document.createElement('script');s.src='https://disconnekted.github.io/Class-tools/topia-helper.js?t='+Date.now();document.body.appendChild(s)})()";
+document.getElementById('bmLink').href = BM;
+document.getElementById('bmLink').addEventListener('click', e => { e.preventDefault(); alert('Drag this button to your bookmarks bar, then click it on TOPIA.'); });
+document.getElementById('code').textContent = BM;
+document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
+  const ok = b.nextElementSibling;
+  try { await navigator.clipboard.writeText(BM); } catch (e) { const t = document.createElement('textarea'); t.value = BM; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+  ok.hidden = false; setTimeout(() => { ok.hidden = true; }, 3000);
+}));
+// Put this device's steps first.
+const ua = navigator.userAgent, isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1), isAnd = /Android/.test(ua);
+const mine = document.getElementById(isIOS ? 'ipad' : isAnd ? 'android' : 'pc');
+mine.classList.add('here'); mine.parentNode.insertBefore(mine, document.querySelector('.card'));
+</script>
+</body></html>
