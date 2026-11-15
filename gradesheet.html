@@ -505,6 +505,8 @@ table.gs tr.r1 th.day input:focus{background:var(--sheet);color:var(--ink);outli
 #chartFab{padding:0;width:46px;height:46px;display:grid;place-items:center;text-align:center;font:800 19px var(--f-display);opacity:.92}
 #chartFab:hover{opacity:1}
 .seglab{font:600 12.5px var(--f-body);color:var(--muted);align-self:center;margin-right:-2px}
+.autopick{margin:0 0 10px;padding:8px 12px;border-radius:10px;background:var(--grid);color:var(--ink);font-size:13.5px}
+.autopick .linkbtn{margin-left:8px}
 </style>
 
 </head><body>
@@ -518,7 +520,7 @@ table.gs tr.r1 th.day input:focus{background:var(--sheet);color:var(--ink);outli
       <div class="more"><button type="button" id="moreBtn" aria-haspopup="true" aria-expanded="false">⋯ More</button>
       <div class="menu" id="moreMenu" hidden role="menu">
       <a class="btn" href="https://claude.ai/artifact/VJKK8aH25mCsAz8ov76Tky" target="_blank" rel="noopener" title="Open the Name Tag Generator">Name tags ↗</a>
-      <button type="button" id="copyTags" title="Copy every class and student so you can paste them into the Name Tag Generator">Copy classes for name tags</button>
+      <button type="button" id="todayToggle" title="Open the class that meets today when the gradesheet starts">☑ Open on today's class</button><button type="button" id="copyTags" title="Copy every class and student so you can paste them into the Name Tag Generator">Copy classes for name tags</button>
       <span id="backupBar" hidden><button type="button" id="backupBtn" title="Save every class to a file you keep">⤓ Back up</button><button type="button" id="restoreBtn" title="Load classes from a backup file">⤒ Restore</button><button type="button" id="ipadBtn" title="Move your classes to an iPad with a QR code or link">📱 Send to iPad</button><button type="button" id="recvBtn" title="Scan the code from the computer to get its classes" hidden>📥 Receive from PC</button><input type="file" id="restoreFile" accept=".json,application/json" hidden></span>
       </div></div>
     </div>
@@ -981,7 +983,11 @@ function openTeacher(id) {
   classes.forEach(c => { c.scores ||= {}; c.extra ||= {}; c.notes ||= {}; c.dates ||= []; });
   classes.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
   if (!classes.length) classes = [exampleClass()];
-  current = classes[0].id;
+  current = classes[0].id; autoPick = null;
+  const last = lsGet(LAST_KEY + id), lastC = classes.find(c => c.id === last);
+  if (lastC) current = lastC.id;
+  const todays = lsGet(TODAY_KEY) === 'off' || lsGet(TODAY_KEY + '.skip') === new Date().toDateString() ? [] : classes.filter(meetsToday);
+  if (todays.length && !todays.some(c => c.id === current)) { autoPick = { from: current, to: todays[0].id }; current = todays[0].id; }
   document.getElementById('who').hidden = true;
   const t = teachers.find(x => x.id === id);
   const wb = document.getElementById('whoBtn'); wb.hidden = false; wb.innerHTML = `👤 ${esc(t ? t.name : '')} · Switch`;
@@ -1034,14 +1040,32 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-info
   document.addEventListener('click', e => { if (!menu.hidden && !e.target.closest('.more')) set(false); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) set(false); });
 })();
+/* Opens on the class that meets today (from its days), else the class used last. One tap goes back; it can be turned off. */
+const LAST_KEY = 'gradesheet.last.', TODAY_KEY = 'gradesheet.todayClass';
+let autoPick = null;
+const DAYNUMS = { 'Mon / Wed': [1, 3], 'Tues / Thurs': [2, 4], 'Fri': [5] };
+function meetsToday(c) { return !c.example && (DAYNUMS[c.days] || []).includes(new Date().getDay()); }
+function autoPickHTML() {
+  if (!autoPick || autoPick.to !== current) { autoPick = null; return ''; }
+  const from = classes.find(c => c.id === autoPick.from), to = cur();
+  return `<p class="autopick">📅 Opened <b>${esc(to.name)}</b>, today's class.${from && !from.example ? ` <button type="button" class="linkbtn" data-autoback>↩ Back to ${esc(from.name)}</button>` : ''} <button type="button" class="linkbtn" data-autooff title="Always open the class you used last">Don't do this</button></p>`;
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-autoback]')) { lsSet(TODAY_KEY + '.skip', new Date().toDateString()); current = autoPick.from; autoPick = null; render(); }
+  else if (e.target.closest('[data-autooff]')) { lsSet(TODAY_KEY, 'off'); const f = autoPick && autoPick.from; autoPick = null; if (f && classes.some(c => c.id === f && !c.example)) current = f; render(); flashMsg("OK. It will open the class you used last. Turn it back on under ⋯ More."); paintTodayToggle(); }
+  else if (e.target.closest('#todayToggle')) { lsSet(TODAY_KEY, lsGet(TODAY_KEY) === 'off' ? 'on' : 'off'); paintTodayToggle(); }
+});
+setTimeout(() => paintTodayToggle(), 0);
+function paintTodayToggle() { const b = document.getElementById('todayToggle'); if (b) b.textContent = (lsGet(TODAY_KEY) === 'off' ? '☐' : '☑') + " Open on today's class"; }
 function render() {
   renderList();
   const c = cur();
+  if (c && me && !c.example) lsSet(LAST_KEY + me, c.id);
   const main = document.getElementById('main');
   if (!c) { main.innerHTML = '<div class="panel"><h3>No class yet</h3><p class="hint">Tap + Add students at the top to paste your class list, or add a class by hand.</p></div>'; return; }
   const syl = syllabusFor(c);
   const subj = SUBJECTS[c.subject];
-  main.innerHTML = `
+  main.innerHTML = `${autoPickHTML()}
   ${c.example ? `<p class="example-flag"><b>Example class</b> (not saved). Tap <b>+ Add students</b> to start with your own class.</p>` : ''}
   <section class="panel">
     <div class="classhead">
@@ -1809,7 +1833,7 @@ function topiaPayload(c, i) {
   }).filter(r => Object.keys(r.g).length);
   return '#GS-TOPIA ' + JSON.stringify({ cls: c.name, day: i + 1, rows });
 }
-function topiaFillBookmarklet() {
+function topiaFillBookmarklet(given) {
   const sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
   const until = async function (f, ms) { for (let t = 0; t < (ms || 8000); t += 150) { const v = f(); if (v) return v; await sleep(150); } return null; };
   const vis = function (el) { return !!(el && el.offsetParent); };
@@ -1862,6 +1886,7 @@ function topiaFillBookmarklet() {
     setTimeout(function () { if (box.isConnected) box.remove(); }, 15000);
   };
   const ask = function () { run(prompt('Paste the scores copied from the gradesheet:') || ''); };
+  if (typeof given === 'string') return run(given);
   if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(run, ask); else ask();
 }
 const TOPIA_BM = 'javascript:' + encodeURIComponent('(' + topiaFillBookmarklet.toString() + ')()');
@@ -1870,8 +1895,11 @@ document.addEventListener('click', async e => {
   const c = cur(), i = pickDay(c), t = topiaPayload(c, i), m = b.parentNode.querySelector('.topiamsg');
   const n = JSON.parse(t.slice(10)).rows.length;
   if (!n) { m.hidden = false; m.textContent = 'No scores on this day yet.'; return; }
-  try { await navigator.clipboard.writeText(t); m.innerHTML = `Copied ${n} student${n > 1 ? 's' : ''}. Now click <b>Fill from gradesheet</b> on <a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">TOPIA's Weekly Report ↗</a>.`; }
-  catch (er) { m.textContent = "Couldn't copy here. Open the gradesheet in Chrome or Safari and try again."; }
+  // Opens the Weekly Report with the scores in the link; TOPIA Helper fills them in there (the teacher presses Save).
+  const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(t.slice(10)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const w = window.open('https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report#gs-topia=' + b64, 'gsTopia');
+  let copied = false; try { await navigator.clipboard.writeText(t); copied = true; } catch (er) {}
+  m.innerHTML = (w ? `Opened TOPIA's Weekly Report: TOPIA Helper fills in ${n} student${n > 1 ? 's' : ''}. Check, then press Save.` : `Allow pop-ups, or open <a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">TOPIA's Weekly Report ↗</a>.`) + (copied ? ' <span title="Without TOPIA Helper, click the Fill from gradesheet bookmark there: the scores are copied too.">No Helper? Use the Fill bookmark.</span>' : '');
   m.hidden = false;
 });
 /* Online homework, automatic: the "Online homework from TOPIA" bookmark (clicked on any TOPIA page while
@@ -2265,8 +2293,8 @@ function dayHTML(c, syl) {
     h += `<div class="dnote"><span class="lab">Notes</span>${noteBoxHTML(c, s.id)}</div>${open ? `<div class="cardfoot"><button type="button" class="small" data-act="report">📄 Report</button>${leaveTools(c, s)}</div>` : ''}<button type="button" class="linkbtn morebtn" data-more aria-expanded="${open}">${open ? 'Less ▴' : `More for ${esc(s.eng || s.kor)}${extra ? ` (${extra})` : ''} ▾`}</button></article>`;
   });
   h += '</div>';
-  h += `<div class="topiarow"><button type="button" class="small" data-act="topia">⇪ Copy Day ${i + 1} for TOPIA</button><button type="button" class="info" data-info="topiahelp" aria-label="How to send scores to TOPIA">ⓘ</button>${hwTarget(c) || shTarget(c) ? `<button type="button" class="small" data-act="hwpaste">⇩ Paste online homework</button>` : ''}<span class="topiamsg hint" hidden></span>
-    <div class="hint infotext" id="topiahelp" hidden><b>On a PC?</b> The <a href="https://disconnekted.github.io/Class-tools/topia-helper.zip">TOPIA Helper</a> Chrome extension puts these tools as buttons on TOPIA, so no bookmarks are needed (unzip it, open chrome://extensions, turn on Developer mode, Load unpacked).<br><br>Send these scores to TOPIA's Weekly Report: <b>1.</b> Tap Copy. <b>2.</b> On TOPIA's Weekly Report page, click the <a class="bm" href="${esc(TOPIA_BM)}" onclick="event.preventDefault()" title="Drag me to your bookmarks bar">Fill from gradesheet</a> bookmark: it picks the class, opens Register, chooses ${i + 1}회차 and fills the boxes. <b>3.</b> Check them and press Save. First time only: drag that button to your bookmarks bar. Scores are sent as a share of TOPIA's totals (8/9 → 89/100).${hwTarget(c) || shTarget(c) ? `<br><br><b>Online homework:</b> on any TOPIA page, click the <a class="bm" href="${esc(TOPIA_HW_BM)}" onclick="event.preventDefault()" title="Drag me to your bookmarks bar">Online homework from TOPIA</a> bookmark. It reads all your classes and opens the gradesheet, which ticks passed word units and shadowing by itself. On iPad it copies instead: tap <b>Paste online homework</b> here. Words pass = Word Study and Matching Game done, plus tests 1–3 each 80% or more, or all 5 tests done. Shadowing passes when TOPIA shows it done.` : ''}</div></div>`;
+  h += `<div class="topiarow"><button type="button" class="small" data-act="topia" title="Opens TOPIA\'s Weekly Report with this day\'s scores filled in by TOPIA Helper">⇪ Send Day ${i + 1} to TOPIA</button><button type="button" class="info" data-info="topiahelp" aria-label="How to send scores to TOPIA">ⓘ</button>${hwTarget(c) || shTarget(c) ? `<button type="button" class="small" data-act="hwpaste">⇩ Paste online homework</button>` : ''}<span class="topiamsg hint" hidden></span>
+    <div class="hint infotext" id="topiahelp" hidden><b>On a PC?</b> The <a href="https://disconnekted.github.io/Class-tools/topia-helper.zip">TOPIA Helper</a> Chrome extension puts these tools as buttons on TOPIA, so no bookmarks are needed (unzip it, open chrome://extensions, turn on Developer mode, Load unpacked).<br><br>Send these scores to TOPIA's Weekly Report: tap <b>Send Day N to TOPIA</b>. With TOPIA Helper the boxes fill themselves; you check and press Save. Without it: <b>1.</b> Tap Send (the scores are copied). <b>2.</b> On TOPIA's Weekly Report page, click the <a class="bm" href="${esc(TOPIA_BM)}" onclick="event.preventDefault()" title="Drag me to your bookmarks bar">Fill from gradesheet</a> bookmark: it picks the class, opens Register, chooses ${i + 1}회차 and fills the boxes. <b>3.</b> Check them and press Save. First time only: drag that button to your bookmarks bar. Scores are sent as a share of TOPIA's totals (8/9 → 89/100).${hwTarget(c) || shTarget(c) ? `<br><br><b>Online homework:</b> on any TOPIA page, click the <a class="bm" href="${esc(TOPIA_HW_BM)}" onclick="event.preventDefault()" title="Drag me to your bookmarks bar">Online homework from TOPIA</a> bookmark. It reads all your classes and opens the gradesheet, which ticks passed word units and shadowing by itself. On iPad it copies instead: tap <b>Paste online homework</b> here. Words pass = Word Study and Matching Game done, plus tests 1–3 each 80% or more, or all 5 tests done. Shadowing passes when TOPIA shows it done.` : ''}</div></div>`;
   if (away.length) h += `<p class="hint">Not in this class on Day ${i + 1}: ${away.map(s => `${esc(s.eng || s.kor)} (${esc(statusText(s))})`).join(', ')}. Use Whole sheet to bring a student back.</p>`;
   return h;
 }
@@ -2486,7 +2514,7 @@ main.addEventListener('submit', e => {
     'then tap anyone late or absent': '그다음 지각·결석 학생을 누르세요', '✓ Here': '✓ 출석', 'Late': '지각', 'Absent': '결석', '✓ In': '✓ 제출', '✗ Not in': '✗ 미제출',
     'Tap to score': '눌러서 점수 입력', '+ Note': '+ 메모', 'Add': '추가', 'Done ▴': '닫기 ▴', 'Close': '닫기', 'Delete': '삭제', 'Keep': '유지', 'Remove': '제거',
     '+ Add a student': '+ 학생 추가', 'Class notes': '반 메모', 'Send or print': '보내기 · 인쇄', 'Blank sheets · PDF · Email · Slack': '빈 양식 · PDF · 이메일 · 슬랙',
-    'Delete this class…': '이 반 삭제…', '% Score chart': '% 점수표', 'Score chart': '점수표', 'Send as': '보낼 형식', 'Type your name to start.': '이름을 입력해 시작하세요.', 'Disruptive': '수업 방해', 'Sent outside': '밖으로 내보냄', 'Retest': '재시험', 'No book': '책 없음', '+ Disruptive': '+ 수업 방해', '+ Sent outside': '+ 밖으로 내보냄', '+ Retest': '+ 재시험', '+ No book': '+ 책 없음', 'Switch': '전환', "On TOPIA's Attendance page click": 'TOPIA 출석 페이지에서', ', then paste here.': '을(를) 누른 뒤 여기에 붙여넣으세요.', 'No students yet. Tap + Add students at the top to paste the class list.': '아직 학생이 없습니다. 위의 + 학생 추가를 눌러 명단을 붙여넣으세요.', 'No students yet. Tap + Add students at the top, or + Add a student below.': '아직 학생이 없습니다. 위의 + 학생 추가 또는 아래의 + 학생 추가를 누르세요.', 'Tap + Add students at the top to paste your class list, or add a class by hand.': '위의 + 학생 추가를 눌러 명단을 붙여넣거나 반을 직접 추가하세요.', 'No class yet': '아직 반이 없습니다', 'Tap to change this date': '눌러서 날짜 변경', 'Tap a date to change it if a lesson moved': '수업이 옮겨지면 날짜를 눌러 바꾸세요', '⇩ Paste online homework': '⇩ 온라인 숙제 붙여넣기',
+    'Delete this class…': '이 반 삭제…', '% Score chart': '% 점수표', 'Score chart': '점수표', 'Send as': '보낼 형식', "☑ Open on today's class": '☑ 오늘 수업 반으로 열기', "☐ Open on today's class": '☐ 오늘 수업 반으로 열기', "Don't do this": '사용 안 함', "Always open the class you used last": '항상 마지막에 쓴 반으로 열기', "OK. It will open the class you used last. Turn it back on under ⋯ More.": '마지막에 쓴 반으로 열립니다. ⋯ 더보기에서 다시 켤 수 있어요.', 'Type your name to start.': '이름을 입력해 시작하세요.', 'Disruptive': '수업 방해', 'Sent outside': '밖으로 내보냄', 'Retest': '재시험', 'No book': '책 없음', '+ Disruptive': '+ 수업 방해', '+ Sent outside': '+ 밖으로 내보냄', '+ Retest': '+ 재시험', '+ No book': '+ 책 없음', 'Switch': '전환', "On TOPIA's Attendance page click": 'TOPIA 출석 페이지에서', ', then paste here.': '을(를) 누른 뒤 여기에 붙여넣으세요.', 'No students yet. Tap + Add students at the top to paste the class list.': '아직 학생이 없습니다. 위의 + 학생 추가를 눌러 명단을 붙여넣으세요.', 'No students yet. Tap + Add students at the top, or + Add a student below.': '아직 학생이 없습니다. 위의 + 학생 추가 또는 아래의 + 학생 추가를 누르세요.', 'Tap + Add students at the top to paste your class list, or add a class by hand.': '위의 + 학생 추가를 눌러 명단을 붙여넣거나 반을 직접 추가하세요.', 'No class yet': '아직 반이 없습니다', 'Tap to change this date': '눌러서 날짜 변경', 'Tap a date to change it if a lesson moved': '수업이 옮겨지면 날짜를 눌러 바꾸세요', '⇩ Paste online homework': '⇩ 온라인 숙제 붙여넣기',
     'Fill from gradesheet': '성적표에서 채우기', 'Online homework from TOPIA': 'TOPIA 온라인 숙제', 'TOPIA Helper': 'TOPIA 도우미',
     '⤓ Back up': '⤓ 백업', '⤒ Restore': '⤒ 복원', '📱 Send to iPad': '📱 iPad로 보내기', '📥 Receive from PC': '📥 PC에서 받기', 'Name tags': '이름표', 'Name tags ↗': '이름표 ↗',
     'Copy classes for name tags': '이름표용 반 목록 복사', '📄 Student reports': '📄 학생 리포트', '🖨 Print': '🖨 인쇄', '✉ Email': '✉ 이메일', '⤓ PDF with scores': '⤓ 점수 포함 PDF',
@@ -2512,8 +2540,8 @@ main.addEventListener('submit', e => {
     'Scores are saved on this device as you type. Now and then use ⋯ More → Back up to keep a copy.': '점수는 입력하는 대로 이 기기에 저장됩니다. 가끔 ⋯ 더보기 → 백업으로 사본을 남겨 두세요.'
   };
   const RULES = [
-    [/^Day (\d+)$/, '$1회차'], [/^(.+): (\d+) new students?(?:, (\d+) already there)?\. Check the subject and Day 1 date under Details\.$/, (m, c, a, b) => `${c}: 새 학생 ${a}명${b ? `, 기존 ${b}명` : ''}. 세부 정보에서 과목과 1회차 날짜를 확인하세요.`], [/^(\d+) new students? in (\d+) classes\. Check the subject and Day 1 date under Details\.$/, '$2개 반에 새 학생 $1명. 세부 정보에서 과목과 1회차 날짜를 확인하세요.'],
-    [/^Undone \((\d+) boxes\)$/, '되돌렸습니다 ($1칸)'], [/^Delete (.+) and all its scores\?$/, '$1 반과 모든 점수를 삭제할까요?'], [/^Quick notes for (.+)$/, '$1 빠른 메모'], [/^Day (\d+) date$/, '$1회차 날짜'], [/^⇪ Copy Day (\d+) for TOPIA$/, '⇪ $1회차 TOPIA용 복사'],
+    [/^Day (\d+)$/, '$1회차'], [/^📅 Opened$/, '📅 열림:'], [/^, today's class\.$/, ' (오늘 수업 반)'], [/^↩ Back to (.+)$/, '↩ $1(으)로 돌아가기'], [/^(.+): (\d+) new students?(?:, (\d+) already there)?\. Check the subject and Day 1 date under Details\.$/, (m, c, a, b) => `${c}: 새 학생 ${a}명${b ? `, 기존 ${b}명` : ''}. 세부 정보에서 과목과 1회차 날짜를 확인하세요.`], [/^(\d+) new students? in (\d+) classes\. Check the subject and Day 1 date under Details\.$/, '$2개 반에 새 학생 $1명. 세부 정보에서 과목과 1회차 날짜를 확인하세요.'],
+    [/^Undone \((\d+) boxes\)$/, '되돌렸습니다 ($1칸)'], [/^Delete (.+) and all its scores\?$/, '$1 반과 모든 점수를 삭제할까요?'], [/^Quick notes for (.+)$/, '$1 빠른 메모'], [/^Day (\d+) date$/, '$1회차 날짜'], [/^⇪ Copy Day (\d+) for TOPIA$/, '⇪ $1회차 TOPIA용 복사'], [/^⇪ Send Day (\d+) to TOPIA$/, '⇪ $1회차 TOPIA로 보내기'],
     [/^More for (.+?)( \(\d+\))? ▾$/, '$1 더보기$2 ▾'], [/^Less ▴$/, '접기 ▴'], [/^(.+) class$/, '$1 반'], [/^(.+) students$/, '$1 학생'],
     [/^Send (.+)'s gradesheet$/, '$1 성적표 보내기'], [/^Overall (\d+%)$/, '전체 $1'], [/^Participation \/(\d+)$/, '참여도 /$1'], [/^Word Test \/(\d+)$/, '단어 시험 /$1'],
     [/^Vocabulary Test \/(\d+)$/, '단어 시험 /$1'], [/^Sem ([AB])$/, '$1학기']
