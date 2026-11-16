@@ -26,52 +26,66 @@ a{color:var(--accent)}
 .golinks{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 14px}
 .go{display:inline-block;padding:10px 16px;border-radius:10px;border:1px solid var(--accent);background:var(--card);color:var(--accent);font-weight:700;text-decoration:none}
 .go:hover{background:var(--accent);color:var(--accent-ink)}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.lang{flex:none;font-size:13px;padding:6px 12px}
+:lang(ko){word-break:keep-all}
 code{font-size:12px;word-break:break-all;color:var(--muted)}
 </style></head>
 <body><main>
-<h1>📒 TOPIA Helper</h1>
-<p class="lead">One bookmark for TOPIA: copy students, fill the Weekly Report, bring in online homework. Set it up once per device. Everything is inside the bookmark: nothing is loaded from anywhere else.</p>
+<div class="top"><h1>📒 TOPIA Helper</h1><button type="button" class="lang" id="langB" lang="ko">한국어</button></div>
+<p class="lead" data-ko="TOPIA용 북마크 하나로 학생 복사, Weekly Report 채우기, 온라인 숙제 가져오기, 미완료 숙제 목록까지 할 수 있습니다. 기기마다 한 번만 설정하세요. 모든 기능이 북마크 안에 들어 있어 외부에서 아무것도 불러오지 않습니다.">One bookmark for TOPIA: copy students, fill the Weekly Report, bring in online homework, and list incomplete homework for the Sheet. Set it up once per device. Everything is inside the bookmark: nothing is loaded from anywhere else.</p>
 
 <div class="card" id="pc">
-  <h2>💻 Computer (Chrome, Edge, Whale, Safari)</h2>
+  <h2 data-ko="💻 컴퓨터 (Chrome, Edge, Whale, Safari)">💻 Computer (Chrome, Edge, Whale, Safari)</h2>
   <ol>
-    <li>Drag this button onto your bookmarks bar (no bar? press <b>Ctrl+Shift+B</b>): <a class="bm" id="bmLink" href="#" title="Drag me to your bookmarks bar">📒 TOPIA Helper</a></li>
-    <li>On any TOPIA page, click it.</li>
+    <li><span data-ko="이 버튼을 북마크바로 끌어다 놓으세요 (북마크바가 없으면 <b>Ctrl+Shift+B</b>):">Drag this button onto your bookmarks bar (no bar? press <b>Ctrl+Shift+B</b>):</span> <a class="bm" id="bmLink" href="#" title="Drag me to your bookmarks bar">📒 TOPIA Helper</a></li>
+    <li data-ko="TOPIA 아무 페이지에서 누르세요.">On any TOPIA page, click it.</li>
   </ol>
 </div>
 
 <div class="card" id="ipad">
   <h2>📱 iPad / iPhone (Safari)</h2>
   <ol>
-    <li><button type="button" class="primary" data-copy>Copy the bookmark</button><span class="ok" hidden>Copied</span></li>
-    <li>Tap <b>Share</b> (□↑) → <b>Add Bookmark</b> → name it <b>TOPIA Helper</b> → Save.</li>
-    <li>Open <b>Bookmarks</b> (📖) → <b>Edit</b> → tap <b>TOPIA Helper</b>, replace the address with what you copied, tap <b>Done</b>.</li>
-    <li>On TOPIA, tap the address bar, type <b>TOPIA Helper</b> and tap the bookmark.</li>
+    <li><button type="button" class="primary" data-copy data-ko="북마크 복사">Copy the bookmark</button><span class="ok" hidden data-ko="복사됨">Copied</span></li>
+    <li data-ko="<b>공유</b>(□↑) → <b>북마크 추가</b> → 이름을 <b>TOPIA Helper</b>로 → 저장.">Tap <b>Share</b> (□↑) → <b>Add Bookmark</b> → name it <b>TOPIA Helper</b> → Save.</li>
+    <li data-ko="<b>북마크</b>(📖) → <b>편집</b> → <b>TOPIA Helper</b>를 눌러 주소를 복사한 내용으로 바꾸고 <b>완료</b>.">Open <b>Bookmarks</b> (📖) → <b>Edit</b> → tap <b>TOPIA Helper</b>, replace the address with what you copied, tap <b>Done</b>.</li>
+    <li data-ko="TOPIA에서 주소창을 누르고 <b>TOPIA Helper</b>를 입력한 뒤 북마크를 누르세요.">On TOPIA, tap the address bar, type <b>TOPIA Helper</b> and tap the bookmark.</li>
   </ol>
 </div>
 
 <div class="card" id="android">
-  <h2>🤖 Android tablet / phone (Chrome)</h2>
+  <h2 data-ko="🤖 안드로이드 태블릿 / 휴대폰 (Chrome)">🤖 Android tablet / phone (Chrome)</h2>
   <ol>
-    <li><button type="button" class="primary" data-copy>Copy the bookmark</button><span class="ok" hidden>Copied</span></li>
-    <li>Tap <b>⋮</b> → <b>☆</b> to bookmark this page, then <b>Edit</b>.</li>
-    <li>Name it <b>TOPIA Helper</b>, paste over the URL, save.</li>
-    <li>On TOPIA, type <b>TOPIA Helper</b> in the address bar and tap the bookmark.</li>
+    <li><button type="button" class="primary" data-copy data-ko="북마크 복사">Copy the bookmark</button><span class="ok" hidden data-ko="복사됨">Copied</span></li>
+    <li data-ko="<b>⋮</b> → <b>☆</b>로 이 페이지를 북마크한 뒤 <b>수정</b>.">Tap <b>⋮</b> → <b>☆</b> to bookmark this page, then <b>Edit</b>.</li>
+    <li data-ko="이름을 <b>TOPIA Helper</b>로 하고 URL에 붙여 넣은 뒤 저장.">Name it <b>TOPIA Helper</b>, paste over the URL, save.</li>
+    <li data-ko="TOPIA에서 주소창에 <b>TOPIA Helper</b>를 입력하고 북마크를 누르세요.">On TOPIA, type <b>TOPIA Helper</b> in the address bar and tap the bookmark.</li>
   </ol>
 </div>
 
 
-<p class="golinks"><a class="go" href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">Open TOPIA Weekly Report ↗</a><a class="go" href="https://www.topiaenglishzone.co.kr/doonsan/class/attendance" target="_blank" rel="noopener">Open Attendance (출석부) ↗</a></p>
-<details class="others"><summary>Other devices</summary><div id="otherBox"></div></details>
-<p class="hint">Nothing is saved on TOPIA until you press Save there.</p>
-<p class="hint">After an update, copy or drag it again to get the newest version. Bookmark size: <span id="code">loading…</span></p>
+<p class="golinks"><a class="go" href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener" data-ko="TOPIA Weekly Report 열기 ↗">Open TOPIA Weekly Report ↗</a><a class="go" href="https://www.topiaenglishzone.co.kr/doonsan/class/attendance" target="_blank" rel="noopener" data-ko="출석부 열기 ↗">Open Attendance (출석부) ↗</a></p>
+<details class="others"><summary data-ko="다른 기기">Other devices</summary><div id="otherBox"></div></details>
+<p class="hint" data-ko="TOPIA에서 직접 Save를 누르기 전에는 아무것도 저장되지 않습니다.">Nothing is saved on TOPIA until you press Save there.</p>
+<p class="hint" data-ko="예전 <b>Online homework</b> 북마크는 이제 메뉴의 📋 <b>온라인 숙제 미완료 목록</b>에 들어 있으니 지워도 됩니다. 메뉴 아래쪽 <b>한국어</b> 버튼으로 TOPIA에서 언어를 바꿀 수 있습니다.">Your old <b>Online homework</b> bookmark is now 📋 <b>Incomplete homework list</b> in the menu, so you can delete it. The <b>한국어</b> button at the bottom of the menu switches language on TOPIA.</p>
+<p class="hint"><span data-ko="업데이트 후에는 다시 복사하거나 끌어다 놓아야 최신 버전이 됩니다. 북마크 크기:">After an update, copy or drag it again to get the newest version. Bookmark size:</span> <span id="code">…</span></p>
 </main>
 <script>
 // Self-contained: the whole helper lives in the bookmark (nothing is loaded from outside). Re-copy after updates.
 let BM = '';
+// 한국어 / English: shares the gradesheet's language setting on this site.
+let KO = false; try { KO = localStorage.getItem('gradesheet.lang') === 'ko'; } catch (e) {}
+const L = [...document.querySelectorAll('[data-ko]')].map(e => [e, e.innerHTML]);
+function lang() {
+  L.forEach(([e, en]) => { e.innerHTML = KO ? e.dataset.ko : en; });
+  document.documentElement.lang = KO ? 'ko' : 'en'; const b = document.getElementById('langB'); b.textContent = KO ? 'English' : '한국어'; b.lang = KO ? 'en' : 'ko';
+  if (BM) paint();
+}
+document.getElementById('langB').onclick = () => { KO = !KO; try { localStorage.setItem('gradesheet.lang', KO ? 'ko' : 'en'); } catch (e) {} lang(); };
+lang();
 const ready = fetch('topia-helper.min.js', { cache: 'no-store' }).then(r => r.text()).then(js => { BM = 'javascript:window.__gsBookmark=1;' + encodeURI(js.trim()).replace(/#/g, '%23') + 'void 0'; paint(); });
-function paint() { document.getElementById('bmLink').href = BM; document.getElementById('code').textContent = BM.length + ' characters'; }
-document.getElementById('bmLink').addEventListener('click', e => { e.preventDefault(); alert('Drag this button to your bookmarks bar, then click it on TOPIA.'); });
+function paint() { document.getElementById('bmLink').href = BM; document.getElementById('code').textContent = BM.length.toLocaleString() + (KO ? '자' : ' characters'); }
+document.getElementById('bmLink').addEventListener('click', e => { e.preventDefault(); alert(KO ? '이 버튼을 북마크바로 끌어다 놓은 뒤 TOPIA에서 누르세요.' : 'Drag this button to your bookmarks bar, then click it on TOPIA.'); });
 document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
   const ok = b.nextElementSibling; await ready;
   try { await navigator.clipboard.writeText(BM); } catch (e) { const t = document.createElement('textarea'); t.value = BM; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }

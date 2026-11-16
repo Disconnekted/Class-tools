@@ -511,6 +511,7 @@ a:not(.btn):not(.bm){color:var(--accent);text-underline-offset:2px}
 table.gs td.avg,table.gs td.mon{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;letter-spacing:-.02em}
 .menudanger{color:var(--bad,#c0392b)!important}
 #delAll .box p{margin:6px 0 14px}
+html:lang(ko) body{word-break:keep-all;overflow-wrap:break-word}
 </style>
 
 </head><body>
@@ -536,8 +537,8 @@ table.gs td.avg,table.gs td.mon{white-space:nowrap;overflow:hidden;text-overflow
       <div class="clist" id="clist"></div>
       <details class="panel fold" data-ui="add" id="addBox">
         <summary><span class="fold-t">+ Add students</span></summary>
-        <p class="hint">On <a href="https://www.topiaenglishzone.co.kr/doonsan/class/attendance" target="_blank" rel="noopener">TOPIA's Attendance page ↗</a> tap your <b>📒 TOPIA Helper</b> bookmark → <b>Copy students</b>, then paste here. <button type="button" class="info" data-info="addhelp" aria-expanded="false">ⓘ</button></p>
-        <p class="hint infotext" id="addhelp" hidden>No bookmark yet? <a href="https://disconnekted.github.io/Class-tools/topia-helper.html" target="_blank" rel="noopener">Set up TOPIA Helper</a> once on each device. Excel cells or a class list file work too.</p>
+        <p class="hint"><span data-ko="<a href=&quot;https://www.topiaenglishzone.co.kr/doonsan/class/attendance&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;>TOPIA 출석부 ↗</a>에서 <b>📒 TOPIA Helper</b> 북마크 → <b>학생 복사</b>를 누른 뒤 여기에 붙여 넣으세요.">On <a href="https://www.topiaenglishzone.co.kr/doonsan/class/attendance" target="_blank" rel="noopener">TOPIA's Attendance page ↗</a> tap your <b>📒 TOPIA Helper</b> bookmark → <b>Copy students</b>, then paste here.</span> <button type="button" class="info" data-info="addhelp" aria-expanded="false">ⓘ</button></p>
+        <p class="hint infotext" id="addhelp" hidden data-ko="북마크가 아직 없나요? 기기마다 한 번 <a href=&quot;https://disconnekted.github.io/Class-tools/topia-helper.html&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;>TOPIA Helper 설정</a>을 하세요. 엑셀 셀이나 반 명단 파일도 됩니다.">No bookmark yet? <a href="https://disconnekted.github.io/Class-tools/topia-helper.html" target="_blank" rel="noopener">Set up TOPIA Helper</a> once on each device. Excel cells or a class list file work too.</p>
         <div class="drop" id="drop">
           <textarea id="paste" rows="3" placeholder="Paste here (Ctrl+V)"></textarea>
           <div class="row"><button type="button" class="small primary" id="importBtn">Import</button><label class="btn small" style="padding:4px 9px;font-size:12.5px">Choose file<input type="file" id="file" accept=".xlsx,.xls,.csv,.tsv,.txt,.html,.htm" hidden></label></div>
@@ -841,6 +842,9 @@ function exampleClass() {
 function isoToday() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 </script>
 <script>
+/* 한국어 / English: L(en, ko) picks the text for built pieces; plain labels are translated by the language switch (ipad.html). */
+window.gsKO = (() => { try { return localStorage.getItem('gradesheet.lang') === 'ko'; } catch (e) { return false; } })();
+function L(en, ko) { return window.gsKO ? ko : en; }
 /* ---------- saving ----------
    Online (published with its database) each teacher has a document in "teachers", and each of their
    classes is its own document in "classes" (id = teacher id + class id), so a class can grow without
@@ -994,7 +998,7 @@ function openTeacher(id) {
   if (todays.length && !todays.some(c => c.id === current)) { autoPick = { from: current, to: todays[0].id }; current = todays[0].id; }
   document.getElementById('who').hidden = true;
   const t = teachers.find(x => x.id === id);
-  const wb = document.getElementById('whoBtn'); wb.hidden = false; wb.innerHTML = `👤 ${esc(t ? t.name : '')} · Switch`;
+  const wb = document.getElementById('whoBtn'); wb.hidden = false; wb.innerHTML = `👤 ${esc(t ? t.name : '')} · ${L('Switch', '전환')}`;
   setSync(db ? '☁ Saved online' : 'Saved on this device');
   classes.forEach(c => { if (c._migrated) { delete c._migrated; touch(c); } }); // save the new totals once
   render();
@@ -1056,7 +1060,7 @@ function autoPickHTML() {
 }
 document.addEventListener('click', e => {
   if (e.target.closest('[data-autoback]')) { lsSet(TODAY_KEY + '.skip', new Date().toDateString()); current = autoPick.from; autoPick = null; render(); }
-  else if (e.target.closest('[data-autooff]')) { lsSet(TODAY_KEY, 'off'); const f = autoPick && autoPick.from; autoPick = null; if (f && classes.some(c => c.id === f && !c.example)) current = f; render(); flashMsg("OK. It will open the class you used last. Turn it back on under ⋯ More."); paintTodayToggle(); }
+  else if (e.target.closest('[data-autooff]')) { lsSet(TODAY_KEY, 'off'); const f = autoPick && autoPick.from; autoPick = null; if (f && classes.some(c => c.id === f && !c.example)) current = f; render(); flashMsg(L("OK. It will open the class you used last. Turn it back on under ⋯ More.", "알겠습니다. 마지막으로 쓴 반이 열립니다. ⋯ 더보기에서 다시 켤 수 있습니다.")); paintTodayToggle(); }
   else if (e.target.closest('#todayToggle')) { lsSet(TODAY_KEY, lsGet(TODAY_KEY) === 'off' ? 'on' : 'off'); paintTodayToggle(); }
 });
 setTimeout(() => paintTodayToggle(), 0);
@@ -1064,10 +1068,10 @@ setTimeout(() => paintTodayToggle(), 0);
 document.addEventListener('click', e => {
   if (e.target.closest('#delAllBtn')) {
     const n = classes.filter(c => !c.example).length; document.getElementById('moreMenu').hidden = true;
-    if (!n) { flashMsg('There are no classes to delete.'); return; }
+    if (!n) { flashMsg(L('There are no classes to delete.', '삭제할 반이 없습니다.')); return; }
     let m = document.getElementById('delAll'); if (!m) { m = document.createElement('div'); m.id = 'delAll'; m.className = 'modal'; document.body.appendChild(m); }
     const canBackup = !document.getElementById('backupBar').hidden;
-    m.innerHTML = `<div class="box" role="dialog" aria-modal="true" aria-labelledby="delAllT"><h2 id="delAllT">Delete all ${n === 1 ? '1 class' : n + ' classes'}?</h2><p>Every student, score and note in ${n === 1 ? 'it' : 'them'} is removed from this device. This can't be undone.</p><div class="outrow">${canBackup ? '<button type="button" data-da="backup">⤓ Back up first</button>' : ''}<button type="button" class="danger" data-da="yes">Delete all</button><button type="button" data-da="no">Cancel</button></div></div>`;
+    m.innerHTML = `<div class="box" role="dialog" aria-modal="true" aria-labelledby="delAllT"><h2 id="delAllT">${L(`Delete all ${n === 1 ? '1 class' : n + ' classes'}?`, `반 ${n}개를 모두 삭제할까요?`)}</h2><p>${L(`Every student, score and note in ${n === 1 ? 'it' : 'them'} is removed from this device. This can't be undone.`, '모든 학생, 점수, 메모가 이 기기에서 지워집니다. 되돌릴 수 없습니다.')}</p><div class="outrow">${canBackup ? '<button type="button" data-da="backup">' + L('⤓ Back up first', '⤓ 먼저 백업') + '</button>' : ''}<button type="button" class="danger" data-da="yes">Delete all</button><button type="button" data-da="no">Cancel</button></div></div>`;
     m.hidden = false; m.querySelector('[data-da=no]').focus();
     return;
   }
@@ -1081,7 +1085,7 @@ document.addEventListener('click', e => {
     classes.filter(c => !c.example).forEach(c => dirty.add(c.id)); classes = [];
     if (db) flush(); else saveLocal();
     classes = [exampleClass()]; current = classes[0].id; autoPick = null; m.hidden = true; render();
-    flashMsg(`Deleted ${n === 1 ? '1 class' : 'all ' + n + ' classes'}.`);
+    flashMsg(L(`Deleted ${n === 1 ? '1 class' : 'all ' + n + ' classes'}.`, `반 ${n}개를 삭제했습니다.`));
   }
 });
 document.addEventListener('keydown', e => { const m = document.getElementById('delAll'); if (e.key === 'Escape' && m && !m.hidden) m.hidden = true; });
@@ -1091,11 +1095,11 @@ function render() {
   const c = cur();
   if (c && me && !c.example) lsSet(LAST_KEY + me, c.id);
   const main = document.getElementById('main');
-  if (!c) { main.innerHTML = '<div class="panel"><h3>No class yet</h3><p class="hint">Tap + Add students at the top to paste your class list, or add a class by hand.</p></div>'; return; }
+  if (!c) { main.innerHTML = L('<div class="panel"><h3>No class yet</h3><p class="hint">Tap + Add students at the top to paste your class list, or add a class by hand.</p></div>', '<div class="panel"><h3>아직 반이 없습니다</h3><p class="hint">위의 + 학생 추가를 눌러 반 명단을 붙여 넣거나, 반을 직접 추가하세요.</p></div>'); return; }
   const syl = syllabusFor(c);
   const subj = SUBJECTS[c.subject];
   main.innerHTML = `${autoPickHTML()}
-  ${c.example ? `<p class="example-flag"><b>Example class</b> (not saved). Tap <b>+ Add students</b> to start with your own class.</p>` : ''}
+  ${c.example ? L(`<p class="example-flag"><b>Example class</b> (not saved). Tap <b>+ Add students</b> to start with your own class.</p>`, `<p class="example-flag"><b>예시 반</b> (저장 안 됨). <b>+ 학생 추가</b>를 눌러 내 반을 시작하세요.</p>`) : ''}
   <section class="panel">
     <div class="classhead">
       <div class="title">
@@ -1104,7 +1108,7 @@ function render() {
       <div class="viewbar" role="tablist" aria-label="View"><button type="button" role="tab" data-view="day" aria-selected="${view === 'day'}">Day by day</button><button type="button" role="tab" data-view="sheet" aria-selected="${view === 'sheet'}">Whole sheet</button></div>
       <details class="fold" data-ui="details"${uiOpen('details') || !subj ? ' open' : ''}>
         <summary><span class="fold-t">${esc([subj ? subj.name : 'No subject yet', 'Sem ' + (c.sem || 'B'), c.days, c.room ? 'Room ' + c.room : ''].filter(Boolean).join(' · '))}</span> <span class="fold-edit">✎ Details</span></summary>
-        <p class="hint">${syl ? `Syllabus: ${esc(syl.t)}, ${syl.s === 'AB' ? 'both semesters' : (syl.s || 'B') + ' semester'} (${syl.d.length} days). Highlighted cells are the days a column is due.` : subj ? `No ${c.sem === 'A' ? 'A' : 'B'}-semester syllabus for ${esc(levelOf(c.name) || 'this level')} ${esc(subj.name)}, so no days are highlighted.` : 'Pick the subject to set the columns.'}${subj && subj.suggested ? ' Your old gradesheet had no tab for this subject, so these columns are suggested.' : ''}</p>
+        <p class="hint">${syl ? L(`Syllabus: ${esc(syl.t)}, ${syl.s === 'AB' ? 'both semesters' : (syl.s || 'B') + ' semester'} (${syl.d.length} days). Highlighted cells are the days a column is due.`, `강의계획서: ${esc(syl.t)}, ${syl.s === 'AB' ? '두 학기' : (syl.s || 'B') + '학기'} (${syl.d.length}회). 색칠된 칸이 그 항목의 마감일입니다.`) : subj ? L(`No ${c.sem === 'A' ? 'A' : 'B'}-semester syllabus for ${esc(levelOf(c.name) || 'this level')} ${esc(subj.name)}, so no days are highlighted.`, `${esc(levelOf(c.name) || '이 레벨')} ${esc(subj.name)}의 ${c.sem === 'A' ? 'A' : 'B'}학기 강의계획서가 없어 색칠된 날이 없습니다.`) : L('Pick the subject to set the columns.', '과목을 고르면 항목이 정해집니다.')}${subj && subj.suggested ? L(' Your old gradesheet had no tab for this subject, so these columns are suggested.', ' 예전 성적표에 이 과목 탭이 없어서 추천 항목을 넣었습니다.') : ''}</p>
       <div class="fields">
         <label class="f">Class<input type="text" id="fName" value="${esc(c.name)}"></label>
         <label class="f">Subject<select id="fSubject"><option value="">Choose…</option>${SUBJ_ORDER.map(k => `<option value="${k}" ${(pendingSubj[c.id] || c.subject) === k ? 'selected' : ''}>${SUBJECTS[k].name}</option>`).join('')}</select></label>
@@ -1127,7 +1131,7 @@ function render() {
           <button type="button" class="small ghost" data-act="delcat" title="Remove this column">Remove</button>
         </div>`).join('')}
         <div class="row"><button type="button" class="small" data-act="addcat">+ Add a column</button> <button type="button" class="info" data-info="colhelp" aria-expanded="false">ⓘ</button></div>
-        <p class="hint infotext" id="colhelp" hidden>Set “out of” and each score shows as a % with the score chart. Attendance, hand-in and ○△✗ cells change with a tap.</p>
+        <p class="hint infotext" id="colhelp" hidden>${L('Set “out of” and each score shows as a % with the score chart. Attendance, hand-in and ○△✗ cells change with a tap.', '“만점”을 정하면 점수가 점수표에 맞춰 %로 나옵니다. 출석, 제출, ○△✗ 칸은 누르면 바뀝니다.')}</p>
       </div>
     </details>
     ${view === 'day' ? dayHTML(c, syl) : `<details class="fold keyfold" data-ui="key"${openAttr('key')}><summary><span class="fold-t">Colour key</span></summary><div class="legend"><span><i style="background:var(--band1)"></i>Month 1 &amp; 3</span><span><i style="background:var(--band2)"></i>Month 2</span><span><i style="background:var(--due)"></i>Due that day (from the syllabus)</span><span>W word test · U unit test · M monthly test · E essay · P presentation/debate</span></div></details>
@@ -1208,7 +1212,7 @@ function sheetHTML(c, syl) {
     <tr class="r2"><th class="stick c-cat">Day</th>${days.map(i => dayHead(c, syl, i)).join('')}
       <th class="mon">1</th><th class="mon">2</th><th class="mon">3</th>${xs.map(x => `<th class="xtra">${esc(x.label)}</th>`).join('')}</tr>
   </thead><tbody>`;
-  if (!c.students.length) h += `<tr><td colspan="${NDAYS + 7 + xs.length}" style="padding:18px;text-align:left" class="hint">No students yet. Tap + Add students at the top, or + Add a student below.</td></tr>`;
+  if (!c.students.length) h += `<tr><td colspan="${NDAYS + 7 + xs.length}" style="padding:18px;text-align:left" class="hint">${L('No students yet. Tap + Add students at the top, or + Add a student below.', '아직 학생이 없습니다. 위의 + 학생 추가 또는 아래의 + 학생 추가를 누르세요.')}</td></tr>`;
   c.students.forEach((s, si) => {
     const sc = c.scores[s.id] || {};
     const ov = overall(c, s);
@@ -1266,7 +1270,7 @@ function addStudentHTML(c) {
     <input id="newKor" placeholder="Korean name" autocomplete="off" aria-label="Korean name">
     <label class="joins">Joins on <select id="newJoin" aria-label="Joins on">${dayOptions(c.students.length && hasMarks(c) ? pickDay(c) : 0)}</select></label>
     <button type="submit" class="primary">+ Add</button>
-    <span class="hint">${c.students.length - gone} in class${gone ? `, ${gone} left` : ''}. A student who quits keeps their scores: use “Left the class”.</span>
+    <span class="hint">${L(`${c.students.length - gone} in class${gone ? `, ${gone} left` : ''}. A student who quits keeps their scores: use “Left the class”.`, `수강 중 ${c.students.length - gone}명${gone ? `, 그만둔 학생 ${gone}명` : ''}. 그만둔 학생은 “퇴원”으로 처리하면 점수가 남습니다.`)}</span>
   </form>`;
 }
 document.getElementById('main').addEventListener('submit', e => {
@@ -1354,7 +1358,7 @@ main.addEventListener('change', e => {
     c.start = t.value; delete dayAt[c.id]; keep(c);
     same.forEach(o => { o.start = t.value; delete dayAt[o.id]; keep(o); });
     render();
-    if (same.length && t.value) flashMsg(`Day 1 date also set for ${same.length === 1 ? same[0].name : same.length === 2 ? 'both ' + same.map(o => o.name).join(' and ') : same.length + ' other ' + c.days + ' classes'}.`);
+    if (same.length && t.value) flashMsg(L(`Day 1 date also set for ${same.length === 1 ? same[0].name : same.length === 2 ? 'both ' + same.map(o => o.name).join(' and ') : same.length + ' other ' + c.days + ' classes'}.`, `${same.length <= 2 ? same.map(o => o.name).join(', ') : '같은 요일 반 ' + same.length + '개'}에도 1회차 날짜를 적용했습니다.`));
     return;
   }
   if (t.id === 'fName') { render(); return; }
@@ -1418,8 +1422,8 @@ main.addEventListener('click', e => {
   else if (act === 'pdf-blank') makePDF(c, false);
   else if (act === 'blank-one') { const p = blankPick(c); makeBlank(c, p.subj, p.names); }
   else if (act === 'preview') openPreview(b.dataset.kind);
-  else if (act === 'switch-yes') { applySwitch(c, planSwitch(c, pendingSubj[c.id])); delete pendingSubj[c.id]; keep(c); render(); flashMsg(`Switched to the ${SUBJECTS[c.subject].name} gradesheet. Every score was kept.`); }
-  else if (act === 'switch-name') { c.subject = pendingSubj[c.id]; delete pendingSubj[c.id]; keep(c); render(); flashMsg('Subject changed. The columns stayed as they were.'); }
+  else if (act === 'switch-yes') { applySwitch(c, planSwitch(c, pendingSubj[c.id])); delete pendingSubj[c.id]; keep(c); render(); flashMsg(L(`Switched to the ${SUBJECTS[c.subject].name} gradesheet. Every score was kept.`, `${SUBJECTS[c.subject].name} 성적표로 바꿨습니다. 점수는 모두 남아 있습니다.`)); }
+  else if (act === 'switch-name') { c.subject = pendingSubj[c.id]; delete pendingSubj[c.id]; keep(c); render(); flashMsg(L('Subject changed. The columns stayed as they were.', '과목을 바꿨습니다. 항목은 그대로입니다.')); }
   else if (act === 'switch-no') { delete pendingSubj[c.id]; render(); }
   else if (act === 'blank-all') makeBlankAll();
   else if (act === 'send-email' || act === 'send-slack') prepareSend(c, act === 'send-email' ? 'email' : 'slack');
@@ -1608,7 +1612,7 @@ document.getElementById('copyTags').addEventListener('click', async () => {
   real.forEach(c => c.students.forEach(s => lines.push([c.name, SUBJECTS[c.subject] ? SUBJECTS[c.subject].name : '', s.eng, s.kor].join('\t'))));
   const btn = document.getElementById('copyTags');
   if (lines.length === 2) { btn.textContent = 'No students to copy yet'; setTimeout(() => btn.textContent = 'Copy classes for name tags', 2500); return; }
-  try { await navigator.clipboard.writeText(lines.join('\n')); btn.textContent = `Copied ${lines.length - 2} students. Paste them in the name tag tool`; }
+  try { await navigator.clipboard.writeText(lines.join('\n')); btn.textContent = L(`Copied ${lines.length - 2} students. Paste them in the name tag tool`, `학생 ${lines.length - 2}명을 복사했습니다. 이름표 도구에 붙여 넣으세요`); }
   catch (e) {
     const ta = document.getElementById('paste'); ta.value = lines.join('\n'); ta.focus(); ta.select();
     btn.textContent = 'Selected in the paste box: press Ctrl+C';
@@ -1630,7 +1634,7 @@ function calcHTML() {
       <div class="sizes">${CHART_SIZES.map(n => `<button type="button" class="small" data-act="size" data-n="${n}" aria-pressed="${n === calcN}">${n}</button>`).join('')}</div>
     </div>
     <div class="chart">${ns.map(n => chartTable(n)).join('')}</div>
-    <p class="hint">Set a column's “out of” and the sheet works these out for you: type 17 in a Word Test /20 cell and it counts as 85%.</p>`;
+    <p class="hint">${L('Set a column\'s “out of” and the sheet works these out for you: type 17 in a Word Test /20 cell and it counts as 85%.', '항목의 “만점”을 정하면 자동으로 계산됩니다: 단어 시험 /20 칸에 17을 넣으면 85%가 됩니다.')}</p>`;
 }
 /* Always-visible Score chart button (bottom right) that opens the chart in a panel. */
 document.body.insertAdjacentHTML('beforeend', `<button type="button" id="chartFab" aria-haspopup="dialog" title="Score chart" aria-label="Score chart">%</button>
@@ -1703,7 +1707,7 @@ function planSwitch(c, key) {
 // Level or semester changed: move to that layout, keeping every mark (same rules as a subject change).
 function relayout(c, why) {
   applySwitch(c, planSwitch(c, c.subject)); keep(c); render();
-  flashMsg(`${why}: using the ${c.sheet || SUBJECTS[c.subject].name} layout. All marks kept.`);
+  flashMsg(L(`${why}: using the ${c.sheet || SUBJECTS[c.subject].name} layout. All marks kept.`, `${why}: ${c.sheet || SUBJECTS[c.subject].name} 양식을 씁니다. 점수는 모두 남아 있습니다.`));
 }
 function applySwitch(c, plan) {
   const taken = new Set([...plan.cats.filter(r => r.from).map(r => r.from.id), ...plan.kept.map(r => r.k.id)]);
@@ -1871,6 +1875,7 @@ function topiaPayload(c, i) {
   return '#GS-TOPIA ' + JSON.stringify({ cls: c.name, day: i + 1, rows });
 }
 function topiaFillBookmarklet(given) {
+  var K = function (en, ko) { try { return localStorage.getItem('tp-lang') === 'ko' ? ko : en; } catch (e) { return en; } };
   const sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
   const until = async function (f, ms) { for (let t = 0; t < (ms || 8000); t += 150) { const v = f(); if (v) return v; await sleep(150); } return null; };
   const vis = function (el) { return !!(el && el.offsetParent); };
@@ -1882,28 +1887,28 @@ function topiaFillBookmarklet(given) {
   const clsKey = function (t) { return norm(String(t).split('(')[0]); };
   const grp = function (l) { return /particip/i.test(l) ? 'participation' : /writ|essay|summary/i.test(l) ? 'writing' : /word|vocab|idiom/i.test(l) ? 'vocab' : /present|debate|speech/i.test(l) ? 'presentation' : /monthly/i.test(l) ? 'monthly' : ''; };
   const run = async function (txt) {
-    if (!txt || txt.indexOf('#GS-TOPIA') !== 0) { alert('In the gradesheet, tap Send Day N to TOPIA first.'); return; }
-    let data; try { data = JSON.parse(txt.slice(10)); } catch (e) { alert('Those copied scores could not be read. Copy them again.'); return; }
+    if (!txt || txt.indexOf('#GS-TOPIA') !== 0) { alert(K('In the gradesheet, tap Send Day N to TOPIA first.', '성적표에서 먼저 ‘N회차 TOPIA로 보내기’를 누르세요.')); return; }
+    let data; try { data = JSON.parse(txt.slice(10)); } catch (e) { alert(K('Those copied scores could not be read. Copy them again.', '복사한 점수를 읽을 수 없습니다. 다시 복사하세요.')); return; }
     let ss = sessionSel();
     if (!ss) {
       const cs = classSel();
       if (cs && clsKey(cs.options[cs.selectedIndex].text) !== clsKey(data.cls)) {
         const o = Array.from(cs.options).find(function (x) { return clsKey(x.text) === clsKey(data.cls); });
-        if (!o) { alert('TOPIA has no class called ' + data.cls + '. Pick the class here, then try again.'); return; }
+        if (!o) { alert(K('TOPIA has no class called ' + data.cls + '. Pick the class here, then try again.', 'TOPIA에 ' + data.cls + ' 반이 없습니다. 여기서 반을 고른 뒤 다시 시도하세요.')); return; }
         setSelect(cs, o.value); await sleep(1500);
       }
       const reg = await until(function () { return Array.from(document.querySelectorAll('button')).find(function (b) { return vis(b) && /^\s*(register|등록)\s*$/i.test(b.innerText); }); }, 5000);
-      if (!reg) { alert('Open TOPIA → Weekly Report first, then click the bookmark.'); return; }
+      if (!reg) { alert(K('Open TOPIA → Weekly Report first, then click the bookmark.', '먼저 TOPIA → Weekly Report를 연 뒤 북마크를 누르세요.')); return; }
       reg.click(); ss = await until(sessionSel);
-      if (!ss) { alert('The Register form did not open. Click Register, then try again.'); return; }
+      if (!ss) { alert(K('The Register form did not open. Click Register, then try again.', 'Register(등록) 창이 열리지 않았습니다. Register를 누른 뒤 다시 시도하세요.')); return; }
     }
     const cs2 = classSel(), scope = ss.closest('form,[role=dialog],[class*=modal],[class*=Modal],[id*=modal],[class*=popup]') || null;
-    if (scope && norm(scope.innerText).indexOf(clsKey(data.cls)) < 0 && !(cs2 && clsKey(cs2.options[cs2.selectedIndex].text) === clsKey(data.cls))) { alert('This form is open for another class. Press Save or Cancel first, then try again.'); return; }
+    if (scope && norm(scope.innerText).indexOf(clsKey(data.cls)) < 0 && !(cs2 && clsKey(cs2.options[cs2.selectedIndex].text) === clsKey(data.cls))) { alert(K('This form is open for another class. Press Save or Cancel first, then try again.', '다른 반의 등록 창이 열려 있습니다. 먼저 Save 또는 Cancel을 누른 뒤 다시 시도하세요.')); return; }
     const want = Array.from(ss.options).find(function (o) { return parseInt(o.text, 10) === data.day; });
-    if (!want) { alert('TOPIA has no ' + data.day + '회차 for this class yet.'); return; }
+    if (!want) { alert(K('TOPIA has no ' + data.day + '회차 for this class yet.', '이 반은 TOPIA에 아직 ' + data.day + '회차가 없습니다.')); return; }
     if (ss.value !== want.value) { setSelect(ss, want.value); await sleep(900); }
     const inputs = (await until(function () { const a = Array.from(document.querySelectorAll('input[name^="infoList."]')).filter(vis); return a.length ? a : null; })) || [];
-    if (!inputs.length) { alert('No score boxes found on the Register form.'); return; }
+    if (!inputs.length) { alert(K('No score boxes found on the Register form.', '등록 창에서 점수 칸을 찾지 못했습니다.')); return; }
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
     let who = '', filled = 0; const seen = {}, missing = [];
     inputs.forEach(function (inp) {
@@ -1921,11 +1926,11 @@ function topiaFillBookmarklet(given) {
     });
     let box = document.getElementById('gsTopiaNote');
     if (!box) { box = document.createElement('div'); box.id = 'gsTopiaNote'; box.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:99999;background:#fff4b8;color:#222;border:2px solid #c9a400;border-radius:10px;padding:12px 16px;font:15px/1.4 sans-serif;max-width:560px;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer'; box.title = 'Click to close'; box.onclick = function () { box.remove(); }; document.body.appendChild(box); }
-    box.textContent = '✓ Filled ' + filled + ' boxes: ' + data.cls + ', ' + data.day + '회차 (yellow).' + (missing.length ? ' Not in the gradesheet: ' + missing.join(', ') + '.' : '') + ' Check them, then press Save.';
+    box.textContent = K('✓ Filled ' + filled + ' boxes: ' + data.cls + ', ' + data.day + '회차 (yellow).' + (missing.length ? ' Not in the gradesheet: ' + missing.join(', ') + '.' : '') + ' Check them, then press Save.', '✓ ' + filled + '칸 입력: ' + data.cls + ', ' + data.day + '회차 (노란색).' + (missing.length ? ' 성적표에 없는 학생: ' + missing.join(', ') + '.' : '') + ' 확인한 뒤 Save를 누르세요.');
     setTimeout(function () { if (box.isConnected) box.remove(); }, 15000);
     return filled > 0;
   };
-  const ask = function () { run(prompt('Paste the scores copied from the gradesheet:') || ''); };
+  const ask = function () { run(prompt(K('Paste the scores copied from the gradesheet:', '성적표에서 복사한 점수를 붙여 넣으세요:')) || ''); };
   if (typeof given === 'string') return run(given);
   if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(run, ask); else ask();
 }
@@ -1939,7 +1944,7 @@ document.addEventListener('click', async e => {
   const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(t.slice(10)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const w = window.open('https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report#gs-topia=' + b64, 'gsTopia');
   let copied = false; try { await navigator.clipboard.writeText(t); copied = true; } catch (er) {}
-  m.innerHTML = (w ? `Opened TOPIA's Weekly Report with ${n} student${n > 1 ? 's' : ''}. If the boxes don't fill by themselves, tap your <b>TOPIA Helper</b> bookmark there. Check, then press Save.` : `Allow pop-ups, or open <a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">TOPIA's Weekly Report ↗</a>.`);
+  m.innerHTML = (w ? L(`Opened TOPIA's Weekly Report with ${n} student${n > 1 ? 's' : ''}. If the boxes don't fill by themselves, tap your <b>TOPIA Helper</b> bookmark there. Check, then press Save.`, `TOPIA Weekly Report를 학생 ${n}명 점수와 함께 열었습니다. 칸이 저절로 채워지지 않으면 거기서 <b>TOPIA Helper</b> 북마크를 누르세요. 확인한 뒤 Save를 누르세요.`) : L(`Allow pop-ups, or open <a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">TOPIA's Weekly Report ↗</a>.`, `팝업을 허용하거나 <a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">TOPIA Weekly Report ↗</a>를 여세요.`));
   m.hidden = false;
 });
 // All of today's classes in one go: the Weekly Report opens with a queue; TOPIA Helper fills them one by one (the teacher saves each).
@@ -1947,31 +1952,32 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-act="topiaall"]'); if (!b) return;
   const m = b.parentNode.querySelector('.topiamsg');
   const items = classes.filter(meetsToday).map(c => JSON.parse(topiaPayload(c, todayIdx(c)).slice(10))).filter(x => x.rows.length);
-  if (!items.length) { m.hidden = false; m.textContent = "No scores yet in today's classes."; return; }
+  if (!items.length) { m.hidden = false; m.textContent = L("No scores yet in today's classes.", '오늘 수업 반에 아직 점수가 없습니다.'); return; }
   const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(items)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const w = window.open('https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report#gs-topia-all=' + b64, 'gsTopia');
   m.hidden = false;
-  m.innerHTML = w ? `Opened TOPIA's Weekly Report with ${items.length === 2 ? 'both classes' : items.length + ' classes'} (${items.map(x => esc(x.cls)).join(', ')}). If no list appears there, tap your <b>TOPIA Helper</b> bookmark. Check each one, then press Save.` : 'Allow pop-ups for this page, then try again.';
+  m.innerHTML = w ? L(`Opened TOPIA's Weekly Report with ${items.length === 2 ? 'both classes' : items.length + ' classes'} (${items.map(x => esc(x.cls)).join(', ')}). If no list appears there, tap your <b>TOPIA Helper</b> bookmark. Check each one, then press Save.`, `TOPIA Weekly Report를 반 ${items.length}개와 함께 열었습니다 (${items.map(x => esc(x.cls)).join(', ')}). 목록이 안 보이면 <b>TOPIA Helper</b> 북마크를 누르세요. 반마다 확인한 뒤 Save를 누르세요.`) : L('Allow pop-ups for this page, then try again.', '이 페이지의 팝업을 허용한 뒤 다시 시도하세요.');
 });
 /* Online homework, automatic: the "Online homework from TOPIA" bookmark (clicked on any TOPIA page while
    logged in) reads every class's 온라인 단어 학습 results through TOPIA's own data feed, applies John's pass
    rule, and opens this gradesheet with #online=… so the boxes tick themselves. On iPad (the Home Screen app has
    its own storage) it copies instead, and "Paste online homework" does the same job. Ticks are only added. */
 function topiaHomeworkBookmarklet() {
+  var K = function (en, ko) { try { return localStorage.getItem('tp-lang') === 'ko' ? ko : en; } catch (e) { return en; } };
   var GS = 'https://disconnekted.github.io/Class-tools/gradesheet.html';
   var API = 'https://front-api.topiaenglishzone.co.kr/v1/t/';
   var iPad = /iPad|iPhone/.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
   var win = iPad ? null : window.open('', 'gsOnline');
-  if (win) { try { win.document.write('<p style="font:16px sans-serif;padding:20px">Reading online homework from TOPIA…</p>'); } catch (e) {} }
+  if (win) { try { win.document.write('<p style="font:16px sans-serif;padding:20px">' + K('Reading online homework from TOPIA…', 'TOPIA에서 온라인 숙제를 읽는 중…') + '</p>'); } catch (e) {} }
   function note(html) {
     var box = document.getElementById('gsTopiaNote');
     if (!box) { box = document.createElement('div'); box.id = 'gsTopiaNote'; box.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:99999;background:#fff4b8;color:#222;border:2px solid #c9a400;border-radius:10px;padding:12px 16px;font:15px/1.4 sans-serif;max-width:560px;box-shadow:0 6px 20px rgba(0,0,0,.25)'; document.body.appendChild(box); }
-    box.innerHTML = html + ' <a href="#" data-x style="margin-left:8px">close</a>';
+    box.innerHTML = html + ' <a href="#" data-x style="margin-left:8px">' + K('close', '닫기') + '</a>';
     box.querySelector('[data-x]').onclick = function (e) { e.preventDefault(); box.remove(); };
     return box;
   }
   var tk = document.cookie.match(/__TP_ACCESS_TOKEN=([^;]+)/);
-  if (!tk || !/topiaenglishzone/.test(location.hostname)) { if (win) win.close(); note('Log in to TOPIA (www.topiaenglishzone.co.kr) first, then try again.'); return; }
+  if (!tk || !/topiaenglishzone/.test(location.hostname)) { if (win) win.close(); note(K('Log in to TOPIA (www.topiaenglishzone.co.kr) first, then try again.', '먼저 TOPIA(www.topiaenglishzone.co.kr)에 로그인한 뒤 다시 시도하세요.')); return; }
   var AH = { headers: { Authorization: 'Bearer ' + decodeURIComponent(tk[1]) } };
   // TOPIA's server is slow, so at most 6 requests run at once and a failed one is tried again.
   var busy = 0, waiting = [];
@@ -2006,12 +2012,12 @@ function topiaHomeworkBookmarklet() {
   // Progress bar plus a tiny "catch the star" game while TOPIA's slow server answers.
   var todo = 0, done = 0, score = 0, bar, lab;
   function progressBox() {
-    var box = note('<b>Reading online homework…</b> <span data-l></span><div style="height:8px;background:#eadf9c;border-radius:4px;margin:8px 0;overflow:hidden"><div data-b style="height:100%;width:0;background:#1f6fb0;transition:width .3s"></div></div><div data-g style="position:relative;height:120px;background:#fffbe0;border-radius:8px;overflow:hidden"><button data-s style="position:absolute;left:45%;top:35%;font-size:26px;background:none;border:0;cursor:pointer;padding:4px">⭐</button><span data-sc style="position:absolute;right:8px;bottom:6px;font-size:13px;color:#7a6a10">Catch the star! 0</span></div>');
+    var box = note('<b>' + K('Reading online homework…', '온라인 숙제 읽는 중…') + '</b> <span data-l></span><div style="height:8px;background:#eadf9c;border-radius:4px;margin:8px 0;overflow:hidden"><div data-b style="height:100%;width:0;background:#1f6fb0;transition:width .3s"></div></div><div data-g style="position:relative;height:120px;background:#fffbe0;border-radius:8px;overflow:hidden"><button data-s style="position:absolute;left:45%;top:35%;font-size:26px;background:none;border:0;cursor:pointer;padding:4px">⭐</button><span data-sc style="position:absolute;right:8px;bottom:6px;font-size:13px;color:#7a6a10">' + K('Catch the star! 0', '별을 잡아라! 0') + '</span></div>');
     bar = box.querySelector('[data-b]'); lab = box.querySelector('[data-l]');
     var st = box.querySelector('[data-s]'), sc = box.querySelector('[data-sc]');
-    st.onclick = function () { score++; sc.textContent = (score >= 20 ? '🏆 ' : '') + 'Catch the star! ' + score; st.style.left = Math.floor(Math.random() * 85) + '%'; st.style.top = Math.floor(Math.random() * 65) + '%'; st.textContent = ['⭐', '🌟', '✨', '🍎', '📒'][score % 5]; };
+    st.onclick = function () { score++; sc.textContent = (score >= 20 ? '🏆 ' : '') + K('Catch the star! ', '별을 잡아라! ') + score; st.style.left = Math.floor(Math.random() * 85) + '%'; st.style.top = Math.floor(Math.random() * 65) + '%'; st.textContent = ['⭐', '🌟', '✨', '🍎', '📒'][score % 5]; };
   }
-  function tick(add) { if (add) todo += add; else done++; if (!bar) return; var pc = todo ? Math.min(100, Math.round(100 * done / todo)) : 0; bar.style.width = pc + '%'; lab.textContent = pc + '% (' + done + ' of ' + todo + ')'; }
+  function tick(add) { if (add) todo += add; else done++; if (!bar) return; var pc = todo ? Math.min(100, Math.round(100 * done / todo)) : 0; bar.style.width = pc + '%'; lab.textContent = pc + '% (' + done + ' / ' + todo + ')'; }
   // Remembered on this computer (TOPIA's own storage): word units everyone has passed, and classes with no shadowing.
   // Those are skipped next time, so later scans only ask TOPIA about what is still open.
   var CK = 'gsOnline.v1', cache; try { cache = JSON.parse(localStorage.getItem(CK) || '{}'); } catch (e) { cache = {}; }
@@ -2021,7 +2027,7 @@ function topiaHomeworkBookmarklet() {
   async function run() {
     progressBox();
     var info = await get('class/info'), cls = info && info.data && info.data.list;
-    if (!cls) { if (win) win.close(); note('Could not load your classes. Refresh TOPIA (log in again if asked) and try once more.'); return; }
+    if (!cls) { if (win) win.close(); note(K('Could not load your classes. Refresh TOPIA (log in again if asked) and try once more.', '반 목록을 불러오지 못했습니다. TOPIA를 새로고침한 뒤(로그인 요청 시 다시 로그인) 한 번 더 시도하세요.')); return; }
     var out = [], nUnits = 0;
     await Promise.all(cls.map(async function (c) {
       var subs = (c.subjectList || []).map(function (s) { return String(s.sourceSubjectId); });
@@ -2081,13 +2087,13 @@ function topiaHomeworkBookmarklet() {
     var data = { app: 'gs-online', at: new Date().toISOString().slice(0, 10), classes: out };
     window.__gsOnlineData = data;
     var link = GS + '#online=' + await squeeze(data), text = '#GS-ONLINE ' + JSON.stringify(data);
-    var copy = function (b) { var ok = function () { if (b) b.textContent = '✓ Copied'; }; (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(ok, function () { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); ok(); } catch (e) {} ta.remove(); }); };
-    if (win) { win.location.href = link; note('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes' + (skipped ? ' (' + skipped + ' skipped: already passed, checked this week, or no shadowing)' : '') + '. The gradesheet opened in a new tab and ticked them.' + (score ? ' Stars caught: ' + score + '.' : '')); return; }
-    var box = note('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes' + (skipped ? ' (' + skipped + ' skipped: already passed, checked this week, or no shadowing)' : '') + '. <button data-c style="font:inherit;padding:4px 10px">Copy</button> then tap <b>Paste online homework</b> in the gradesheet app, or <a href="' + link + '" target="_blank">open the gradesheet here</a>.');
+    var copy = function (b) { var ok = function () { if (b) b.textContent = K('✓ Copied', '✓ 복사됨'); }; (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(ok, function () { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); ok(); } catch (e) {} ta.remove(); }); };
+    if (win) { win.location.href = link; note(K('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes' + (skipped ? ' (' + skipped + ' skipped: already passed, checked this week, or no shadowing)' : '') + '. The gradesheet opened in a new tab and ticked them.' + (score ? ' Stars caught: ' + score + '.' : ''), '✓ ' + out.length + '개 반에서 단어 유닛·쉐도잉 ' + nUnits + '개를 읽었습니다' + (skipped ? ' (' + skipped + '개 건너뜀: 이미 통과, 이번 주 확인함, 또는 쉐도잉 없음)' : '') + '. 새 탭에 성적표가 열려 체크했습니다.' + (score ? ' 잡은 별: ' + score + '개.' : ''))); return; }
+    var box = note(K('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes' + (skipped ? ' (' + skipped + ' skipped: already passed, checked this week, or no shadowing)' : '') + '. <button data-c style="font:inherit;padding:4px 10px">Copy</button> then tap <b>Paste online homework</b> in the gradesheet app, or <a href="' + link + '" target="_blank">open the gradesheet here</a>.', '✓ ' + out.length + '개 반에서 단어 유닛·쉐도잉 ' + nUnits + '개를 읽었습니다' + (skipped ? ' (' + skipped + '개 건너뜀: 이미 통과, 이번 주 확인함, 또는 쉐도잉 없음)' : '') + '. <button data-c style="font:inherit;padding:4px 10px">복사</button> 후 성적표 앱에서 <b>온라인 숙제 붙여넣기</b>를 누르거나, <a href="' + link + '" target="_blank">여기서 성적표를 여세요</a>.'));
     box.querySelector('[data-c]').onclick = function () { copy(this); };
-    try { await navigator.clipboard.writeText(text); box.querySelector('[data-c]').textContent = '✓ Copied'; } catch (e) {}
+    try { await navigator.clipboard.writeText(text); box.querySelector('[data-c]').textContent = K('✓ Copied', '✓ 복사됨'); } catch (e) {}
   }
-  run().catch(function (e) { if (win) win.close(); note('Something went wrong: ' + e.message); });
+  run().catch(function (e) { if (win) win.close(); note(K('Something went wrong: ', '오류가 났습니다: ') + e.message); });
 }
 const TOPIA_HW_BM = 'javascript:' + encodeURIComponent('(' + topiaHomeworkBookmarklet.toString() + ')()');
 function hwTarget(c) {
@@ -2142,10 +2148,10 @@ function applyOnlineAll(data) {
   return res;
 }
 function onlineReport(res, data) {
-  if (!res.length) return `No class here matches TOPIA's (${(data.classes || []).map(d => esc(d.cls)).join(', ')}). Class names need to match, e.g. V2_1.`;
+  if (!res.length) return L(`No class here matches TOPIA's (${(data.classes || []).map(d => esc(d.cls)).join(', ')}). Class names need to match, e.g. V2_1.`, `TOPIA의 반(${(data.classes || []).map(d => esc(d.cls)).join(', ')})과 같은 반이 없습니다. 반 이름이 같아야 합니다 (예: V2_1).`);
   const total = res.reduce((a, r) => a + r.ticks, 0);
-  return `<h3>Online homework from TOPIA</h3><p>✓ Ticked ${total} new box${total === 1 ? '' : 'es'}${data.at ? ' (TOPIA ' + esc(data.at) + ')' : ''}: ` + res.map(r => `${esc(r.c.name)} ${r.ticks}`).join(' · ') + '</p>' +
-    (res.some(r => r.notDone.length) ? `<details><summary>Not passed yet (${res.reduce((a, r) => a + r.notDone.length, 0)})</summary>${res.filter(r => r.notDone.length).map(r => `<p><b>${esc(r.c.name)}</b>: ${r.notDone.map(esc).join('; ')}</p>`).join('')}<p class="hint">Words pass = Word Study and Matching Game done, plus tests 1–3 each 80% or more, or all 5 tests done. Shadowing passes when TOPIA shows it done (O).</p></details>` : '');
+  return `<h3>${L('Online homework from TOPIA', 'TOPIA 온라인 숙제')}</h3><p>${L(`✓ Ticked ${total} new box${total === 1 ? '' : 'es'}`, `✓ 새로 ${total}칸 체크`)}${data.at ? ' (TOPIA ' + esc(data.at) + ')' : ''}: ` + res.map(r => `${esc(r.c.name)} ${r.ticks}`).join(' · ') + '</p>' +
+    (res.some(r => r.notDone.length) ? `<details><summary>${L('Not passed yet', '아직 미통과')} (${res.reduce((a, r) => a + r.notDone.length, 0)})</summary>${res.filter(r => r.notDone.length).map(r => `<p><b>${esc(r.c.name)}</b>: ${r.notDone.map(esc).join('; ')}</p>`).join('')}<p class="hint">${L('Words pass = Word Study and Matching Game done, plus tests 1–3 each 80% or more, or all 5 tests done. Shadowing passes when TOPIA shows it done (O).', '단어 통과 = Word Study와 Matching Game 완료, 그리고 테스트 1–3 각각 80% 이상 또는 테스트 5개 모두 완료. 쉐도잉은 TOPIA에 완료(O)로 나오면 통과입니다.')}</p></details>` : '');
 }
 function onlineBanner(html) {
   let box = document.getElementById('onlineBanner');
@@ -2171,10 +2177,10 @@ document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act="hwpaste"]'); if (!b) return;
   const m = b.parentNode.querySelector('.topiamsg'); m.hidden = false;
   let t = ''; try { t = await navigator.clipboard.readText(); } catch (er) {}
-  if (!/#GS-ONLINE |#online=/.test(t || '')) t = prompt('Paste what TOPIA Helper → Online homework copied:') || '';
+  if (!/#GS-ONLINE |#online=/.test(t || '')) t = prompt(L('Paste what TOPIA Helper → Online homework copied:', 'TOPIA Helper → 온라인 숙제에서 복사한 내용을 붙여 넣으세요:')) || '';
   const lk = t.match(/#online=([jz][A-Za-z0-9_-]+)/); if (lk) { onlineToken(lk[1]); return; }
-  if (!/^#GS-ONLINE /.test(t)) { m.textContent = 'Nothing to paste. On TOPIA, tap TOPIA Helper → Online homework first (ⓘ).'; return; }
-  let data; try { data = JSON.parse(t.slice(11)); } catch (er) { m.textContent = 'That copy looks broken. Copy it again on TOPIA.'; return; }
+  if (!/^#GS-ONLINE /.test(t)) { m.textContent = L('Nothing to paste. On TOPIA, tap TOPIA Helper → Online homework first (ⓘ).', '붙여 넣을 내용이 없습니다. 먼저 TOPIA에서 TOPIA Helper → 온라인 숙제를 누르세요 (ⓘ).'); return; }
+  let data; try { data = JSON.parse(t.slice(11)); } catch (er) { m.textContent = L('That copy looks broken. Copy it again on TOPIA.', '복사한 내용이 깨졌습니다. TOPIA에서 다시 복사하세요.'); return; }
   onlineGo(data);
 });
 /* "Copy students" bookmark: copied verbatim from John's Name Tag Generator (name-tags.html) so both tools use
@@ -2380,7 +2386,7 @@ function dayHTML(c, syl) {
   });
   h += '</div>';
   h += `<div class="topiarow"><button type="button" class="small" data-act="topia" title="Opens TOPIA\'s Weekly Report with this day\'s scores filled in by TOPIA Helper">⇪ Send Day ${i + 1} to TOPIA</button>${classes.filter(meetsToday).length > 1 && meetsToday(c) ? `<button type="button" class="small" data-act="topiaall" title="Every class that meets today, one after another: TOPIA Helper fills each, you check and press Save">⇪ All of today's classes</button>` : ''}<button type="button" class="info" data-info="topiahelp" aria-label="How to send scores to TOPIA">ⓘ</button>${hwTarget(c) || shTarget(c) ? `<button type="button" class="small" data-act="hwpaste">⇩ Paste online homework</button>` : ''}<span class="topiamsg hint" hidden></span>
-    <div class="hint infotext" id="topiahelp" hidden>Tap <b>Send Day N to TOPIA</b> (it opens <a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">TOPIA's Weekly Report ↗</a>). On TOPIA, tap your <b>📒 TOPIA Helper</b> bookmark if the boxes aren't filled yet, check them and press Save. Scores go in as a share of TOPIA's totals (8/9 → 89/100).${hwTarget(c) || shTarget(c) ? `<br><br><b>Online homework:</b> on any TOPIA page tap TOPIA Helper → <b>Online homework</b>. The gradesheet ticks passed word units and shadowing by itself (on iPad, tap <b>Paste online homework</b> here). Words pass = Word Study and Matching Game done, plus tests 1–3 each 80% or more, or all 5 tests done.` : ''}<br><br>No bookmark yet? <a href="https://disconnekted.github.io/Class-tools/topia-helper.html" target="_blank" rel="noopener">Set up TOPIA Helper</a> once on each device.</div></div>`;
+    <div class="hint infotext" id="topiahelp" hidden>${window.gsKO ? `<b>⇪ N회차 TOPIA로 보내기</b>를 누르세요 (<a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">TOPIA Weekly Report ↗</a>가 열립니다). 칸이 아직 안 채워졌으면 TOPIA에서 <b>📒 TOPIA Helper</b> 북마크를 누르고, 확인한 뒤 Save를 누르세요. 점수는 TOPIA 만점에 맞춰 환산됩니다 (8/9 → 89/100).${hwTarget(c) || shTarget(c) ? `<br><br><b>온라인 숙제:</b> TOPIA 아무 페이지에서 TOPIA Helper → <b>온라인 숙제 → 성적표</b>를 누르세요. 통과한 단어 유닛과 쉐도잉이 자동으로 체크됩니다 (iPad에서는 여기서 <b>온라인 숙제 붙여넣기</b>). 단어 통과 = Word Study와 Matching Game 완료, 그리고 테스트 1–3 각각 80% 이상 또는 테스트 5개 모두 완료.` : ''}<br><br>북마크가 아직 없나요? 기기마다 한 번 <a href="https://disconnekted.github.io/Class-tools/topia-helper.html" target="_blank" rel="noopener">TOPIA Helper 설정</a>을 하세요.` : `Tap <b>Send Day N to TOPIA</b> (it opens <a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">TOPIA's Weekly Report ↗</a>). On TOPIA, tap your <b>📒 TOPIA Helper</b> bookmark if the boxes aren't filled yet, check them and press Save. Scores go in as a share of TOPIA's totals (8/9 → 89/100).${hwTarget(c) || shTarget(c) ? `<br><br><b>Online homework:</b> on any TOPIA page tap TOPIA Helper → <b>Online homework</b>. The gradesheet ticks passed word units and shadowing by itself (on iPad, tap <b>Paste online homework</b> here). Words pass = Word Study and Matching Game done, plus tests 1–3 each 80% or more, or all 5 tests done.` : ''}<br><br>No bookmark yet? <a href="https://disconnekted.github.io/Class-tools/topia-helper.html" target="_blank" rel="noopener">Set up TOPIA Helper</a> once on each device.`}</div></div>`;
   if (away.length) h += `<p class="hint">Not in this class on Day ${i + 1}: ${away.map(s => `${esc(s.eng || s.kor)} (${esc(statusText(s))})`).join(', ')}. Use Whole sheet to bring a student back.</p>`;
   return h;
 }
@@ -2623,14 +2629,16 @@ main.addEventListener('submit', e => {
     'Monthly test days': '월말 평가 날', 'Presentation / debate days': '발표·토론 날', 'Every lesson but Day 1 and monthly tests': '1회차·월말 평가 제외 매 수업',
     'Handed in ✓ ✗': '제출 ✓ ✗', 'Circle ○ Triangle △ X ✗': '동그라미 ○ 세모 △ 엑스 ✗', 'Attendance ✓ L A': '출석 ✓ L A',
     'then tap anyone late or absent ': '그다음 지각·결석 학생을 누르세요 ',
-    'Scores are saved on this device as you type. Now and then use ⋯ More → Back up to keep a copy.': '점수는 입력하는 대로 이 기기에 저장됩니다. 가끔 ⋯ 더보기 → 백업으로 사본을 남겨 두세요.'
+    'Scores are saved on this device as you type. Now and then use ⋯ More → Back up to keep a copy.': '점수는 입력하는 대로 이 기기에 저장됩니다. 가끔 ⋯ 더보기 → 백업으로 사본을 남겨 두세요.',
+    "📥 Set up on a computer? Receive your classes": "📥 컴퓨터에서 설정했나요? 반 받기", "Undo the last change (Ctrl+Z)": "마지막 변경 되돌리기 (Ctrl+Z)", "Open the Name Tag Generator": "이름표 만들기 열기", "Remove every class from this device": "이 기기의 모든 반 지우기", "Open the class that meets today when the gradesheet starts": "성적표를 열면 오늘 수업 반이 바로 열림", "Copy every class and student so you can paste them into the Name Tag Generator": "모든 반과 학생을 복사해 이름표 만들기에 붙여 넣기", "Save every class to a file you keep": "모든 반을 파일로 저장해 보관", "Load classes from a backup file": "백업 파일에서 반 불러오기", "Move your classes to an iPad with a QR code or link": "QR 코드나 링크로 반을 iPad로 옮기기", "Scan the code from the computer to get its classes": "컴퓨터 화면의 코드를 스캔해 반 받기", "View": "보기", "Column name": "항목 이름", "Points the test is out of. Scores then show as % with the score chart.": "시험 만점. 점수가 점수표에 맞춰 %로 나옵니다.", "Remove this column": "이 항목 삭제", "Everyone here gets full marks for what is done today: attendance, participation and anything due today. Boxes you already filled stay as they are.": "출석한 학생 모두 오늘 항목(출석, 참여도, 오늘 마감 항목)에 만점을 받습니다. 이미 채운 칸은 그대로 둡니다.", "Empty every box for this day, for every student. Tap twice to confirm.": "이날 모든 학생의 칸을 비웁니다. 두 번 눌러 확인하세요.", "New note": "새 메모", "Opens TOPIA's Weekly Report with this day's scores filled in by TOPIA Helper": "이날 점수를 TOPIA Helper가 채우도록 TOPIA Weekly Report를 엽니다", "How to send scores to TOPIA": "TOPIA로 점수 보내는 방법", "English name": "영어 이름", "Korean name": "한국어 이름", "Anything about the class as a whole: books handed back, test dates moved, seating…": "반 전체에 관한 메모: 책 반납, 시험 날짜 변경, 자리 배치…", "Enlarge the preview of the blank sheet": "빈 양식 미리보기 크게 보기", "Enlarge the preview of the sheet with scores": "점수 포함 미리보기 크게 보기", "One page per student: scores, averages and notes": "학생마다 한 장: 점수, 평균, 메모", "No backup yet: tap to save a copy": "아직 백업이 없습니다: 눌러서 사본 저장", "Every class that meets today, one after another: TOPIA Helper fills each, you check and press Save": "오늘 수업하는 반을 차례로: TOPIA Helper가 채우고, 확인한 뒤 Save를 누르세요", "W word test · U unit test · M monthly test · E essay · P presentation/debate": "W 단어 시험 · U 단원 평가 · M 월말 평가 · E 에세이 · P 발표/토론", "+ Add": "+ 추가", "# Slack": "# 슬랙", "Paste online homework": "온라인 숙제 붙여넣기", "Switch": "전환", "Download cancelled.": "다운로드를 취소했습니다.", "Getting it ready…": "준비 중…", "Getting the pages ready to print…": "인쇄할 페이지 준비 중…", "Print dialog opened.": "인쇄 창을 열었습니다.", "Could not save your name online. Check the internet and try again.": "이름을 온라인에 저장하지 못했습니다. 인터넷을 확인하고 다시 시도하세요.", "No students to copy yet": "아직 복사할 학생이 없습니다", "Paste a class list into the box first.": "먼저 반 명단을 칸에 붙여 넣으세요.", "Selected in the paste box: press Ctrl+C": "붙여넣기 칸에서 선택됨: Ctrl+C를 누르세요", "Selected: press Copy": "선택됨: 복사를 누르세요", "No scores on this day yet.": "이날은 아직 점수가 없습니다.", "Copied": "복사됨", "Copy": "복사", "✓ Copied": "✓ 복사됨", "New class": "새 반", "New column": "새 항목", "No marks have been entered yet.": "아직 입력한 점수가 없습니다.", "No subject yet": "아직 과목 없음", "Nothing marked yet": "아직 표시 없음", "Nothing to fill: every box for today already has a mark.": "채울 칸이 없습니다: 오늘 칸이 모두 채워져 있습니다.", "Pick the subject to set the columns.": "과목을 고르면 항목이 정해집니다.", "Point the camera at the code on the computer screen.": "카메라를 컴퓨터 화면의 코드에 대세요.", "Kept as extra columns so their marks aren’t lost:": "점수가 사라지지 않도록 추가 항목으로 남김:", "Moves across:": "그대로 옮겨짐:", "Stays the same:": "그대로 유지:", "Removed (they were empty):": "삭제됨 (비어 있었음):", "☁ Saved online": "☁ 온라인에 저장됨", "⚠ Could not reach the online save": "⚠ 온라인 저장에 연결하지 못했습니다", "⚠ Not saved yet. Check the internet": "⚠ 아직 저장 안 됨. 인터넷을 확인하세요", "⚠ That file is not a gradesheet backup": "⚠ 성적표 백업 파일이 아닙니다", "⚠ That link is damaged. Send it again.": "⚠ 링크가 손상됐습니다. 다시 보내세요.", "⚠ View only: ask the owner for edit access to save": "⚠ 보기 전용: 저장하려면 소유자에게 편집 권한을 요청하세요", "🖨 Print Monthly Test": "🖨 월말 평가 인쇄", "Add a class first, then send it to your iPad.": "먼저 반을 추가한 뒤 iPad로 보내세요.", "Copy the link and email it to yourself, then open the email on the iPad and tap the link.": "링크를 복사해 나에게 이메일로 보낸 뒤, iPad에서 이메일을 열고 링크를 누르세요.", "Send to iPad": "iPad로 보내기", "Not now": "나중에", "Left the class…": "퇴원…", "Delete…": "삭제…", "Back in class": "다시 수강", "Only for a student added by mistake": "잘못 추가한 학생만", "Move up": "위로", "Move down": "아래로", "Last lesson before leaving:": "마지막 수업:", "Leaves from": "퇴원일", "New today": "오늘 합류", "Zoom out": "축소", "Zoom in": "확대", "Previous code": "이전 코드", "Next code": "다음 코드", "What to send": "보낼 내용", "Day 1 date": "1회차 날짜", "Printing straight from the page is blocked inside claude.ai, so the PDF was saved instead: open it and print. (The standalone gradesheet.html prints directly.)": "claude.ai 안에서는 바로 인쇄할 수 없어 PDF로 저장했습니다: 열어서 인쇄하세요. (내려받은 gradesheet.html은 바로 인쇄됩니다.)", "Not found: keep the \"files\" folder next to gradesheet.html.": "찾을 수 없음: \"files\" 폴더를 gradesheet.html 옆에 두세요.", "Prep sheet": "준비 시트", "Prep sheet key": "준비 시트 답안", "Answer key": "답안지", "Blank gradesheet": "빈 성적표", "Online homework": "온라인 숙제", "both semesters": "두 학기"
   };
   const RULES = [
     [/^Day (\d+)$/, '$1회차'], [/^Delete all (\d+) classes\?$/, '반 $1개를 모두 삭제할까요?'], [/^Deleted all (\d+) classes\.$/, '반 $1개를 모두 삭제했습니다.'], [/^Day 1 date also set for (?:both )?(.+)\.$/, '$1에도 1회차 날짜를 적용했습니다.'], [/^📅 Opened$/, '📅 열림:'], [/^, today's class\.$/, ' (오늘 수업 반)'], [/^↩ Back to (.+)$/, '↩ $1(으)로 돌아가기'], [/^(.+): (\d+) new students?(?:, (\d+) already there)?\. Check the subject and Day 1 date under Details\.$/, (m, c, a, b) => `${c}: 새 학생 ${a}명${b ? `, 기존 ${b}명` : ''}. 세부 정보에서 과목과 1회차 날짜를 확인하세요.`], [/^(\d+) new students? in (\d+) classes\. Check the subject and Day 1 date under Details\.$/, '$2개 반에 새 학생 $1명. 세부 정보에서 과목과 1회차 날짜를 확인하세요.'],
-    [/^Undone \((\d+) boxes\)$/, '되돌렸습니다 ($1칸)'], [/^Delete (.+) and all its scores\?$/, '$1 반과 모든 점수를 삭제할까요?'], [/^Quick notes for (.+)$/, '$1 빠른 메모'], [/^Day (\d+) date$/, '$1회차 날짜'], [/^⇪ Copy Day (\d+) for TOPIA$/, '⇪ $1회차 TOPIA용 복사'], [/^⇪ Send Day (\d+) to TOPIA$/, '⇪ $1회차 TOPIA로 보내기'],
+    [/^Undone \((\d+) boxes\)$/, '되돌렸습니다 ($1칸)'], [/^Delete (.+) and all its scores\?$/, '$1 반과 모든 점수를 삭제할까요?'], [/^Quick notes for Day (\d+)$/, '$1회차 빠른 메모'], [/^Quick notes for (.+)$/, '$1 빠른 메모'], [/^Day (\d+) date$/, '$1회차 날짜'], [/^⇪ Copy Day (\d+) for TOPIA$/, '⇪ $1회차 TOPIA용 복사'], [/^⇪ Send Day (\d+) to TOPIA$/, '⇪ $1회차 TOPIA로 보내기'],
     [/^More for (.+?)( \(\d+\))? ▾$/, '$1 더보기$2 ▾'], [/^Less ▴$/, '접기 ▴'], [/^(.+) class$/, '$1 반'], [/^(.+) students$/, '$1 학생'],
     [/^Send (.+)'s gradesheet$/, '$1 성적표 보내기'], [/^Overall (\d+%)$/, '전체 $1'], [/^Participation \/(\d+)$/, '참여도 /$1'], [/^Word Test \/(\d+)$/, '단어 시험 /$1'],
-    [/^Vocabulary Test \/(\d+)$/, '단어 시험 /$1'], [/^Sem ([AB])$/, '$1학기']
+    [/^Vocabulary Test \/(\d+)$/, '단어 시험 /$1'], [/^Sem ([AB])$/, '$1학기'],
+    [/^Date for day (\d+)$/, '$1회차 날짜'], [/^Change this if today's test has a different number of questions\. Only Day (\d+) changes\.$/, '오늘 시험 문항 수가 다르면 바꾸세요. $1회차만 바뀝니다.'], [/^Delete note: (.+)$/, '메모 삭제: $1'], [/^Day (\d+): (.+)$/, '$1회차: $2'], [/^Options for (.+)$/, '$1 옵션'], [/^Copied (\d+) students\. Paste them in the name tag tool$/, '학생 $1명을 복사했습니다. 이름표 도구에 붙여 넣으세요'], [/^Filled (\d+) empty box(?:es)? with full marks for Day (\d+)\. Tap any score to change it\.$/, '$2회차 빈칸 $1개를 만점으로 채웠습니다. 바꿀 점수는 누르세요.'], [/^Tap again to clear Day (\d+)$/, '한 번 더 누르면 $1회차를 지웁니다'], [/^Last backup (\d+) days ago: tap to save a copy$/, '마지막 백업 $1일 전: 눌러서 사본 저장'], [/^Got (\d+) of (\d+) codes\. Keep holding the iPad in front of the screen…$/, '코드 $2개 중 $1개 받음. iPad를 화면 앞에 계속 대고 있으세요…'], [/^Backed up (.+)$/, '백업함: $1'], [/^Code (\d+) of (\d+)$/, '코드 $1 / $2'], [/^(.+) only$/, '$1만'], [/^Monthly Test (I+) today\.$/, '오늘 월말 평가 $1.']
   ];
   const SKIP = '.tbtn,.nlist,.nsum,td.c-name,.scard header,#clist,script,style,textarea,.nundo,#gsTopiaNote,.foot.raw';
   const tr = s => {
@@ -2643,6 +2651,7 @@ main.addEventListener('submit', e => {
     const w = document.createTreeWalker(node, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
     for (let n = node; n; n = w.nextNode()) {
       if (n.nodeType === 1) {
+        if (n.dataset && n.dataset.ko !== undefined) { if (ko && !n.__koOn) { n.__enHTML = n.innerHTML; n.innerHTML = n.dataset.ko; n.__koOn = 1; } else if (!ko && n.__koOn) { n.innerHTML = n.__enHTML; n.__koOn = 0; } }
         if (n.closest && n.closest(SKIP) && !(n.tagName === 'TEXTAREA' && !n.parentElement.closest(SKIP))) continue;
         for (const a of ['placeholder', 'title', 'aria-label']) {
           const key = '__en_' + a, v = n.getAttribute && n.getAttribute(a); if (v == null) continue;
@@ -2660,9 +2669,9 @@ main.addEventListener('submit', e => {
   }
   let queued = false;
   const mo = new MutationObserver(() => { if (!ko || queued) return; queued = true; requestAnimationFrame(() => { queued = false; mo.disconnect(); apply(document.body); watch(); }); });
-  const watch = () => mo.observe(document.body, { childList: true, subtree: true, characterData: true });
+  const watch = () => mo.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['title', 'placeholder', 'aria-label'] });
   const paintLang = () => { langB.textContent = ko ? 'EN' : '한'; langB.title = ko ? 'English' : '한국어로 보기'; langB.setAttribute('aria-label', langB.title); root.lang = ko ? 'ko' : 'en'; };
-  langB.onclick = () => { ko = !ko; set('gradesheet.lang', ko ? 'ko' : 'en'); mo.disconnect(); apply(document.body); paintLang(); paintTheme(); if (ko) watch(); };
+  langB.onclick = () => { ko = !ko; window.gsKO = ko; set('gradesheet.lang', ko ? 'ko' : 'en'); mo.disconnect(); try { if (typeof renderWho === 'function' && !document.getElementById('who').hidden) renderWho(); render(); } catch (e) {} apply(document.body); paintLang(); paintTheme(); if (ko) watch(); };
   paintLang(); if (ko) { apply(document.body); watch(); }
 })();
 </script>
