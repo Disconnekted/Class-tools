@@ -22,6 +22,10 @@ button.primary{background:var(--accent);color:var(--accent-ink);border-color:var
 details summary{cursor:pointer;font-weight:600}
 .others{margin:4px 0 14px}.others[open] summary{margin-bottom:10px}
 .here{outline:2px solid var(--accent)}
+a{color:var(--accent)}
+.golinks{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 14px}
+.go{display:inline-block;padding:10px 16px;border-radius:10px;border:1px solid var(--accent);background:var(--card);color:var(--accent);font-weight:700;text-decoration:none}
+.go:hover{background:var(--accent);color:var(--accent-ink)}
 code{font-size:12px;word-break:break-all;color:var(--muted)}
 </style></head>
 <body><main>
@@ -57,7 +61,7 @@ code{font-size:12px;word-break:break-all;color:var(--muted)}
 </div>
 
 
-<p><a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">Open TOPIA Weekly Report ↗</a> · <a href="https://www.topiaenglishzone.co.kr/doonsan/class-homeroom/attendance" target="_blank" rel="noopener">Attendance (출석부) ↗</a></p>
+<p class="golinks"><a class="go" href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">Open TOPIA Weekly Report ↗</a><a class="go" href="https://www.topiaenglishzone.co.kr/doonsan/class-homeroom/attendance" target="_blank" rel="noopener">Open Attendance (출석부) ↗</a></p>
 <details class="others"><summary>Other devices</summary><div id="otherBox"></div></details>
 <p class="hint">Nothing is saved on TOPIA until you press Save there.</p>
 <p class="hint">After an update, copy or drag it again to get the newest version. Bookmark size: <span id="code">loading…</span></p>
