@@ -2048,7 +2048,7 @@ function topiaHomeworkBookmarklet() {
       }));
       })(), (async function () {
       // Shadowing lives in the Homework (과제평가) grid: score 2 = done (O), 0 or 1 = not done.
-      var today = new Date().toISOString().slice(0, 10);
+      var now = new Date(), pad = function (n) { return (n < 10 ? '0' : '') + n; }, today = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
       // A class with no shadowing last time is checked again after a week (this is TOPIA's slowest page).
       var week = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10), look = subs.filter(function (sid) { var w = cache.s[c.classId + '|' + sid]; if (w && w > week) { skipped++; return false; } return true; });
       tick(look.length);
@@ -2057,6 +2057,10 @@ function topiaHomeworkBookmarklet() {
         if (!L || !Array.isArray(L.studentInfolist)) return;
         var any = L.studentInfolist.some(function (st) { return (st.homeworkList || []).some(function (h) { return h.onlineHomeworkInfo && h.onlineHomeworkInfo.shadowing; }); });
         if (any) delete cache.s[c.classId + '|' + sid]; else cache.s[c.classId + '|' + sid] = today;
+        // Due rule (same as John's Online homework button): a lesson's shadowing counts as missing once the NEXT lesson's
+        // date has passed, or it is that day and 2:00 PM or later. The last lesson is never counted.
+        var dates = (L.dateSequenceList || []).map(function (x) { return String(x.date || '').slice(0, 10); }).filter(Boolean).sort();
+        var overdue = function (d) { var nx = dates.filter(function (x) { return x > d; })[0]; return !!nx && (nx < today || (nx === today && now.getHours() >= 14)); };
         L.studentInfolist.forEach(function (st) {
           var nm = [String(st.nameE || '').trim(), String(st.nameK || '').trim()];
           (st.homeworkList || []).forEach(function (h) {
@@ -2065,7 +2069,7 @@ function topiaHomeworkBookmarklet() {
             var d = String(h.classDate || '').slice(0, 10), k = o.unitNum + '|' + (o.unitDay || '');
             var u = shadow[k] || (shadow[k] = { u: String(o.unitNum), d: o.unitDay || '', date: d, name: o.name || '', p: [], f: [] });
             if (d && d < u.date) u.date = d;
-            if (String(v) === '2') u.p.push(nm); else if (d && d < today) u.f.push(nm.concat('shadowing not done'));
+            if (String(v) === '2') u.p.push(nm); else if (d && (dates.length ? overdue(d) : d < today)) u.f.push(nm.concat(String(v) === '1' ? 'shadowing △' : 'shadowing not done'));
           });
         });
       }));
