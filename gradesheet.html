@@ -508,6 +508,7 @@ table.gs tr.r1 th.day input:focus{background:var(--sheet);color:var(--ink);outli
 .autopick{margin:0 0 10px;padding:8px 12px;border-radius:10px;background:var(--grid);color:var(--ink);font-size:13.5px}
 .autopick .linkbtn{margin-left:8px}
 a:not(.btn):not(.bm){color:var(--accent);text-underline-offset:2px}
+table.gs td.avg,table.gs td.mon{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;letter-spacing:-.02em}
 </style>
 
 </head><body>
@@ -767,7 +768,7 @@ function rowStats(c, s, cat, from = 0, to = NDAYS) {
     const marked = vals.filter(v => v in MARK_PCT);
     if (!marked.length) return null;
     const n = x => marked.filter(v => v === x).length;
-    return { text: `${n('O')}○ ${n('T')}△ ${n('X')}✗`, pct: marked.reduce((a, v) => a + MARK_PCT[v], 0) / marked.length };
+    return { text: [['O', '○'], ['T', '△'], ['X', '✗']].filter(([x]) => n(x)).map(([x, m]) => n(x) + m).join(''), full: `${n('O')}○ ${n('T')}△ ${n('X')}✗`, pct: marked.reduce((a, v) => a + MARK_PCT[v], 0) / marked.length };
   }
   const ps = vals.map((v, j) => pct(v, outOfAt(c, cat, from + j))).filter(v => v !== null);
   if (!ps.length) return null;
@@ -1988,9 +1989,12 @@ function topiaHomeworkBookmarklet() {
       var list = [];
       for (var pg = 1; pg < 10; pg++) { var j = await get('online-contents/onlineword?classId=' + c.classId + '&limit=100&page=' + pg), d = j && j.data; if (!d) break; list = list.concat(d.list || []); if (!d.hasNextPage) break; }
       list = list.filter(function (u) { return subs.indexOf(String(u.sourceSubjectObj && u.sourceSubjectObj.id)) >= 0 && u.countObj && u.countObj.participantCount > 0; });
+      // Skip: units everyone passed, and older units (not the 3 newest) checked in the last week. Those are rechecked weekly.
+      var nums = list.map(function (u) { return +u.unitNum; }).sort(function (a, b) { return b - a; }), newest = nums.slice(0, 3);
+      var wk = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
       var fresh = list.filter(function (u) {
         var k = c.classId + '|' + u.sourceSubjectObj.id + '|' + u.unitNum, m = cache.u[k];
-        if (m && m.n === u.countObj.participantCount) { units[u.unitNum] = { name: m.name, p: m.p, f: [] }; nUnits++; skipped++; return false; }
+        if (m && m.n === u.countObj.participantCount && (!(m.f && m.f.length) || (m.t > wk && newest.indexOf(+u.unitNum) < 0))) { units[u.unitNum] = { name: m.name, p: m.p, f: m.f || [] }; nUnits++; skipped++; return false; }
         return true;
       });
       tick(fresh.length);
@@ -1999,7 +2003,7 @@ function topiaHomeworkBookmarklet() {
         var p = [], f = [];
         L.forEach(function (st) { var s = st.studentObj || {}, nm = [String(s.nameE || '').trim(), String(s.nameK || '').trim()], why = judge(st); if (why) f.push(nm.concat(why)); else p.push(nm); });
         units[u.unitNum] = { name: u.unitName, p: p, f: f }; nUnits++;
-        if (!f.length && p.length) cache.u[c.classId + '|' + u.sourceSubjectObj.id + '|' + u.unitNum] = { n: u.countObj.participantCount, name: u.unitName, p: p };
+        if (p.length || f.length) cache.u[c.classId + '|' + u.sourceSubjectObj.id + '|' + u.unitNum] = { n: u.countObj.participantCount, name: u.unitName, p: p, f: f, t: new Date().toISOString().slice(0, 10) };
       }));
       })(), (async function () {
       // Shadowing lives in the Homework (과제평가) grid: score 2 = done (O), 0 or 1 = not done.
@@ -2033,8 +2037,8 @@ function topiaHomeworkBookmarklet() {
     window.__gsOnlineData = data;
     var link = GS + '#online=' + await squeeze(data), text = '#GS-ONLINE ' + JSON.stringify(data);
     var copy = function (b) { var ok = function () { if (b) b.textContent = '✓ Copied'; }; (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(ok, function () { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); ok(); } catch (e) {} ta.remove(); }); };
-    if (win) { win.location.href = link; note('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes' + (skipped ? ' (' + skipped + ' skipped: already passed or no shadowing)' : '') + '. The gradesheet opened in a new tab and ticked them.' + (score ? ' Stars caught: ' + score + '.' : '')); return; }
-    var box = note('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes' + (skipped ? ' (' + skipped + ' skipped: already passed or no shadowing)' : '') + '. <button data-c style="font:inherit;padding:4px 10px">Copy</button> then tap <b>Paste online homework</b> in the gradesheet app, or <a href="' + link + '" target="_blank">open the gradesheet here</a>.');
+    if (win) { win.location.href = link; note('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes' + (skipped ? ' (' + skipped + ' skipped: already passed, checked this week, or no shadowing)' : '') + '. The gradesheet opened in a new tab and ticked them.' + (score ? ' Stars caught: ' + score + '.' : '')); return; }
+    var box = note('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes' + (skipped ? ' (' + skipped + ' skipped: already passed, checked this week, or no shadowing)' : '') + '. <button data-c style="font:inherit;padding:4px 10px">Copy</button> then tap <b>Paste online homework</b> in the gradesheet app, or <a href="' + link + '" target="_blank">open the gradesheet here</a>.');
     box.querySelector('[data-c]').onclick = function () { copy(this); };
     try { await navigator.clipboard.writeText(text); box.querySelector('[data-c]').textContent = '✓ Copied'; } catch (e) {}
   }
@@ -2773,7 +2777,7 @@ function drawSheet(doc, c, full) {
         }
         for (let j = 0; j < (mon ? 3 : 0); j++) {
           doc.rect(xMon + j * colMon, y, colMon, rh);
-          if (full && s) { const m = rowStats(c, s, k, MONTHS[j][0], MONTHS[j][1]); if (m) { doc.setFont('helvetica', 'normal'); doc.setFontSize(5.4); doc.text(k.kind === 'mark' ? (m.text.match(/\d+/g) || []).join('/') : m.text, xMon + j * colMon + colMon / 2, y + rh / 2 + 0.8, { align: 'center' }); } }
+          if (full && s) { const m = rowStats(c, s, k, MONTHS[j][0], MONTHS[j][1]); if (m) { doc.setFont('helvetica', 'normal'); doc.setFontSize(5.4); doc.text(k.kind === 'mark' ? ((m.full || m.text).match(/\d+/g) || []).join('/') : m.text, xMon + j * colMon + colMon / 2, y + rh / 2 + 0.8, { align: 'center' }); } }
         }
       });
       // number, name and online homework span the whole block
