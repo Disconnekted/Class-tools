@@ -9,8 +9,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="author" content="Joseph McLaren">
 <title>Name Tag Generator</title>
-<meta name="theme-color" content="#7A1701">
-<meta name="apple-mobile-web-app-title" content="Name Tags">
 <style>
   :root {
     --maroon: #7A1701;
@@ -52,16 +50,13 @@
   .panel h2 { margin: 0 0 10px; font-size: 15px; color: var(--maroon); }
   .panel p.hint { margin: 4px 0 10px; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
   label { font-size: 12.5px; color: #444; display: block; margin: 8px 0 3px; }
-  input[type=text], input[type=password], input[type=number], select, textarea { font: inherit; font-size: 14px; width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; background: #fff; }
+  input[type=text], input[type=password], select, textarea { font: inherit; font-size: 14px; width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; background: #fff; }
   textarea { resize: vertical; min-height: 90px; line-height: 1.4; }
   .row { display: flex; gap: 8px; }
   .row > * { flex: 1; min-width: 0; }
   .btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
   .check { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 8px 0 0; color: #333; }
   .check input { margin: 0; }
-  .steps { padding-left: 18px; margin: 6px 0 0; }
-  ol.hint { font-size: 13px; color: var(--muted); line-height: 1.45; }
-  .steps li { margin-bottom: 6px; }
   a.bookmarklet { display: inline-block; margin-top: 4px; padding: 5px 12px; border-radius: 6px; background: var(--maroon); color: var(--cream); font-weight: bold; text-decoration: none; cursor: grab; }
   .msg { font-size: 13px; margin-top: 8px; padding: 8px 10px; border-radius: 6px; display: none; }
   .msg.ok { display: block; background: #eef7ee; color: #235b23; }
@@ -79,6 +74,9 @@
   .class-card .namelist { display: flex; flex-wrap: wrap; gap: 4px; font-size: 13px; }
   .class-card .namelist span { padding: 2px 8px; border-radius: 10px; background: rgba(0,0,0,.05); }
   .class-card .namelist span.added { background: rgba(122,23,1,.1); }
+  .class-card .namelist .nm { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: text; }
+  .class-card .namelist .nm:hover { text-decoration: underline dotted; }
+  .class-card .namelist input.nm-edit { width: 14em; padding: 1px 6px; font-size: 13px; }
   .class-card .namelist .x { border: 0; background: none; padding: 0 0 0 5px; font-size: 11px; color: var(--muted); cursor: pointer; }
   .class-card .addname { display: flex; gap: 6px; margin-top: 8px; }
   .class-card .addname input { flex: 1; }
@@ -137,12 +135,14 @@
   html.dark button:disabled:hover { background: #2d2c28; }
   html.dark button.primary { background: var(--cream); color: var(--maroon); border-color: var(--cream); }
   html.dark button.danger { color: #ff8a80; }
-  html.dark input[type=text], html.dark input[type=password], html.dark input[type=number], html.dark select, html.dark textarea { background: #1b1a17; color: var(--ink); border-color: #4b4944; }
+  html.dark input[type=text], html.dark input[type=password], html.dark select, html.dark textarea { background: #1b1a17; color: var(--ink); border-color: #4b4944; }
   html.dark label, html.dark .check, html.dark .summary, html.dark .picklist label { color: #d2cec5; }
   html.dark .panel h2 { color: #f2b8a6; }
   html.dark a { color: #8fb8ff; }
   html.dark a.bookmarklet { color: var(--cream); }
   html.dark .class-card { background: #282622; }
+  html.dark .class-card .namelist span { background: rgba(255,255,255,.08); }
+  html.dark .class-card .namelist span.added { background: rgba(242,184,166,.18); }
   html.dark .class-card.active { box-shadow: 0 0 0 2px rgba(110,165,255,.45); }
   html.dark .style-pick label, html.dark .print-mode label { background: #2d2c28; }
   html.dark .style-pick label:has(input:checked), html.dark .print-mode label:has(input:checked) { background: #3b2922; border-color: #c4664c; color: #f2b8a6; }
@@ -154,18 +154,16 @@
   html.dark .msg.err { background: #3b1f1f; color: #f3a9a9; }
   html.dark .page { box-shadow: 0 1px 10px rgba(0,0,0,.7); }
 
-  /* ---- Pages & tags (A4 landscape, 5 x 6 = 30 tags per page, like the old sheet) ---- */
+  /* ---- Pages & tags (page size, label positions and tag scale come from the paper setting, in #paper-css) ---- */
   .page {
-    width: 297mm; height: 210mm; background: #fff; margin: 0 auto 14px;
+    background: #fff; margin: 0 auto 14px;
     box-shadow: 0 1px 6px rgba(0,0,0,.18);
-    display: flex; align-items: center; justify-content: center;
   }
-  .grid { display: grid; grid-template-columns: repeat(5, 57mm); grid-template-rows: repeat(6, 32.5mm); }
+  .grid { display: grid; position: absolute; }
   /* shared tag structure */
   .tag { display: flex; flex-direction: column; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .tag * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .tag.blank-slot { background: transparent !important; outline: none !important; border: none !important; box-shadow: none !important; }
-  .tag.blank-slot::before { display: none !important; }
   .tag .name { display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden; line-height: 1; }
   .tag .name .sep { opacity: .45; font-weight: 400; margin: 0 .25em; }
   .tag .name .kor { font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans CJK KR", sans-serif; font-weight: 800; }
@@ -241,10 +239,8 @@
   .style-pick i { display: block; height: 22px; border-radius: 4px; margin-bottom: 5px; }
 
   .copyright { font-size: 11.5px; color: var(--muted); text-align: center; margin: 4px 0 8px; line-height: 1.5; }
-  .copyright span { opacity: .8; }
   .panel p.hint.privacy { margin: 10px 0 0; }
   #who { position: fixed; inset: 0; z-index: 8500; background: var(--bg); overflow: auto; display: flex; align-items: flex-start; justify-content: center; padding: 8vh 16px 24px; }
-  #who[hidden] { display: none !important; }
   body.who-open { overflow: hidden; }
   .who-card { width: min(460px, 100%); background: var(--panel); border: 1px solid var(--line); border-top: 6px solid var(--maroon); border-radius: 12px; padding: 20px 22px; box-shadow: 0 8px 30px rgba(0,0,0,.12); }
   .who-top { display: flex; align-items: center; gap: 10px; }
@@ -266,6 +262,7 @@
   #undo-btn:disabled:hover, #redo-btn:disabled:hover { background: transparent; }
   #undo-btn { margin-right: -10px; }
   html.dark .who-card h3 { color: #c9c5bc; }
+  html.dark .who-top h2 { color: #f2b8a6; }
   html.dark .who-form button.primary, html.dark #notice button.primary, html.dark .who-card > button.primary { background: var(--cream); color: var(--maroon); border-color: var(--cream); }
   html.dark .who-err { color: #ff8a80; }
   html.dark #who-btn, html.dark #undo-btn, html.dark #redo-btn { background: transparent; color: var(--cream); }
@@ -336,9 +333,13 @@
   @keyframes yay-bounce { 0%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-14px) rotate(-8deg); } 60% { transform: translateY(0) rotate(6deg); } }
   @media (prefers-reduced-motion: reduce) { #yay-btn, #yay-btn .yay-emoji, #yay-card, #yay-card::before, #yay-card .yay-big, #yay-shade { animation: none; } }
 
+  /* Shown only when the tool is opened as a file: sends teachers to the website, where it can be installed as an app. */
+  #app-btn { font-size: 13px; background: transparent; color: var(--cream); border: 1px dashed rgba(251,237,197,.6); border-radius: 999px; padding: 6px 12px; }
+  #app-btn:hover { background: rgba(255,255,255,.12); }
+  html.dark #app-btn { background: transparent; color: var(--cream); }
+
   @media print {
     #tour-shade, #tour-ring, #tour-tip, #notice, #who, #confetti, #yay-shade { display: none !important; }
-    @page { size: A4 landscape; margin: 0; }
     body { background: #fff; }
     header, .controls, .summary, .noprint { display: none !important; }
     .wrap { display: block; padding: 0; }
@@ -349,6 +350,7 @@
     .page:last-child { page-break-after: auto; break-after: auto; }
   }
 </style>
+<style id="paper-css"></style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -381,6 +383,7 @@
   <button id="help" class="icon lang" onclick="tourStart()" data-i18n-title="helpTitle" title="How to use this tool" aria-label="How to use this tool">?</button>
   <button id="lang" class="icon lang" onclick="toggleLang()"></button>
   <button id="theme" class="icon" onclick="toggleTheme()" title="Dark mode" aria-label="Dark mode"></button>
+  <button id="app-btn" onclick="appInfo()" hidden data-i18n="appBtn" data-i18n-title="appTitle" title="Install the tool on this computer as an app">💻 Get the desktop app</button>
   <button id="who-btn" onclick="signOut()" hidden></button>
   <button id="undo-btn" onclick="undo()" disabled data-i18n="undo" data-i18n-title="undoTitle" title="Undo the last change (Ctrl+Z)">↶ Undo</button>
   <button id="redo-btn" onclick="redo()" disabled data-i18n="redo" data-i18n-title="redoTitle" title="Redo the change you undid (Ctrl+Y)">↷ Redo</button>
@@ -394,8 +397,8 @@
     <div class="panel" id="p-details">
       <h2 data-i18n="d1">1. Your details</h2>
       <div class="row">
-        <div><label for="teacher" data-i18n="teacherLbl">Your name (bottom right of each tag)</label><input type="text" id="teacher" placeholder="e.g. Eugene" data-i18n-placeholder="teacherPh"></div>
-        <div><label for="school" data-i18n="schoolLbl">School label (bottom left)</label><input type="text" id="school" value="TOPIA"></div>
+        <div><label for="teacher" data-i18n="teacherLbl">Your name</label><input type="text" id="teacher" title="Printed on every tag" data-i18n-title="teacherTitle" placeholder="e.g. Eugene" data-i18n-placeholder="teacherPh"></div>
+        <div><label for="school" data-i18n="schoolLbl">School label</label><input type="text" id="school" value="TOPIA"></div>
       </div>
       <label for="namemode" data-i18n="namemodeLbl">Names on the tag</label>
       <select id="namemode">
@@ -405,7 +408,6 @@
         <option value="kor" data-i18n="korOnly">Korean only</option>
       </select>
       <label class="check"><input type="checkbox" id="newpage" checked> <span data-i18n="newpage">Start each class on a new page</span></label>
-      <p class="hint privacy" data-i18n="privacy">🔒 Shared computer: your classes are saved under your name. Click <b>Switch</b> at the top when you're done. You're also signed out after 30 minutes without use.</p>
     </div>
 
     <div class="panel" id="p-style">
@@ -416,23 +418,18 @@
         <label><input type="radio" name="tagstyle" value="cute"><i style="background:#FFE066;border:4px solid #F7B731"></i><span data-i18n="cute">Cute</span></label>
         <label><input type="radio" name="tagstyle" value="topia"><i style="background:#fff;border:1px solid #ddd;border-top:6px solid #7E1B17"></i><span>TOPIA</span></label>
       </div>
+      <label for="paper" data-i18n="paperLbl">Paper</label>
+      <select id="paper"></select>
       <label class="check"><input type="checkbox" id="watermark" checked> <span data-i18n="wm">Squirrel watermark</span></label>
-      <label class="check"><input type="checkbox" id="cropmarks" checked> <span data-i18n="crop">Cutting guides (crop marks + class label in the margin)</span></label>
+      <label class="check" id="crop-row" title="Crop marks, plus the class name in the margin" data-i18n-title="cropTitle"><input type="checkbox" id="cropmarks" checked> <span data-i18n="crop">Cutting guides</span></label>
     </div>
 
     <div class="panel" id="p-add">
       <h2 data-i18n="d2">2. Add students</h2>
-      <p class="hint" data-i18n="topiaHint">Students come straight from the TOPIA attendance page, using the <i>Copy students</i> button.</p>
-      <ol class="hint steps">
-        <li><span data-i18n="li1"><b>One time only:</b> show your bookmarks bar (Ctrl+Shift+B), then drag this button onto it:</span>
-          <a id="bookmarklet" class="bookmarklet" href="#" onclick="return false" title="Drag me to your bookmarks bar" data-i18n="bm" data-i18n-title="bmTitle">Copy students</a></li>
-        <li data-i18n="li2">On the TOPIA <b>Attendance</b> page (the list of your classes for a day), click <b>Copy students</b> in your bookmarks bar. It reads every class's students at once. If that ever fails, it opens each class's list by itself and closes it again with Cancel. It never presses Save.</li>
-        <li data-i18n="li3">When it's finished, click <b>Copy for name tags</b> in the red box.</li>
-        <li data-i18n="li4">Come back here, click the box below and press <b>Ctrl+V</b>. Every class and student comes in at once, with the days filled in.</li>
-        <li data-i18n="li5">Classes that meet on other days? Change the date on the TOPIA page and repeat. New classes are added, and days like <i>Mon / Wed</i> build up automatically.</li>
-      </ol>
-      <label for="paste" data-i18n="pasteLbl">Paste here (Ctrl+V)</label>
-      <textarea id="paste" data-i18n-placeholder="pastePh" placeholder="Click here and press Ctrl+V after using Copy students"></textarea>
+      <p class="hint"><span data-i18n="li1"><b>One time only:</b> show your bookmarks bar (Ctrl+Shift+B), then drag this button onto it:</span>
+          <a id="bookmarklet" class="bookmarklet" href="#" onclick="return false" title="Drag me to your bookmarks bar" data-i18n="bm" data-i18n-title="bmTitle">Copy students</a></p>
+      <label for="paste" data-i18n="pasteLbl">Paste (Ctrl+V anywhere on this page)</label>
+      <textarea id="paste" data-i18n-placeholder="pastePh" placeholder="After Copy students, just press Ctrl+V"></textarea>
       <div class="btns">
         <button class="danger" onclick="clearAll()" data-i18n="clearBtn">Clear everything</button>
       </div>
@@ -446,13 +443,8 @@
         <label><input type="radio" name="printmode" value="all"><span data-i18n="printAll">Print all classes</span></label>
         <label><input type="radio" name="printmode" value="reprint"><span data-i18n="reprint">Reprint some students</span></label>
       </div>
-      <p class="hint" id="reprint-hint" hidden data-i18n="reprintHint">Tick the students who need a new tag (a new student, or a lost tag). Only those tags print, packed together on as few pages as possible. Need two of someone? Change ×1 to ×2 next to their name. <a href="#" onclick="clearPicks();return false">Untick everyone</a></p>
-      <p class="hint" data-i18n="hint3">Pick the subject and days (add a class time if you like, it prints before the days; the Time button turns times on or off), and untick classes you don't need. Use ×2 or ×3 next to a class to print extra copies of each tag. Names come from TOPIA. A student missing? Type their name in the box under the class and click Add.</p>
-      <datalist id="subjects">
-        <option>Debate</option><option>Grammar</option><option>Integrated</option><option>Language Arts</option>
-        <option>Phonics</option><option>Speaking</option><option>Writing</option>
-        <option>TOEFL Reading</option>
-      </datalist>
+      <p class="hint" id="reprint-hint" hidden data-i18n="reprintHint" title="Only ticked tags print, packed onto as few pages as possible. Change ×1 next to a name for extra copies." data-i18n-title="reprintTitle">Tick the students who need a new tag. <a href="#" onclick="clearPicks();return false">Untick everyone</a></p>
+      <p class="hint" id="hint3" data-i18n="hint3">Untick classes you don't need. Click a student's name to change it.</p>
       <datalist id="dayslist">
         <option>Mon / Wed</option><option>Tues / Thurs</option>
       </datalist>
@@ -460,7 +452,7 @@
       <div id="classbar" hidden></div>
       <div id="classes"></div>
     </div>
-    <p class="copyright">Made by Joseph McLaren<br><span>Includes SheetJS (Apache License 2.0).</span></p>
+    <p class="copyright">Made by Joseph McLaren</p>
   </div>
 
   <div id="preview-area">
@@ -479,29 +471,26 @@ let nextId = 1;
 const KO = {
   title: '이름표 만들기', helpTitle: '사용법 안내',
   privacy: '🔒 공용 컴퓨터: 반 목록은 내 이름으로 저장됩니다. 다 쓰면 위의 <b>바꾸기</b>를 누르세요. 30분 동안 사용하지 않아도 자동으로 로그아웃됩니다.',
-  print: '이름표 인쇄', yay: '다 했어요!', undo: '↶ 되돌리기', undoTitle: '마지막 변경 되돌리기 (Ctrl+Z)', redo: '↷ 다시 하기', redoTitle: '되돌린 변경 다시 하기 (Ctrl+Y)',
+  print: '이름표 인쇄', yay: '다 했어요!', appBtn: '💻 데스크톱 앱 받기', appTitle: '이 컴퓨터에 앱으로 설치하기', undo: '↶ 되돌리기', undoTitle: '마지막 변경 되돌리기 (Ctrl+Z)', redo: '↷ 다시 하기', redoTitle: '되돌린 변경 다시 하기 (Ctrl+Y)',
   d1: '1. 기본 정보',
-  teacherLbl: '내 이름 (이름표 오른쪽 아래)', teacherPh: '예: Eugene',
-  schoolLbl: '학원 이름 (왼쪽 아래)',
+  teacherLbl: '내 이름', teacherPh: '예: Eugene', teacherTitle: '모든 이름표에 인쇄됩니다',
+  schoolLbl: '학원 이름',
   namemodeLbl: '이름표에 넣을 이름', both: '영어 | 한국어', korEng: '한국어 | 영어', engOnly: '영어만', korOnly: '한국어만',
   newpage: '반마다 새 페이지에서 시작',
   styleH: '이름표 스타일', classic: '클래식', modern: '모던', cute: '귀여운',
-  wm: '다람쥐 워터마크', crop: '재단선 (재단 표시 + 여백에 반 이름)',
+  paperLbl: '용지',
+  wm: '다람쥐 워터마크', crop: '재단선', cropTitle: '재단 표시와 여백의 반 이름',
   d2: '2. 학생 추가',
-  pasteLbl: '여기에 붙여 넣기 (Ctrl+V)',
-  pastePh: '학생 복사를 사용한 뒤 여기를 누르고 Ctrl+V를 누르세요',
+  pasteLbl: '붙여 넣기 (이 페이지 어디서나 Ctrl+V)',
+  pastePh: '학생 복사 후 Ctrl+V만 누르세요',
   clearBtn: '모두 지우기',
   topiaHint: '학생은 <i>학생 복사</i> 버튼으로 TOPIA 출석 페이지에서 바로 가져옵니다.',
   li1: '<b>처음 한 번만:</b> 북마크바를 표시하고(Ctrl+Shift+B) 이 버튼을 북마크바로 끌어다 놓으세요:',
   bm: '학생 복사', bmTitle: '북마크바로 끌어다 놓으세요',
-  li2: 'TOPIA <b>출석</b> 페이지(그날의 반 목록)에서 북마크바의 <b>학생 복사</b>를 누르세요. 모든 반의 학생을 한 번에 읽습니다. 안 되면 반마다 명단을 차례로 열고 취소로 다시 닫습니다. 저장은 절대 누르지 않습니다.',
-  li3: '다 끝나면 빨간 상자의 <b>Copy for name tags · 이름표용 복사</b>를 누르세요.',
-  li4: '이 페이지로 돌아와 아래 칸을 누르고 <b>Ctrl+V</b>를 누르세요. 모든 반과 학생이 요일까지 채워져 한 번에 들어옵니다.',
-  li5: '다른 요일에 수업하는 반이 있나요? TOPIA 페이지에서 날짜를 바꾸고 다시 하세요. 새 반이 추가되고 <i>Mon / Wed</i> 같은 요일이 자동으로 쌓입니다.',
   d3: '3. 반별 확인',
   printAll: '모든 반 인쇄', reprint: '일부 학생만 다시 인쇄',
-  reprintHint: '새 이름표가 필요한 학생(새 학생, 잃어버린 이름표)을 체크하세요. 체크한 이름표만 최대한 적은 장수에 모아 인쇄됩니다. 두 장이 필요하면 이름 옆의 ×1을 ×2로 바꾸세요. <a href="#" onclick="clearPicks();return false">모두 체크 해제</a>',
-  hint3: '과목과 요일을 고르고 (원하면 수업 시간도 넣으세요. 요일 앞에 인쇄되며, 시간 버튼으로 켜고 끕니다), 필요 없는 반은 체크를 해제하세요. 반 옆의 ×2, ×3으로 이름표를 여러 장 인쇄할 수 있습니다. 이름은 TOPIA에서 가져옵니다. 빠진 학생이 있으면 반 아래 칸에 이름을 입력하고 추가를 누르세요.',
+  reprintHint: '새 이름표가 필요한 학생을 체크하세요. <a href="#" onclick="clearPicks();return false">모두 체크 해제</a>', reprintTitle: '체크한 이름표만 최대한 적은 장수에 모아 인쇄됩니다. 여러 장이 필요하면 이름 옆의 ×1을 바꾸세요.',
+  hint3: '필요 없는 반은 체크를 해제하세요. 학생 이름을 누르면 바꿀 수 있습니다.',
 };
 const isKo = () => state.lang === 'ko';
 const L = (en, ko) => isKo() ? ko : en;
@@ -527,7 +516,7 @@ function applyLang() {
 }
 function toggleLang() {
   state.lang = isKo() ? 'en' : 'ko';
-  applyLang(); applyTheme(); updateWhoBtn(); renderClasses(); render();
+  applyLang(); applyTheme(); paperOptions(); updateWhoBtn(); renderClasses(); render();
   if (!document.getElementById('who').hidden) renderWho();
   if (tourAt >= 0) tourGo(tourAt);
   const m = document.getElementById('msg'); m.className = 'msg'; // the last message was in the other language
@@ -548,7 +537,7 @@ let localProfiles = [];                    // teachers saved in this browser
 let cloud = null, cloudReady = false;      // the online database, once it has answered
 let cloudDocs = {};                        // id -> { name, state, updated, by } from the database
 const TAB_ID = Math.random().toString(36).slice(2, 10);
-const freshState = () => ({ teacher: '', school: 'TOPIA', newpage: true, nameMode: 'both', style: 'classic', watermark: true,
+const freshState = () => ({ teacher: '', school: 'TOPIA', newpage: true, nameMode: 'both', style: 'classic', paper: 'a4', watermark: true,
   cropmarks: true, reprint: false, theme: state.theme, lang: state.lang, classes: [] });
 const currentProfile = () => profiles.find(p => p.id === currentId);
 const newProfileId = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -704,20 +693,13 @@ function load() {
     if (g.lang) state.lang = g.lang;
     if (g.theme !== undefined) state.theme = g.theme;
     localProfiles = Array.isArray(g.profiles) ? g.profiles : [];
-    // Saved before profiles existed: give those classes to a profile named after the teacher.
-    if (Array.isArray(g.classes) && (g.classes.length || clean(g.teacher))) {
-      const old = Object.assign({}, g); delete old.profiles; delete old.lang; delete old.theme;
-      const id = 'p' + Date.now().toString(36);
-      localProfiles.push({ id, name: clean(g.teacher) || 'Teacher 1' });
-      try { localStorage.setItem(PROFILE_PREFIX + id, JSON.stringify(old)); } catch (e) {}
-    }
   }
   profiles = localProfiles;
   save(); // the shared entry now holds only the shared settings and names
   syncUI(); showWho();
   // Online, the page's database answers within a moment; as a plain file there is none.
   const use = window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
-  Promise.resolve(use).catch(() => null).then(db => db ? startCloud(db) : SHEET_URL ? startCloud(sheetDb(SHEET_URL)) : startLocal());
+  Promise.resolve(use).catch(() => null).then(db => db ? startCloud(db) : SHEET_URL && !window.claude ? startCloud(sheetDb(SHEET_URL)) : startLocal());
 }
 function resumeSession() {
   let cur = null;
@@ -733,9 +715,13 @@ function startCloud(db) {
     snap.docs.forEach(d => { cloudDocs[d.id] = d.data(); });
     profiles = snap.docs.map(d => ({ id: d.id, name: clean(String(cloudDocs[d.id].name || '')) })).filter(p => p.name)
       .sort((a, b) => a.name.localeCompare(b.name));
+    mergeDuplicates();
     if (!cloudReady) { cloudReady = true; resumeSession(); return; }
     if (currentId && !cloudDocs[currentId]) {
-      currentId = null; signOut(L('Your name was removed on another computer.', '다른 컴퓨터에서 이 선생님이 삭제되었습니다.'));
+      const was = (currentProfile() || {}).name, joined = was && profiles.some(p => sameName(p.name, was));
+      currentId = null;
+      signOut(joined ? L('Your name was listed twice, so the two were joined into one. Pick your name again.', '이름이 두 번 있어서 하나로 합쳤습니다. 이름을 다시 고르세요.')
+        : L('Your name was removed on another computer.', '다른 컴퓨터에서 이 선생님이 삭제되었습니다.'));
       return;
     }
     // The signed-in teacher's classes were changed somewhere else (another computer or tab).
@@ -756,6 +742,36 @@ function startCloud(db) {
     if (!cloudReady) { cloudProblem = code === 'setup' ? 'setup' : 'offline'; renderWho(); return; }
     setSync('error');
   });
+}
+
+/* One teacher listed twice (the same name, e.g. Start was clicked again while the first save was still
+   on its way online): keep the entry used last, add the other's classes that it doesn't have (matched
+   by class name), then remove the other. A teacher who is signed in is joined once they switch. */
+const sameName = (a, b) => clean(a).toLowerCase() === clean(b).toLowerCase();
+let merging = false;
+async function mergeDuplicates() {
+  if (merging || !cloud || syncState === 'readonly') return;
+  const groups = {};
+  profiles.forEach(p => { const k = clean(p.name).toLowerCase(); (groups[k] = groups[k] || []).push(p.id); });
+  const dupes = Object.values(groups).filter(ids => ids.length > 1 && !ids.includes(currentId) && ids.every(id => cloudDocs[id]));
+  if (!dupes.length) return;
+  merging = true;
+  try {
+    for (const ids of dupes) {
+      const used = id => cloudDocs[id].updated || 0, count = id => ((cloudDocs[id].state || {}).classes || []).length;
+      ids.sort((a, b) => used(b) - used(a) || count(b) - count(a) || (a < b ? -1 : 1));
+      const [keep, ...rest] = ids, keepDoc = cloudDocs[keep];
+      const st = JSON.parse(JSON.stringify(keepDoc.state || {}));
+      if (!Array.isArray(st.classes)) st.classes = [];
+      rest.forEach(id => ((cloudDocs[id].state || {}).classes || []).forEach(c => {
+        const json = JSON.stringify(c);
+        if (c.name ? !st.classes.some(o => o.name === c.name) : !st.classes.some(o => JSON.stringify(o) === json)) st.classes.push(JSON.parse(json));
+      }));
+      await cloud.doc('teachers/' + keep).set({ name: keepDoc.name, state: st, updated: Date.now(), by: TAB_ID });
+      for (const id of rest) { delete cloudQueue[id]; await cloud.doc('teachers/' + id).delete(); }
+    }
+  } catch (e) {} // tried again on the next look
+  merging = false;
 }
 
 function openProfile(id) {
@@ -782,14 +798,13 @@ function signOut(message) {
 
 // Put the signed-in teacher's settings into the page.
 function syncUI() {
-  if (state.style === 'playful') state.style = 'cute';
-  if (state.cropmarks === undefined) state.cropmarks = true;
   document.getElementById('teacher').value = state.teacher || '';
   document.getElementById('school').value = state.school;
   document.getElementById('newpage').checked = state.newpage;
   document.getElementById('watermark').checked = state.watermark !== false;
   document.getElementById('cropmarks').checked = state.cropmarks;
   document.getElementById('namemode').value = state.nameMode || 'both';
+  setLayout(); paperOptions();
   (document.querySelector(`input[name=tagstyle][value="${state.style}"]`) || document.querySelector('input[name=tagstyle]')).checked = true;
   document.getElementById('paste').value = '';
   document.getElementById('msg').className = 'msg';
@@ -803,7 +818,7 @@ function updateWhoBtn() {
   btn.hidden = !p;
   if (!p) return;
   btn.innerHTML = `👤 <b>${esc(p.name)}</b> · ${L('Switch', '바꾸기')}`;
-  btn.title = L('Switch teacher (your classes stay saved)', '선생님 바꾸기 (내 반 목록은 저장됩니다)');
+  btn.title = L("Sign out so the next teacher can't see your classes. They stay saved. You're also signed out after 30 minutes without use.", '로그아웃하면 다음 선생님이 내 반 목록을 볼 수 없습니다. 반 목록은 저장됩니다. 30분 동안 사용하지 않아도 로그아웃됩니다.');
 }
 
 /* Undo and redo. Every saved change is compared with the one before. Each click is one step; typing
@@ -860,10 +875,11 @@ function showWho(message) {
   document.getElementById('who').hidden = false;
   document.body.classList.add('who-open');
   renderWho(message);
+  mergeDuplicates(); // a teacher listed twice who was signed in a moment ago
 }
 function hideWho() { document.getElementById('who').hidden = true; document.body.classList.remove('who-open'); }
 // Teachers saved in this browser who aren't online yet.
-const localOnly = () => cloud ? localProfiles.filter(p => readLocal(p.id) && !profiles.some(o => o.name.toLowerCase() === p.name.toLowerCase())) : [];
+const localOnly = () => cloud ? localProfiles.filter(p => readLocal(p.id) && !profiles.some(o => sameName(o.name, p.name))) : [];
 function renderWho(message) {
   const box = document.getElementById('who');
   const top = `<div class="who-top"><h2>${L("Who's making name tags?", '누가 이름표를 만드나요?')}</h2>
@@ -899,7 +915,7 @@ function renderWho(message) {
   const list = profiles.length
     ? `<div class="who-list">${profiles.map(p => `<div class="who-item"><button class="who-pick" data-act="pick" data-id="${p.id}">${esc(p.name)}</button>` +
         `<button class="small danger" data-act="del" data-id="${p.id}" title="${L('Remove this teacher', '이 선생님 삭제')}">✕</button></div>`).join('')}</div>`
-    : `<p class="hint">${L('No teachers yet. Add your name below to start.', '아직 등록된 선생님이 없습니다. 아래에 이름을 넣고 시작하세요.')}</p>`;
+    : '';
   const moving = localOnly();
   const move = moving.length ? `<div class="who-move"><p>${L(`${moving.length === 1 ? '1 teacher is' : moving.length + ' teachers are'} saved only on this computer: <b>${esc(moving.map(p => p.name).join(', '))}</b>.`,
       `이 컴퓨터에만 저장된 선생님이 ${moving.length}명 있습니다: <b>${esc(moving.map(p => p.name).join(', '))}</b>.`)}</p>
@@ -907,17 +923,16 @@ function renderWho(message) {
   box.innerHTML = `<div class="who-card">${top}${move}${list}
     <h3>${profiles.length ? L('New teacher', '새 선생님') : L('Your name', '내 이름')}</h3>
     <form id="who-new" class="who-form">
-      <input type="text" id="new-name" placeholder="${L('Your name, e.g. Eugene', '이름 (예: Eugene)')}" autocomplete="off">
+      <input type="text" id="new-name" placeholder="${L('e.g. Eugene', '예: Eugene')}" autocomplete="off">
       <button class="primary">${L('Start', '시작')}</button></form>
     <p class="who-err" id="who-err"></p>
     <p class="hint">${cloud
-      ? L("Each teacher's classes are saved online, so you can open this page on any computer and carry on. Click Switch at the top when you're done. You're also signed out after 30 minutes without use.",
-        '선생님마다 반 목록이 온라인에 저장되어 어느 컴퓨터에서든 이 페이지를 열어 이어서 쓸 수 있습니다. 다 쓰면 위의 바꾸기를 누르세요. 30분 동안 사용하지 않아도 자동으로 로그아웃됩니다.')
-      : L("Each teacher's classes are saved separately on this computer. Click Switch at the top when you're done. You're also signed out after 30 minutes without use.",
-        '선생님마다 반 목록이 이 컴퓨터에 따로 저장됩니다. 다 쓰면 위의 바꾸기를 누르세요. 30분 동안 사용하지 않아도 자동으로 로그아웃됩니다.')}</p>
+      ? L('Your classes are saved online under your name, so they are there on any computer.', '반 목록은 내 이름으로 온라인에 저장되어 어느 컴퓨터에서든 열 수 있습니다.')
+      : L('Your classes are saved under your name on this computer.', '반 목록은 이 컴퓨터에 내 이름으로 저장됩니다.')}</p>
     <p class="copyright">Made by Joseph McLaren</p></div>`;
   if (!profiles.length) document.getElementById('new-name').focus();
 }
+let adding = false;
 const whoErr = t => { const e = document.getElementById('who-err'); if (e) e.textContent = t; };
 async function removeProfile(id) {
   delete cloudQueue[id];
@@ -962,15 +977,18 @@ document.getElementById('who').addEventListener('submit', async e => {
     if (pw) setPassword(pw); else document.getElementById('pw-box').focus();
     return;
   }
-  if (!cloudReady) return;
+  if (!cloudReady || adding) return;
   const name = clean(document.getElementById('new-name').value);
   if (!name) { whoErr(L('Type your name first.', '먼저 이름을 입력하세요.')); return; }
-  if (profiles.some(p => p.name.toLowerCase() === name.toLowerCase())) { whoErr(L('That name is already here. Pick it from the list above.', '이미 있는 이름입니다. 위 목록에서 고르세요.')); return; }
+  if (profiles.some(p => sameName(p.name, name))) { whoErr(L('That name is already here. Pick it from the list above.', '이미 있는 이름입니다. 위 목록에서 고르세요.')); return; }
   const id = newProfileId();
   if (cloud) {
+    // Saving online takes a moment: a second click on Start meanwhile must not add the name twice.
+    adding = true; whoErr(L('Saving…', '저장 중…'));
     try { await cloud.doc('teachers/' + id).set({ name, state: { teacher: name }, updated: Date.now(), by: TAB_ID }); }
-    catch (err) { whoErr(err && err.code === 'invalid_argument' ? L('This page is view only for you. Ask the owner for edit access.', '이 페이지는 보기 전용입니다. 소유자에게 편집 권한을 요청하세요.')
+    catch (err) { adding = false; whoErr(err && err.code === 'invalid_argument' ? L('This page is view only for you. Ask the owner for edit access.', '이 페이지는 보기 전용입니다. 소유자에게 편집 권한을 요청하세요.')
       : L('Could not save online. Check the internet and try again.', '온라인에 저장하지 못했습니다. 인터넷을 확인하고 다시 해 보세요.')); return; }
+    adding = false;
     if (!profiles.some(p => p.id === id)) { profiles.push({ id, name }); cloudDocs[id] = { name, state: { teacher: name } }; }
   } else {
     profiles.push({ id, name });
@@ -1023,22 +1041,20 @@ function newClass(name) {
    The subject decides the colour (the class line, side bar or frame, depending on the style), so a
    book's subject shows at a glance. Subjects not listed here keep the style's own colours. */
 const COLORS = {
-  'debate':        { bg: '#F6CFCB', fg: '#7A1510', strong: '#C62828', en: 'Red',    ko: '빨강' },
-  'grammar':       { bg: '#F9E79F', fg: '#5E4700', strong: '#E0B100', en: 'Yellow', ko: '노랑' },
-  'phonics':       { bg: '#F7BE85', fg: '#5A2A05', strong: '#E07A2E', en: 'Orange', ko: '주황' },
-  'speaking':      { bg: '#CFE0F5', fg: '#1F3A68', strong: '#2F6DB5', en: 'Blue',   ko: '파랑' },
-  'writing':       { bg: '#D5ECC8', fg: '#1E5B2A', strong: '#3B8C3A', en: 'Green',  ko: '초록' },
-  'integrated':    { bg: '#E3D6F2', fg: '#4B2A78', strong: '#7B52AB', en: 'Purple', ko: '보라' },
-  'language arts': { bg: '#C9EBE7', fg: '#145650', strong: '#23978C', en: 'Teal',   ko: '청록' },
-  'toefl':         { bg: '#D3D8E8', fg: '#1B2550', strong: '#34407A', en: 'Navy',   ko: '남색' },
+  'debate':        { name: 'Debate', bg: '#F6CFCB', fg: '#7A1510', strong: '#C62828', en: 'Red',    ko: '빨강' },
+  'grammar':       { name: 'Grammar', bg: '#F9E79F', fg: '#5E4700', strong: '#E0B100', en: 'Yellow', ko: '노랑' },
+  'phonics':       { name: 'Phonics', bg: '#F7BE85', fg: '#5A2A05', strong: '#E07A2E', en: 'Orange', ko: '주황' },
+  'speaking':      { name: 'Speaking', bg: '#CFE0F5', fg: '#1F3A68', strong: '#2F6DB5', en: 'Blue',   ko: '파랑' },
+  'writing':       { name: 'Writing', bg: '#D5ECC8', fg: '#1E5B2A', strong: '#3B8C3A', en: 'Green',  ko: '초록' },
+  'integrated':    { name: 'Integrated', bg: '#E3D6F2', fg: '#4B2A78', strong: '#7B52AB', en: 'Purple', ko: '보라' },
+  'language arts': { name: 'Language Arts', bg: '#C9EBE7', fg: '#145650', strong: '#23978C', en: 'Teal',   ko: '청록' },
+  'toefl':         { name: 'TOEFL Reading', bg: '#D3D8E8', fg: '#1B2550', strong: '#34407A', en: 'Navy',   ko: '남색' },
 };
-const SUBJECT_NAMES = { 'debate': 'Debate', 'grammar': 'Grammar', 'phonics': 'Phonics', 'speaking': 'Speaking', 'writing': 'Writing',
-  'integrated': 'Integrated', 'language arts': 'Language Arts', 'toefl': 'TOEFL Reading' };
 const classColor = c => { const sub = clean(c.subject || '').toLowerCase(); const k = Object.keys(COLORS).find(k => sub.includes(k)); return k ? COLORS[k] : null; };
 const subDot = c => { const cc = classColor(c); return cc ? `<i class="subdot" style="background:${cc.strong}" title="${L(cc.en, cc.ko)}"></i>` : ''; };
 function renderLegend() {
   document.getElementById('legend').innerHTML = L('Colours:', '과목별 색:') + ' ' +
-    Object.keys(COLORS).map(k => `<span><i style="background:${COLORS[k].strong}"></i>${SUBJECT_NAMES[k]}</span>`).join('');
+    Object.keys(COLORS).map(k => `<span><i style="background:${COLORS[k].strong}"></i>${COLORS[k].name}</span>`).join('');
 }
 
 /* ---------- English names for Korean-only students ----------
@@ -1088,7 +1104,7 @@ function findCol(header, patterns) {
   return -1;
 }
 
-// Column names recognised in exported class lists, attendance pages and hand-made sheets.
+// Column names in what Copy students copies: TOPIA's class table and each class's student list.
 const COLS = {
   eng: [/영문\s*이름|영어\s*이름|영문\s*명|영어\s*명/, /eng(lish)?\.?\s*name/i, /^english$/i, /^(student\s*)?name$/i],
   kor: [/한글\s*이름|국문\s*이름|한국\s*이름|korean/i, /^(학생\s*)?(이름|성명|학생명)$/],
@@ -1150,16 +1166,20 @@ function parseRows(rows) {
 }
 
 // Students come in one way only: the text the Copy students button copies.
-const ONLY_TOPIA = () => showMsg(L('Only lists copied with the Copy students button can be pasted here. Follow the steps above.',
-  '학생 복사 버튼으로 복사한 명단만 붙여 넣을 수 있습니다. 위의 단계를 따라 하세요.'), false);
+const ONLY_TOPIA = () => showMsg(L('Only lists copied with the Copy students bookmark can be pasted here. Click it on the TOPIA attendance page first.',
+  '학생 복사 북마크로 복사한 명단만 붙여 넣을 수 있습니다. 먼저 TOPIA 출석 페이지에서 눌러 주세요.'), false);
 const pasteBox = document.getElementById('paste');
-pasteBox.addEventListener('paste', e => {
-  e.preventDefault();
+// Ctrl+V anywhere on the page brings the students in; other pastes into other boxes work as normal.
+document.addEventListener('paste', e => {
+  if (!currentId || tourAt >= 0) return; // not on the sign-in screen or during the tour
   const text = e.clipboardData && e.clipboardData.getData('text/plain');
-  if (!text || !text.startsWith('#TOPIA-NAMETAGS')) { ONLY_TOPIA(); return; }
+  const isList = !!text && text.startsWith('#TOPIA-NAMETAGS');
+  if (!isList && e.target !== pasteBox) return;
+  e.preventDefault();
+  if (!isList) { ONLY_TOPIA(); return; }
   const lines = text.split(/\r?\n/).slice(1);
   const date = (lines[0] || '').match(/^#DATE (\d{4})-(\d\d)-(\d\d)/);
-  const groups = parseRows(parseDelimited(lines.filter(l => !l.startsWith('#')).join('\n')));
+  const groups = parseRows(lines.filter(l => !l.startsWith('#')).map(l => l.split('\t')));
   if (date) groups.weekday = new Date(+date[1], +date[2] - 1, +date[3]).getDay();
   applyGroups(groups);
 });
@@ -1310,7 +1330,7 @@ function copyStudentsBookmarklet() {
       total += r.students;
       var full = r.count === null || r.students >= r.count;
       if (!full) short++;
-      report.push((full ? '&#10003; ' : '&#9888; ') + r.name + ': ' + r.students + (r.count !== null ? ' of ' + r.count : '') + ' students');
+      report.push((full ? '&#10003; ' : '&#9888; ') + r.name + ': ' + r.students + (r.count !== null ? ' of ' + r.count : '') + (r.students === 1 && r.count === null ? ' student' : ' students'));
     });
     var text = out.join('\n');
     say((short ? '<b>' + short + ' class' + (short > 1 ? 'es are' : ' is') + ' missing students.</b> Close this and click Copy students again, or add them by hand.' +
@@ -1337,8 +1357,41 @@ function copyStudentsBookmarklet() {
 }
 document.getElementById('bookmarklet').href = 'javascript:' + encodeURIComponent('(' + copyStudentsBookmarklet.toString() + ')()');
 
-// Page layout: 5 x 6 tags of 57 x 32.5 mm on A4 landscape, like the old sheet.
-const layout = () => ({ cols: 5, rows: 6, cw: 57, rh: 32.5 });
+// Paper. "a4" is plain A4 landscape: 5 x 6 tags of 57 x 32.5 mm (like the old sheet), cut out with the
+// guillotine. The others are AnyLabel (Printec) A4 sticker sheets, printed portrait straight onto the
+// pre-cut labels: x0 / y0 are the left and top margins, gx / gy the gaps between labels, all in mm.
+// V3240 and V3330 margins are the maker's figures; V3410's were measured on a real sheet (13 Nov 2026):
+// 7 mm left, 14.3 mm top (checked with a test print), 2.5 mm between columns, rows touching.
+const PAPERS = {
+  a4:    { cols: 5, rows: 6, cw: 57, rh: 32.5, W: 297, H: 210, cut: true },
+  v3410: { cols: 4, rows: 10, cw: 47, rh: 26.9, W: 210, H: 297, x0: 7, y0: 14.3, gx: 2.5, gy: 0, code: 'V3410' },
+  v3330: { cols: 3, rows: 7, cw: 63.5, rh: 38.1, W: 210, H: 297, x0: 7.62, y0: 15.875, gx: 2.54, gy: 0, code: 'V3330' },
+  v3240: { cols: 2, rows: 8, cw: 99.06, rh: 33.85, W: 210, H: 297, x0: 5.08, y0: 13.7922, gx: 2.54, gy: 0, code: 'V3240' },
+};
+const TAG_H = 32.5; // a tag is designed 32.5 mm tall and scaled to fit each label
+let LAYOUT;
+function setLayout() {
+  const p = PAPERS[state.paper] || PAPERS.a4;
+  LAYOUT = Object.assign({ gx: 0, gy: 0 }, p);
+  if (LAYOUT.x0 === undefined) { LAYOUT.x0 = (LAYOUT.W - LAYOUT.cols * LAYOUT.cw) / 2; LAYOUT.y0 = (LAYOUT.H - LAYOUT.rows * LAYOUT.rh) / 2; }
+  LAYOUT.scale = LAYOUT.rh / TAG_H;
+  document.getElementById('paper-css').textContent = paperCSS();
+}
+// The page size, where the labels sit, and how much each tag is scaled, for the screen and for printing.
+const paperCSS = () => `.page { width: ${LAYOUT.W}mm; height: ${LAYOUT.H}mm; }
+  .grid { left: ${LAYOUT.x0}mm; top: ${LAYOUT.y0}mm; column-gap: ${LAYOUT.gx}mm; row-gap: ${LAYOUT.gy}mm;
+    grid-template-columns: repeat(${LAYOUT.cols}, ${LAYOUT.cw}mm); grid-template-rows: repeat(${LAYOUT.rows}, ${LAYOUT.rh}mm); }
+  .grid > .tag { width: ${+(LAYOUT.cw / LAYOUT.scale).toFixed(3)}mm; height: ${TAG_H}mm; zoom: ${+LAYOUT.scale.toFixed(5)}; }
+  @media print { @page { size: A4 ${LAYOUT.cut ? 'landscape' : 'portrait'}; margin: 0; } }`;
+const paperName = () => LAYOUT.cut ? L('A4 landscape', 'A4 가로') : `AnyLabel ${LAYOUT.code}`;
+const paperLabel = k => { const p = PAPERS[k]; return p.cut ? L(`A4 paper, cut out (${p.cols * p.rows} per page)`, `A4 용지, 잘라서 사용 (한 쪽에 ${p.cols * p.rows}개)`)
+  : L(`AnyLabel ${p.code} labels · ${p.cw} × ${p.rh} mm (${p.cols * p.rows} per sheet)`, `애니라벨 ${p.code} 라벨 · ${p.cw} × ${p.rh} mm (한 장에 ${p.cols * p.rows}칸)`); };
+function paperOptions() {
+  const sel = document.getElementById('paper'), v = PAPERS[state.paper] ? state.paper : 'a4';
+  sel.innerHTML = Object.keys(PAPERS).map(k => `<option value="${k}">${esc(paperLabel(k))}</option>`).join('');
+  sel.value = v;
+  document.getElementById('crop-row').hidden = !PAPERS[v].cut; // sticker labels are already cut
+}
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
 // Classes always meet in pairs: any Monday or Wednesday means "Mon / Wed", Tuesday or Thursday "Tues / Thurs".
@@ -1380,10 +1433,11 @@ function applyGroups(groups) {
   let students = 0;
   const fresh = [];
   const subjects = groups.subjects || new Map(), times = groups.times || new Map();
-  for (const [raw, names] of groups) {
+  for (const [raw, topia] of groups) {
     const nm = shortClass(raw);
     let c = state.classes.find(x => x.name === nm && nm);
     if (!c) { c = newClass(nm); state.classes.push(c); }
+    const names = topia.map(n => (c.renamed && c.renamed[n]) || n); // names the teacher changed stay changed
     if (names.length) { // a class-only list keeps any names already typed in
       // Flag students who weren't in this class before. A class seen for the first time has no "before".
       const before = c.names.filter(Boolean);
@@ -1414,7 +1468,7 @@ function applyGroups(groups) {
     ` ${fresh.length} new student${fresh.length === 1 ? '' : 's'}: ${shown}${more > 0 ? ` and ${more} more` : ''}.`,
     ` 새 학생 ${fresh.length}명: ${shown}${more > 0 ? ` 외 ${more}명` : ''}.`);
   showMsg(students
-    ? L(`Imported ${students} students in ${cls}.${newText} Check the subject and days for each class below.`,
+    ? L(`Imported ${students} student${students === 1 ? '' : 's'} in ${cls}.${newText} Check the subject and days for each class below.`,
         `학생 ${students}명을 ${n}개 반으로 가져왔습니다.${newText} 아래에서 반마다 과목과 요일을 확인하세요.`)
     : L(`Imported ${cls} with their subjects. This list has no student names, so add them to each class below.`,
         `${n}개 반과 과목을 가져왔습니다. 이 명단에는 학생 이름이 없으니 아래 각 반에 이름을 추가하세요.`), true);
@@ -1429,22 +1483,6 @@ function classTime(t) {
   return `${h > 12 ? h - 12 : h}:${m[2]}`;
 }
 
-function parseDelimited(text) {
-  const delim = text.includes('\t') ? '\t' : (text.includes(',') ? ',' : '\t');
-  return text.split(/\r?\n/).map(line => {
-    if (delim === ',') { // simple CSV with quotes
-      const out = []; let cur = '', q = false;
-      for (let i = 0; i < line.length; i++) {
-        const ch = line[i];
-        if (q) { if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; } else if (ch === '"') q = false; else cur += ch; }
-        else if (ch === '"') q = true; else if (ch === ',') { out.push(cur); cur = ''; } else cur += ch;
-      }
-      out.push(cur); return out;
-    }
-    return line.split('\t');
-  });
-}
-
 /* ---------- class editor ---------- */
 async function clearAll() {
   if (!state.classes.length) return;
@@ -1455,7 +1493,7 @@ async function clearAll() {
 }
 
 function renderClasses() {
-  renderLegend();
+  renderLegend(); stepThreeHints();
   const el = document.getElementById('classes');
   renderClassBar();
   if (!state.classes.length) { el.innerHTML = `<div class="empty">${L('No classes yet. Use <i>Copy students</i> on the TOPIA attendance page, then paste above.', '아직 반이 없습니다. TOPIA 출석 페이지에서 <i>학생 복사</i>를 사용한 뒤 위에 붙여 넣으세요.')}</div>`; return; }
@@ -1465,9 +1503,9 @@ function renderClasses() {
         <strong>${esc(c.name) || L('New class', '새 반')}</strong>
         <span class="count">${countText(c)}</span>
         ${state.reprint ? '' : `<label class="inc" title="${L('Print this class', '이 반 인쇄')}"><input type="checkbox" data-f="include" ${c.include ? 'checked' : ''}>${L('Print', '인쇄')}</label>`}
-        <select data-f="copies" class="copies" title="${L('Copies of each name tag', '이름표마다 인쇄할 장수')}">
-          ${[1, 2, 3].map(k => `<option value="${k}" ${(c.copies || 1) == k ? 'selected' : ''}>×${k}</option>`).join('')}
-        </select>
+        ${state.reprint ? '' : `<select data-f="copies" class="copies" title="${L('Copies of each name tag', '이름표마다 인쇄할 장수')}">
+          ${COPIES.map(k => `<option value="${k}" ${(c.copies || 1) == k ? 'selected' : ''}>×${k}</option>`).join('')}
+        </select>`}
         <button class="small danger" data-act="remove" title="${L('Remove class', '반 삭제')}">✕</button>
       </div>
       ${romHTML(c)}
@@ -1475,16 +1513,16 @@ function renderClasses() {
         <span class="nb-btns"><button class="small" data-act="ticknew">${L('Reprint these', '이 학생들 인쇄')}</button><button class="small" data-act="dismissnew">${L('Dismiss', '닫기')}</button></span></div>` : ''}
       <div class="row">
         <div><label>${L('Subject', '과목')}<span class="dotwrap">${subDot(c)}</span></label>${subjectHTML(c)}</div>
-        <div class="timebox"${showTime() ? '' : ' hidden'}><label>${L('Time (optional)', '시간 (선택)')}</label><input type="text" data-f="time" value="${esc(c.time || '')}" placeholder="${L('e.g. 4:00', '예: 4:00')}"></div>
+        <div class="timebox"${showTime() ? '' : ' hidden'}><label>${L('Time', '시간')}</label><input type="text" data-f="time" value="${esc(c.time || '')}" placeholder="${L('e.g. 4:00', '예: 4:00')}"></div>
       </div>
       <div class="row">
         <div><div class="dayhead"><label>${L('Days', '요일')}</label>${DAY_CHOICES.map(d => `<button class="small daychip${clean(c.days) === d ? ' on' : ''}" data-act="days" data-v="${d}">${d}</button>`).join('')}</div>
           <input type="text" data-f="days" list="dayslist" value="${esc(c.days)}" placeholder="${L('pick above or type', '위에서 고르거나 입력')}"></div>
-        <div><label>${L('Teacher (blank = your name)', '선생님 (비우면 내 이름)')}</label><input type="text" data-f="teacher" value="${esc(c.teacher)}"></div>
+        <div><label>${L('Teacher', '선생님')}</label><input type="text" data-f="teacher" value="${esc(c.teacher)}" placeholder="${esc(clean(state.teacher) || L('Your name', '내 이름'))}" title="${L('Leave empty to use your name', '비워 두면 내 이름이 들어갑니다')}"></div>
       </div>
-      <label>${L('Students', '학생')}</label>
-      <div class="namelist">${c.names.map(n => `<span${isAdded(c, n) ? ' class="added"' : ''}>${esc(clean(String(n).replace(/^\|\s*|\s*\|$/g, '')) || '–')}` +
-        (isAdded(c, n) ? `<button class="x" data-act="delname" data-name="${esc(n)}" title="${L('Remove this student', '이 학생 삭제')}">✕</button>` : '') + '</span>').join('')}</div>
+      ${state.reprint ? '' : `<label>${L('Students', '학생')}</label>
+      <div class="namelist">${c.names.map(n => `<span${isAdded(c, n) ? ' class="added"' : ''}><button class="nm" data-act="editname" data-name="${esc(n)}" title="${L('Click to change this name', '눌러서 이름 바꾸기')}">${esc(shownName(n))}</button>` +
+        (isAdded(c, n) ? `<button class="x" data-act="delname" data-name="${esc(n)}" title="${L('Remove this student', '이 학생 삭제')}">✕</button>` : '') + '</span>').join('')}</div>`}
       <div class="addname"><input type="text" data-addname placeholder="${L('Add a student, e.g. Soyul | 김소율', '학생 추가, 예: Soyul | 김소율')}"><button class="small" data-act="addname">${L('Add', '추가')}</button></div>
       ${state.reprint ? `<div class="picklist">${pickHTML(c)}</div>` : ''}
     </div>`).join('');
@@ -1499,7 +1537,8 @@ function renderClassBar() {
   if (bar.hidden) return;
   const n = all.filter(c => c.include).length, on = showTime();
   // "Time" is one on/off button: on, each tag shows its class time before the days; off, just the days.
-  bar.innerHTML = (ticks ? `<span>${L(`Printing <b>${n} of ${all.length}</b> classes`, `<b>${all.length}개 중 ${n}개</b> 반 인쇄`)}</span>` +
+  bar.innerHTML = (ticks ? `<span>${L(n === all.length ? (n === 2 ? 'Printing <b>both</b> classes' : `Printing <b>all ${n}</b> classes`) : n ? `Printing <b>${n} of ${all.length}</b> classes` : 'Printing <b>no</b> classes',
+      n === all.length ? `<b>${n}개 반 모두</b> 인쇄` : `<b>${all.length}개 중 ${n}개</b> 반 인쇄`)}</span>` +
     `<button class="small" data-all="1">${L('Tick all', '모두 체크')}</button><button class="small" data-all="0">${L('Untick all', '모두 해제')}</button>` : '') +
     `<button class="small timetoggle${on ? ' on' : ''}" data-time aria-pressed="${on}" title="${on ? L('Class times are on the tags. Click to leave them off.', '이름표에 수업 시간이 나옵니다. 누르면 뺍니다.')
       : L('Class times are off. Click to put them on the tags.', '수업 시간이 빠져 있습니다. 누르면 이름표에 넣습니다.')}">${on ? '✓ ' : ''}${L('Time', '시간')}</button>`;
@@ -1517,7 +1556,7 @@ function updateNewAll() {
   const n = state.classes.reduce((a, c) => a + (c.newNames || []).length, 0);
   const box = document.getElementById('newall');
   box.hidden = !n;
-  box.querySelector('button').textContent = L(`Reprint the ${n} new student${n === 1 ? '' : 's'}`, `새 학생 ${n}명 이름표 인쇄`);
+  box.querySelector('button').textContent = L(n === 1 ? 'Reprint the new student' : `Reprint the ${n} new students`, `새 학생 ${n}명 이름표 인쇄`);
 }
 function tickNew(list) {
   list.forEach(c => { if ((c.newNames || []).length) c.picked = [...new Set([...(c.picked || []), ...c.newNames])]; });
@@ -1525,14 +1564,16 @@ function tickNew(list) {
   showPrintMode(); renderClasses(); render();
 }
 
+// A name as shown on screen: "| 박지민" (no English name) shows as "박지민".
+const shownName = n => clean(String(n).replace(/^\|\s*|\s*\|$/g, '')) || '–';
 // Reprint mode: a tick box per student. Ticks are kept by name, so editing other names keeps them.
 function pickHTML(c) {
   const picked = new Set(c.picked || []);
   const names = [...new Set(c.names.filter(Boolean))];
   return names.length
-    ? names.map(n => `<label><input type="checkbox" data-f="pick" data-name="${esc(n)}" ${picked.has(n) ? 'checked' : ''}>${esc(n)}` +
+    ? names.map(n => `<label><input type="checkbox" data-f="pick" data-name="${esc(n)}" ${picked.has(n) ? 'checked' : ''}>${esc(shownName(n))}` +
         ((c.newNames || []).includes(n) ? ` <span class="newtag">${L('NEW', '신규')}</span>` : '') +
-        (picked.has(n) ? `<select data-f="pickcount" data-name="${esc(n)}" title="${L('How many of this tag', '이 이름표 장수')}">${[1, 2, 3].map(k =>
+        (picked.has(n) ? `<select data-f="pickcount" data-name="${esc(n)}" title="${L('How many of this tag', '이 이름표 장수')}">${COPIES.map(k =>
           `<option value="${k}" ${pickCount(c, n) === k ? 'selected' : ''}>×${k}</option>`).join('')}</select>` : '') + '</label>').join('')
     : `<span class="none">${L('No students in this class yet.', '이 반에는 아직 학생이 없습니다.')}</span>`;
 }
@@ -1545,6 +1586,39 @@ function typedName(t) {
   let [e, k = ''] = t.split('|').map(clean);
   if (/[ㄱ-힣]/.test(e) && !/[ㄱ-힣]/.test(k)) [e, k] = [k, e];
   return e && k ? `${e} | ${k}` : (e || `| ${k}`);
+}
+// Change a student's name everywhere it is kept. A TOPIA name that was changed stays changed when the
+// class is copied in again (c.renamed: TOPIA's spelling -> the teacher's).
+function renameStudent(c, from, to) {
+  if (!to || to === from) return true;
+  if (c.names.some(o => o !== from && normName(o) === normName(to))) {
+    showMsg(L(`${to} is already in ${c.name}.`, `${to} 학생은 이미 ${c.name}에 있습니다.`), false); return false;
+  }
+  const swap = list => list && list.map(n => n === from ? to : n);
+  c.names = swap(c.names); c.added = swap(c.added); c.picked = swap(c.picked); c.newNames = swap(c.newNames); c.korKeep = swap(c.korKeep);
+  if (c.pickCounts && c.pickCounts[from]) { c.pickCounts = Object.assign({}, c.pickCounts, { [to]: c.pickCounts[from] }); delete c.pickCounts[from]; }
+  if (!isAdded(c, to)) {
+    c.renamed = Object.assign({}, c.renamed);
+    const orig = Object.keys(c.renamed).find(k => c.renamed[k] === from) || from;
+    if (orig === to) delete c.renamed[orig]; else c.renamed[orig] = to;
+  }
+  return true;
+}
+function editName(c, btn) {
+  const from = btn.dataset.name, input = document.createElement('input');
+  input.type = 'text'; input.className = 'nm-edit'; input.value = from.replace(/^\|\s*/, '');
+  btn.replaceWith(input); input.focus(); input.select();
+  let done = false;
+  const finish = keep => {
+    if (done) return; done = true;
+    if (keep) renameStudent(c, from, typedName(input.value));
+    renderClasses(); render();
+  };
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(false); }
+  });
+  input.addEventListener('blur', () => finish(true));
 }
 function addStudent(c, input) {
   const n = typedName(input.value);
@@ -1567,8 +1641,10 @@ function pickedNames(c) { const p = new Set(c.picked || []); return c.names.filt
 function clearPicks() { state.classes.forEach(c => { c.picked = []; }); renderClasses(); render(); }
 
 const DAY_CHOICES = ['Mon / Wed', 'Tues / Thurs'];
+const COPIES = [1, 2, 3, 4, 5]; // ×1 to ×5 of each tag
 
 function countText(c) {
+  if (state.reprint) { const t = pickedNames(c).reduce((a, n) => a + pickCount(c, n), 0); return t ? L(`${t} to reprint`, `다시 인쇄 ${t}개`) : ''; }
   const k = c.copies || 1, n = c.names.length;
   if (isKo()) return k > 1 ? `${n} × ${k} = 이름표 ${n * k}개` : `이름표 ${n}개`;
   return k > 1 ? `${n} × ${k} = ${n * k} tags` : `${n} tag${n === 1 ? '' : 's'}`;
@@ -1591,21 +1667,14 @@ document.getElementById('classes').addEventListener('input', e => {
     const p = new Set(c.picked || []), n = e.target.dataset.name;
     if (e.target.checked) p.add(n); else p.delete(n);
     c.picked = [...p];
-    card.querySelector('.picklist').innerHTML = pickHTML(c);
+    card.querySelector('.count').textContent = countText(c); card.querySelector('.picklist').innerHTML = pickHTML(c);
   }
-  else if (f === 'pickcount') { c.pickCounts = Object.assign({}, c.pickCounts, { [e.target.dataset.name]: +e.target.value }); }
-  else if (f === 'names') {
-    c.names = e.target.value.split('\n').map(clean).filter(Boolean).map(n => n === '-' ? '' : n);
-    if (c.newNames) c.newNames = c.newNames.filter(n => c.names.includes(n));
-    card.querySelector('.count').textContent = countText(c);
-    const pl = card.querySelector('.picklist'); if (pl) pl.innerHTML = pickHTML(c);
-    const rb = card.querySelector('.rombar'), rh = romHTML(c);
-    if (rb && !rh) rb.remove();
-    else if (!rb && rh) card.querySelector('.head').insertAdjacentHTML('afterend', rh);
-  }
+  else if (f === 'pickcount') { c.pickCounts = Object.assign({}, c.pickCounts, { [e.target.dataset.name]: +e.target.value }); card.querySelector('.count').textContent = countText(c); }
   else if (f === 'copies') { c.copies = +e.target.value; card.querySelector('.count').textContent = countText(c); }
-  else { c[f] = e.target.value; if (f === 'days') c.daysAuto = false;
-    if (f === 'subject') { const cc = classColor(c); card.style.borderLeftColor = cc ? cc.strong : ''; card.querySelector('.dotwrap').innerHTML = subDot(c); } if (f === 'name') card.querySelector('strong').textContent = c.name || L('New class', '새 반'); }
+  else { // subject (typed), time, teacher
+    c[f] = e.target.value;
+    if (f === 'subject') { const cc = classColor(c); card.style.borderLeftColor = cc ? cc.strong : ''; card.querySelector('.dotwrap').innerHTML = subDot(c); }
+  }
   if (f === 'include' || f === 'copies' || f === 'pick' || f === 'pickcount') render(); else scheduleRender();
 });
 // Typed days become the pair when the box is left: "Mon" -> "Mon / Wed", "thurs" -> "Tues / Thurs".
@@ -1621,6 +1690,7 @@ document.getElementById('classes').addEventListener('click', async e => {
   const id = e.target.closest('.class-card').dataset.id;
   const c = state.classes.find(x => x.id == id);
   if (act === 'ticknew') { tickNew([c]); return; }
+  if (act === 'editname') { editName(c, e.target); return; }
   if (act === 'addname') { addStudent(c, e.target.closest('.class-card').querySelector('[data-addname]')); return; }
   if (act === 'delname') {
     const n = e.target.dataset.name;
@@ -1642,11 +1712,7 @@ document.getElementById('classes').addEventListener('click', async e => {
     else card.querySelectorAll('.rombar input[data-kor]').forEach(inp => {
       const eng = clean(inp.value), kor = inp.dataset.kor;
       if (!eng) return;
-      const full = `${eng} | ${splitName(kor).kor}`;
-      c.names = c.names.map(n => n === kor ? full : n);
-      if (c.picked) c.picked = c.picked.map(n => n === kor ? full : n);
-      if (c.newNames) c.newNames = c.newNames.map(n => n === kor ? full : n);
-      if (c.added) c.added = c.added.map(n => n === kor ? full : n);
+      renameStudent(c, kor, `${eng} | ${splitName(kor).kor}`);
     });
     renderClasses(); render(); return;
   }
@@ -1658,12 +1724,16 @@ document.getElementById('classes').addEventListener('click', async e => {
 /* ---------- settings ---------- */
 ['teacher', 'school'].forEach(k => {
   const el = document.getElementById(k);
-  el.addEventListener('input', () => { state[k] = el.value; scheduleRender(); });
+  el.addEventListener('input', () => {
+    state[k] = el.value; scheduleRender();
+    if (k === 'teacher') document.querySelectorAll('[data-f="teacher"]').forEach(i => { i.placeholder = clean(el.value) || L('Your name', '내 이름'); });
+  });
 });
 document.getElementById('newpage').addEventListener('change', e => { state.newpage = e.target.checked; render(); });
 document.getElementById('watermark').addEventListener('change', e => { state.watermark = e.target.checked; render(); });
 document.getElementById('cropmarks').addEventListener('change', e => { state.cropmarks = e.target.checked; render(); });
 document.getElementById('namemode').addEventListener('change', e => { state.nameMode = e.target.value; render(); });
+document.getElementById('paper').addEventListener('change', e => { state.paper = e.target.value; setLayout(); paperOptions(); render(); fitPreview(); });
 
 // Dark mode follows the computer's setting until the button is used, then remembers the choice.
 const darkQuery = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
@@ -1687,7 +1757,14 @@ document.querySelectorAll('input[name=printmode]').forEach(r => r.addEventListen
 }));
 function showPrintMode() {
   document.querySelector(`input[name=printmode][value="${state.reprint ? 'reprint' : 'all'}"]`).checked = true;
-  document.getElementById('reprint-hint').hidden = !state.reprint;
+  stepThreeHints();
+}
+function stepThreeHints() {
+  const none = !state.classes.length;
+  document.querySelector('.print-mode').hidden = none;
+  document.getElementById('legend').hidden = none;
+  document.getElementById('reprint-hint').hidden = none || !state.reprint;
+  document.getElementById('hint3').hidden = none || state.reprint;
 }
 document.querySelectorAll('input[name=tagstyle]').forEach(r => r.addEventListener('change', () => { state.style = r.value; render(); }));
 
@@ -1726,7 +1803,7 @@ function nameHTML(raw) {
 
 const SQUIRREL = '<svg class="wm" viewBox="0 0 100 100" aria-hidden="true"><use href="#squirrel"/></svg>';
 
-function tagHTML(c, name, ci) {
+function tagHTML(c, name) {
   const cls = [c.name, c.subject].filter(Boolean).join(' ');
   const teacher = clean(c.teacher) || clean(state.teacher);
   const n = nameHTML(name);
@@ -1738,11 +1815,10 @@ function tagHTML(c, name, ci) {
   const cc = classColor(c);
   const attrs = `data-cid="${c.id}" class="tag${cc ? ' cc' : ''}${c.id === activeId ? ' active' : ''}"` +
     (cc ? ` style="--cc-bg:${cc.bg};--cc-fg:${cc.fg};--cc-strong:${cc.strong}"` : '');
-  const mark = (c.newNames || []).includes(name) ? '<span class="newmark noprint">NEW</span>' : ''; // screen only
-  const SQUIRREL_ = SQUIRREL + mark;
+  const extras = SQUIRREL + ((c.newNames || []).includes(name) ? '<span class="newmark noprint">NEW</span>' : ''); // NEW shows on screen only
   return state.style === 'cute'
-    ? `<div ${attrs}><div class="inner-card">${inner}</div>${SQUIRREL_}</div>`
-    : `<div ${attrs}>${inner}${SQUIRREL_}</div>`;
+    ? `<div ${attrs}><div class="inner-card">${inner}</div>${extras}</div>`
+    : `<div ${attrs}>${inner}${extras}</div>`;
 }
 
 // Typing re-renders after a short pause instead of on every key press.
@@ -1752,7 +1828,7 @@ function scheduleRender() { clearTimeout(renderTimer); undoTyping = true; render
 function render() {
   clearTimeout(renderTimer);
   save();
-  const grid = layout(), PER = grid.cols * grid.rows;
+  const PER = LAYOUT.cols * LAYOUT.rows;
   const chunks = []; // { tags: [...html], names: Set of class names } per page
   let cur = { tags: [], names: new Set() };
   const flush = () => { if (cur.tags.length) chunks.push(cur); cur = { tags: [], names: new Set() }; };
@@ -1765,7 +1841,7 @@ function render() {
     if (state.newpage && !state.reprint) flush();
     for (const n of list) {
       for (let k = 0; k < (state.reprint ? pickCount(c, n) : c.copies || 1); k++) { // copies of one student sit side by side
-        cur.tags.push(tagHTML(c, n, ci)); cur.names.add(c.name || L('Class ', '반 ') + (ci + 1)); total++;
+        cur.tags.push(tagHTML(c, n)); cur.names.add(c.name || L('Class ', '반 ') + (ci + 1)); total++;
         if (cur.tags.length === PER) flush();
       }
     }
@@ -1775,16 +1851,16 @@ function render() {
     const tags = pg.tags;
     while (tags.length < PER) tags.push('<div class="tag blank-slot"></div>');
     const label = `${[...pg.names].join(', ')}  ·  ${L(`page ${i + 1} of ${chunks.length}`, `${i + 1} / ${chunks.length}쪽`)}`;
-    return `<div class="page style-${esc(state.style)}${state.watermark ? '' : ' no-wm'}">${state.cropmarks ? cropMarks(label) : ''}${creditMark()}<div class="grid">${tags.join('')}</div></div>`;
+    return `<div class="page style-${esc(state.style)}${state.watermark ? '' : ' no-wm'}">${LAYOUT.cut ? (state.cropmarks ? cropMarks(label) : '') : sheetLabel(label)}${creditMark()}<div class="grid">${tags.join('')}</div></div>`;
   }).join('');
   fitNames();
   const pages = chunks.length;
   document.getElementById('summary').textContent = !total
-    ? (state.reprint ? L('Tick the students who need a new tag, under each class on the left.', '왼쪽 각 반에서 새 이름표가 필요한 학생을 체크하세요.')
+    ? (state.reprint ? L('No students ticked yet.', '아직 체크한 학생이 없습니다.')
                      : L('Your tags will appear here.', '여기에 이름표가 나타납니다.'))
     : (state.reprint ? L('Reprint: ', '다시 인쇄: ') : '') + L(
-      `${total} tag${total === 1 ? '' : 's'} from ${classes} class${classes === 1 ? '' : 'es'} on ${pages} page${pages === 1 ? '' : 's'} (A4 landscape, ${PER} per page). Print at 100% scale with "Background graphics" turned on.`,
-      `이름표 ${total}개 · ${classes}개 반 · ${pages}쪽 (A4 가로, 한 쪽에 ${PER}개). 배율 100%, "배경 그래픽" 켜기로 인쇄하세요.`);
+      `${total} tag${total === 1 ? '' : 's'} · ${classes} class${classes === 1 ? '' : 'es'} · ${pages} ${LAYOUT.cut ? 'page' : 'sheet'}${pages === 1 ? '' : 's'} (${paperName()}). Print at 100% scale with Background graphics on.`,
+      `이름표 ${total}개 · ${classes}개 반 · ${pages}쪽 (${paperName()}). 배율 100%, 배경 그래픽 켜기로 인쇄하세요.`);
 }
 
 // Shrink any name that still overflows its box (measured, so mixed English/Korean fits exactly).
@@ -1836,8 +1912,7 @@ function fitNames() {
 // runs along every cut between the tags themselves, so the cuts still show when a printer leaves the
 // paper's edge blank.
 function cropMarks(label) {
-  const { cols, rows, cw: CW, rh: RH } = layout();
-  const W = 297, H = 210, x0 = (W - cols * CW) / 2, y0 = (H - rows * RH) / 2;
+  const { cols, rows, cw: CW, rh: RH, W, H, x0, y0 } = LAYOUT;
   let d = '', grid = '';
   for (let k = 0; k <= cols; k++) { const x = x0 + k * CW; d += `M${x} 0V${y0}M${x} ${H - y0}V${H}`; grid += `M${x} ${y0}V${H - y0}`; }
   for (let k = 0; k <= rows; k++) { const y = y0 + k * RH; d += `M0 ${y}H${x0}M${W - x0} ${y}H${W}`; grid += `M${x0} ${y}H${W - x0}`; }
@@ -1845,10 +1920,14 @@ function cropMarks(label) {
     `<path d="${grid}" stroke="#444" stroke-width=".2" fill="none" opacity=".85"/>` +
     `<text x="${x0 + 2}" y="${H - y0 / 2 + 1}" font-size="2.6" font-family="Arial, sans-serif" fill="#555">${esc(label)}</text></svg>`;
 }
+// On sticker sheets: just the class / page label in the bottom margin.
+function sheetLabel(label) {
+  const { W, H, x0, y0, rows, rh, gy } = LAYOUT, bottom = y0 + rows * rh + (rows - 1) * gy;
+  return `<svg class="crop" viewBox="0 0 ${W} ${H}" aria-hidden="true"><text x="${x0 + 2}" y="${(bottom + H) / 2 + 1}" font-size="2.6" font-family="Arial, sans-serif" fill="#555">${esc(label)}</text></svg>`;
+}
 // The creator's credit, printed in the bottom margin of every page whether or not the cutting guides are on.
 function creditMark() {
-  const { cols, rows, cw: CW, rh: RH } = layout();
-  const W = 297, H = 210, x0 = (W - cols * CW) / 2, y0 = (H - rows * RH) / 2;
+  const { W, H, x0, y0 } = LAYOUT;
   return `<svg class="crop" viewBox="0 0 ${W} ${H}" aria-hidden="true"><text x="${W - x0 - 2}" y="${H - y0 / 2 + 1}" font-size="2" font-family="Arial, sans-serif" fill="#999" text-anchor="end">Name tags by Joseph McLaren</text></svg>`;
 }
 
@@ -1868,11 +1947,12 @@ async function printOut() {
   const day = new Date().toISOString().slice(0, 10);
   const html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="author" content="Joseph McLaren">' +
     `<title>Name tags ${day}</title><style>${document.querySelector('style').textContent}
+    ${paperCSS()}
     .printnote { font: 14px/1.5 Arial, sans-serif; color: #333; background: #FBEDC5; padding: 12px 16px; margin: 0 0 16px; }
     @media print { .printnote { display: none; } }</style></head>` +
     `<body>${document.querySelector('body > svg').outerHTML}` +
-    `<p class="printnote">${L('The print window should open by itself. If it doesn\'t, press <b>Ctrl+P</b> (<b>⌘P</b> on a Mac). Use paper size A4, landscape, margins <b>None</b>, scale <b>100%</b>.',
-      '인쇄 창이 자동으로 열립니다. 열리지 않으면 <b>Ctrl+P</b> (Mac은 <b>⌘P</b>)를 누르세요. 용지 A4, 가로, 여백 <b>없음</b>, 배율 <b>100%</b>로 인쇄하세요.')}<br>` +
+    `<p class="printnote">${L(`The print window should open by itself. If it doesn't, press <b>Ctrl+P</b> (<b>⌘P</b> on a Mac). Use paper size A4, ${LAYOUT.cut ? 'landscape' : 'portrait'}, margins <b>None</b>, scale <b>100%</b>.${LAYOUT.cut ? '' : ` Put the AnyLabel ${LAYOUT.code} sheets in the printer.`}`,
+      `인쇄 창이 자동으로 열립니다. 열리지 않으면 <b>Ctrl+P</b> (Mac은 <b>⌘P</b>)를 누르세요. 용지 A4, ${LAYOUT.cut ? '가로' : '세로'}, 여백 <b>없음</b>, 배율 <b>100%</b>로 인쇄하세요.${LAYOUT.cut ? '' : ` 프린터에 애니라벨 ${LAYOUT.code} 라벨지를 넣으세요.`}`)}<br>` +
     `<span style="font-size:11px;opacity:.6">Name Tag Generator by Joseph McLaren</span></p>` +
     `<div id="preview-area"><div id="pages">${pages}</div></div>` +
     '<script>addEventListener("load", function () { setTimeout(function () { window.print(); }, 400); });<\/script></body></html>';
@@ -1992,7 +2072,7 @@ document.getElementById('pages').addEventListener('click', e => {
 // Shrink the on-screen preview to fit the window (printing always uses full size).
 function fitPreview() {
   const area = document.getElementById('preview-area');
-  const pageW = 297 * 96 / 25.4;
+  const pageW = LAYOUT.W * 96 / 25.4;
   document.getElementById('pages').style.zoom = Math.min(1, (area.clientWidth - 4) / pageW);
 }
 window.addEventListener('resize', fitPreview);
@@ -2003,12 +2083,21 @@ if (window.ResizeObserver) new ResizeObserver(fitHeader).observe(document.queryS
 fitHeader();
 window.addEventListener('beforeprint', () => { if (renderTimer) render(); });
 
+/* The file opened from a computer can't be installed as an app, so this explains how to install the website instead. */
+const APP_URL = 'https://disconnekted.github.io/Name-tag-generator-/';
+if (location.protocol === 'file:') document.getElementById('app-btn').hidden = false;
+function appInfo() {
+  showNotice(L('<b>Get the desktop app</b><br>1. Click <b>Open the website</b> below (use Chrome or Edge).<br>2. Click the install icon at the right end of the address bar, or ⋮ menu → <i>Cast, save and share</i> → <i>Install page as app</i>.<br>3. The tool gets its own icon on your computer and works without the internet.',
+    '<b>데스크톱 앱 받기</b><br>1. 아래 <b>웹사이트 열기</b>를 누르세요 (Chrome 또는 Edge).<br>2. 주소창 오른쪽 끝의 설치 아이콘을 누르거나, ⋮ 메뉴 → <i>전송, 저장, 공유</i> → <i>페이지를 앱으로 설치</i>를 누르세요.<br>3. 컴퓨터에 아이콘이 생기고 인터넷 없이도 쓸 수 있습니다.'),
+    [[L('Open the website', '웹사이트 열기'), () => { window.open(APP_URL, '_blank', 'noopener'); hideNotice(); }], [L('Close', '닫기'), hideNotice]], 'app');
+}
+
 /* ---------- guided tour ---------- */
 // Each step spotlights part of the screen; the rest is shaded. Steps whose target isn't on screen
 // (for example the class boxes before any class exists) point at the nearest thing that is.
 const TOUR = [
-  { en: ['Welcome!', 'This quick tour shows each part of the tool, one step at a time. Use Next or the arrow keys. You can stop any time and bring it back with the ? button.'],
-    ko: ['환영합니다!', '이 짧은 안내에서 각 부분을 차례로 보여 드립니다. 다음 버튼이나 화살표 키로 넘기세요. 언제든 그만둘 수 있고 ? 버튼으로 다시 볼 수 있습니다.'] },
+  { en: ['Welcome!', 'A quick look at each part of the tool. Use Next or the arrow keys, and the ? button brings it back.'],
+    ko: ['환영합니다!', '도구의 각 부분을 짧게 보여 드립니다. 다음 버튼이나 화살표 키로 넘기고, ? 버튼으로 다시 볼 수 있습니다.'] },
   { sel: '#p-details',
     en: ['1. Your details', 'Type your name. It goes on the bottom right of every tag. Then choose whether tags show English, Korean or both names.'],
     ko: ['1. 기본 정보', '내 이름을 입력하세요. 모든 이름표 오른쪽 아래에 들어갑니다. 그리고 이름표에 영어, 한국어, 둘 다 중 무엇을 넣을지 고르세요.'] },
@@ -2016,11 +2105,11 @@ const TOUR = [
     en: ['Pick a look', 'Choose one of the four styles. Keep Cutting guides on: the little lines show exactly where to cut with the paper cutter.'],
     ko: ['디자인 고르기', '네 가지 스타일 중 하나를 고르세요. 재단선은 켜 두세요. 재단기로 자를 위치를 작은 선으로 보여 줍니다.'] },
   { sel: '#p-add',
-    en: ['2. Add your students', 'Drag the red Copy students button to your bookmarks bar once. After that, click it on the TOPIA attendance page, come back, and press Ctrl+V in the box here.'],
-    ko: ['2. 학생 추가', '빨간 학생 복사 버튼을 북마크바로 한 번만 끌어다 놓으세요. 그다음부터는 TOPIA 출석 페이지에서 누르고, 돌아와서 여기 칸에 Ctrl+V를 누르면 됩니다.'] },
+    en: ['2. Add your students', 'Drag the red Copy students button to your bookmarks bar once. After that, click it on the TOPIA attendance page, come back, and press Ctrl+V anywhere on this page.'],
+    ko: ['2. 학생 추가', '빨간 학생 복사 버튼을 북마크바로 한 번만 끌어다 놓으세요. 그다음부터는 TOPIA 출석 페이지에서 누르고, 돌아와서 이 페이지 어디서나 Ctrl+V를 누르면 됩니다.'] },
   { sel: ['#classes .class-card', '#p-check'],
-    en: ['3. Check each class', 'Every class gets a box. Fill in the subject and click Mon / Wed or Tues / Thurs (or type the days). Add a class time if you like; it prints before the days. Untick a class to leave it out, or pick ×2 / ×3 for extra copies.'],
-    ko: ['3. 반별 확인', '반마다 상자가 하나씩 생깁니다. 과목을 넣고 Mon / Wed나 Tues / Thurs를 누르거나 직접 입력하세요. 수업 시간은 선택이며 요일 앞에 인쇄됩니다. 체크를 해제하면 그 반은 빠지고, ×2 / ×3으로 여러 장 인쇄할 수 있습니다.'] },
+    en: ['3. Check each class', 'Every class gets a box. Subject, time and days come from TOPIA, so just check them. Untick a class to leave it out, or pick ×2 to ×5 for extra copies.'],
+    ko: ['3. 반별 확인', '반마다 상자가 하나씩 생깁니다. 과목, 시간, 요일은 TOPIA에서 가져오니 확인만 하세요. 체크를 해제하면 그 반은 빠지고, ×2~×5로 여러 장 인쇄할 수 있습니다.'] },
   { sel: '.print-mode',
     en: ['Only need a few tags?', 'Switch to Reprint some students and tick just the ones who need a new tag. When you import a class again, new students are flagged for you.'],
     ko: ['몇 장만 필요할 때', '일부 학생만 다시 인쇄로 바꾸고 새 이름표가 필요한 학생만 체크하세요. 반 명단을 다시 가져오면 새 학생이 자동으로 표시됩니다.'] },
@@ -2089,7 +2178,7 @@ function tourGo(i) {
   const tip = document.getElementById('tour-tip');
   tip.querySelector('h3').textContent = title;
   tip.querySelector('p').textContent = body + (i === 0 && state.classes.some(c => c.demo)
-    ? L(' A sample class is added so you can see how it works. It disappears when the tour ends.', ' 사용 모습을 보여 드리려고 예시 반을 하나 넣었습니다. 안내가 끝나면 사라집니다.') : '');
+    ? L(' A sample class is shown until the tour ends.', ' 안내가 끝날 때까지 예시 반이 보입니다.') : '');
   tip.querySelector('.tour-count').textContent = `${i + 1} / ${TOUR.length}`;
   tip.querySelector('.tour-skip').textContent = i === TOUR.length - 1 ? '' : L('Skip tour', '건너뛰기');
   tip.querySelector('.tour-back').textContent = L('Back', '이전');
@@ -2153,6 +2242,7 @@ document.addEventListener('keydown', e => {
 });
 
 /* ---------- start ---------- */
+setLayout();
 load(); // signs the same teacher back in after a reload, otherwise asks who's using the tool
 
 /* Opened from the Class Prep Station (name-tags.html?from=prep): after printing, go back to it.
@@ -2173,6 +2263,8 @@ load(); // signs the same teacher back in after a reload, otherwise asks who's u
   const st = document.createElement('style');
   st.textContent = 'body{padding-bottom:72px}a.prepback.prepback,a.prepback.prepback:visited,a.prepback.prepback:hover{color:#fff!important}.prepback{position:fixed;left:16px;bottom:16px;z-index:8550;background:#7a1c0c;color:#fff;font:600 15px/1 Arial,sans-serif;padding:12px 16px;border-radius:999px;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}@media print{.prepback{display:none}}';
   document.head.appendChild(st); document.body.appendChild(bar);
+  // inside the Grade Prep Station the desktop-app offer doesn't apply (this copy lives in the downloaded folder)
+  const appBtn = document.getElementById('app-btn'); if (appBtn) { appBtn.hidden = true; st.textContent += '#app-btn{display:none!important}'; }
   // the class list from Class Prep goes in by itself once a teacher is signed in (and any tour is closed)
   const take = () => { try { const h = JSON.parse(localStorage.getItem('prep.tagsHandoff') || 'null'); if (!h || Date.now() - h.at > 30 * 60 * 1000) return null; return h.t; } catch (e) { return null; } };
   if (take()) { const iv = setInterval(() => {
