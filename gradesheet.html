@@ -3446,6 +3446,15 @@ Promise.resolve(useDb).catch(() => null).then(d => { if (d) startCloud(d); else 
     const box = document.getElementById('paste'); if (!box || typeof me === 'undefined' || !me) return; clearInterval(iv);
     if (t.startsWith('#TOPIA-NAMETAGS')) { const dt = new DataTransfer(); dt.setData('text/plain', t); box.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); }
     else { box.value = t; document.getElementById('importBtn').click(); }
+    // class days and Day 1 date from Prep (#DAYS / #START lines), so the sheet opens on today's lesson
+    const meta = {}, nm = x => String(x).replace(/\(.*?\)/g, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+    t.split(/\r?\n/).forEach(l => { const m = /^#(START|DAYS)\t([^\t]*)\t(.+)$/.exec(l); if (m) (meta[nm(m[2])] ||= {})[m[1]] = m[3].trim(); });
+    if (Object.keys(meta).length) setTimeout(() => { let ch = false;
+      classes.forEach(c => { const v = !c.example && meta[nm(c.name)]; if (!v) return;
+        if (/^(Mon \/ Wed|Tues \/ Thurs|Fri)$/.test(v.DAYS || '')) c.days = v.DAYS;
+        if (/^\d{4}-\d\d-\d\d$/.test(v.START || '')) { c.start = v.START; try { delete dayAt[c.id]; } catch (e) {} }
+        keep(c); ch = true; });
+      if (ch) render(); }, 300);
   }, 400); setTimeout(() => clearInterval(iv), 30 * 60 * 1000); }
 })();
 </script>
