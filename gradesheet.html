@@ -1776,8 +1776,14 @@ function pickDay(c) {
     const asDate = md => { const [m, d] = String(md).split('/').map(Number); if (!m || !d) return null; const y = st.getFullYear() + (m < st.getMonth() + 1 ? 1 : 0); return new Date(y, m - 1, d); };
     for (let j = 0; j < NDAYS; j++) { const dt = asDate(dateFor(c, j)); if (dt && dt <= now) i = j; }
   }
-  if (i === undefined) i = [...Array(NDAYS).keys()].find(i => !c.students.some(s => (((c.scores[s.id] || {}).attendance) || [])[i]));
+  if (i === undefined) { const last = lastMarked(c, 'attendance'); i = last < 0 ? 0 : Math.min(NDAYS - 1, last + 1); }
   return dayAt[c.id] = i === undefined ? 0 : i;
+}
+/* The last day (index) where any student has a mark: in one column (cat), or in any column. -1 if none. */
+function lastMarked(c, cat) {
+  let last = -1;
+  c.students.forEach(s => Object.entries(c.scores[s.id] || {}).forEach(([k, a]) => { if (cat && k !== cat) return; (a || []).forEach((v, j) => { if (v !== '' && v != null && j > last) last = j; }); }));
+  return last;
 }
 const val = (c, sid, cat, i) => (((c.scores[sid] || {})[cat] || [])[i]) || '';
 /* Notes are kept as dated lines ("9/16 Homework missing"). A phrase button turns that day's note on and
@@ -1862,7 +1868,7 @@ document.addEventListener('click', async e => {
    "Fill from gradesheet" bookmark, clicked on TOPIA's Register form, matches students by name and items by
    group, fills the boxes as a share of TOPIA's perfect score, and leaves Save to the teacher. */
 const topiaGroup = l => /particip/i.test(l) ? 'participation' : /writ|essay|summary/i.test(l) ? 'writing' : /word|vocab|idiom/i.test(l) ? 'vocab' : /present|debate|speech/i.test(l) ? 'presentation' : /monthly/i.test(l) ? 'monthly' : '';
-function topiaPayload(c, i) {
+function topiaPayload(c, i, date) {
   const rows = c.students.filter(s => inClass(s, i)).map(s => {
     const g = {};
     c.cats.forEach(k0 => {
@@ -1872,7 +1878,7 @@ function topiaPayload(c, i) {
     });
     return { eng: s.eng || '', kor: s.kor || '', g };
   }).filter(r => Object.keys(r.g).length);
-  return '#GS-TOPIA ' + JSON.stringify({ cls: c.name, day: i + 1, rows });
+  return '#GS-TOPIA ' + JSON.stringify({ cls: c.name, day: i + 1, date: date || dateFor(c, i) || '', rows });
 }
 function topiaFillBookmarklet(given) {
   var K = function (en, ko) { try { return localStorage.getItem('tp-lang') === 'ko' ? ko : en; } catch (e) { return en; } };
@@ -1904,7 +1910,8 @@ function topiaFillBookmarklet(given) {
     }
     const cs2 = classSel(), scope = ss.closest('form,[role=dialog],[class*=modal],[class*=Modal],[id*=modal],[class*=popup]') || null;
     if (scope && norm(scope.innerText).indexOf(clsKey(data.cls)) < 0 && !(cs2 && clsKey(cs2.options[cs2.selectedIndex].text) === clsKey(data.cls))) { alert(K('This form is open for another class. Press Save or Cancel first, then try again.', '다른 반의 등록 창이 열려 있습니다. 먼저 Save 또는 Cancel을 누른 뒤 다시 시도하세요.')); return; }
-    const want = Array.from(ss.options).find(function (o) { return parseInt(o.text, 10) === data.day; });
+    const want = (data.date && Array.from(ss.options).find(function (o) { return o.text.indexOf('(' + data.date + ')') >= 0; })) || Array.from(ss.options).find(function (o) { return parseInt(o.text, 10) === data.day; });
+    if (want) data.day = parseInt(want.text, 10) || data.day;
     if (!want) { alert(K('TOPIA has no ' + data.day + '회차 for this class yet.', '이 반은 TOPIA에 아직 ' + data.day + '회차가 없습니다.')); return; }
     if (ss.value !== want.value) { setSelect(ss, want.value); await sleep(900); }
     const inputs = (await until(function () { const a = Array.from(document.querySelectorAll('input[name^="infoList."]')).filter(vis); return a.length ? a : null; })) || [];
@@ -1951,7 +1958,7 @@ document.addEventListener('click', async e => {
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act="topiaall"]'); if (!b) return;
   const m = b.parentNode.querySelector('.topiamsg');
-  const items = classes.filter(meetsToday).map(c => JSON.parse(topiaPayload(c, todayIdx(c)).slice(10))).filter(x => x.rows.length);
+  const t0 = todayMD(), items = classes.filter(meetsToday).map(c => { let i = [...Array(NDAYS).keys()].find(j => dateFor(c, j) === t0); if (i === undefined) i = Math.max(0, lastMarked(c)); return JSON.parse(topiaPayload(c, i, dateFor(c, i) === t0 || !dateFor(c, i) ? t0 : dateFor(c, i)).slice(10)); }).filter(x => x.rows.length);
   if (!items.length) { m.hidden = false; m.textContent = L("No scores yet in today's classes.", '오늘 수업 반에 아직 점수가 없습니다.'); return; }
   const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(items)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const w = window.open('https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report#gs-topia-all=' + b64, 'gsTopia');
