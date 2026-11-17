@@ -1982,8 +1982,8 @@ function topiaHomeworkBookmarklet() {
   var GS = 'https://disconnekted.github.io/Class-tools/gradesheet.html';
   var API = 'https://front-api.topiaenglishzone.co.kr/v1/t/';
   var iPad = /iPad|iPhone/.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
-  var win = iPad ? null : window.open('', 'gsOnline');
-  if (win) { try { win.document.write('<p style="font:16px sans-serif;padding:20px">' + K('Reading online homework from TOPIA…', 'TOPIA에서 온라인 숙제를 읽는 중…') + '</p>'); } catch (e) {} }
+  /* No tab is opened up front (it showed as a blank page while reading); the gradesheet opens at the end. */
+  var win = null;
   function note(html) {
     var box = document.getElementById('gsTopiaNote');
     if (!box) { box = document.createElement('div'); box.id = 'gsTopiaNote'; box.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:99999;background:#fff4b8;color:#222;border:2px solid #c9a400;border-radius:10px;padding:12px 16px;font:15px/1.4 sans-serif;max-width:560px;box-shadow:0 6px 20px rgba(0,0,0,.25)'; document.body.appendChild(box); }
@@ -2103,7 +2103,14 @@ function topiaHomeworkBookmarklet() {
     window.__gsOnlineData = data;
     var link = GS + '#online=' + await squeeze(data), text = '#GS-ONLINE ' + JSON.stringify(data);
     var copy = function (b) { var ok = function () { if (b) b.textContent = K('✓ Copied', '✓ 복사됨'); }; (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(ok, function () { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); ok(); } catch (e) {} ta.remove(); }); };
-    if (win) { win.location.href = link; note(K('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes' + (skipped ? ' (' + skipped + ' skipped: already passed, checked this week, or no shadowing)' : '') + '. The gradesheet opened in a new tab and ticked them.' + (score ? ' Stars caught: ' + score + '.' : ''), '✓ ' + out.length + '개 반에서 단어 유닛·쉐도잉 ' + nUnits + '개를 읽었습니다' + (skipped ? ' (' + skipped + '개 건너뜀: 이미 통과, 이번 주 확인함, 또는 쉐도잉 없음)' : '') + '. 새 탭에 성적표가 열려 체크했습니다.' + (score ? ' 잡은 별: ' + score + '개.' : ''))); return; }
+    var doneMsg = function () { note(K('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes' + (skipped ? ' (' + skipped + ' skipped: already passed, checked this week, or no shadowing)' : '') + '. The gradesheet ticked them (in your open gradesheet tab if there is one).' + (score ? ' Stars caught: ' + score + '.' : ''), '✓ ' + out.length + '개 반에서 단어 유닛·쉐도잉 ' + nUnits + '개를 읽었습니다' + (skipped ? ' (' + skipped + '개 건너뜀: 이미 통과, 이번 주 확인함, 또는 쉐도잉 없음)' : '') + '. 성적표에 체크했습니다 (열려 있는 성적표 탭이 있으면 그 탭에).' + (score ? ' 잡은 별: ' + score + '개.' : ''))); };
+    /* PC: open the gradesheet (it hands the ticks to an open gradesheet tab). If the browser blocks it after the long read, one tap does it. */
+    if (!iPad) {
+      win = window.open(link, 'gsOnline'); if (win) { doneMsg(); return; }
+      var nb = note(K('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes. ', '✓ ' + out.length + '개 반에서 단어 유닛·쉐도잉 ' + nUnits + '개를 읽었습니다. ') + '<button data-go style="font:inherit;font-weight:700;padding:6px 14px;border:0;border-radius:8px;background:#1f6fb0;color:#fff;cursor:pointer">' + K('📒 Tick them in the gradesheet', '📒 성적표에 체크하기') + '</button>');
+      nb.querySelector('[data-go]').onclick = function () { window.open(link, 'gsOnline'); doneMsg(); };
+      return;
+    }
     var box = note(K('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes' + (skipped ? ' (' + skipped + ' skipped: already passed, checked this week, or no shadowing)' : '') + '. <button data-c style="font:inherit;padding:4px 10px">Copy</button> then tap <b>Paste online homework</b> in the gradesheet app, or <a href="' + link + '" target="_blank">open the gradesheet here</a>.', '✓ ' + out.length + '개 반에서 단어 유닛·쉐도잉 ' + nUnits + '개를 읽었습니다' + (skipped ? ' (' + skipped + '개 건너뜀: 이미 통과, 이번 주 확인함, 또는 쉐도잉 없음)' : '') + '. <button data-c style="font:inherit;padding:4px 10px">복사</button> 후 성적표 앱에서 <b>온라인 숙제 붙여넣기</b>를 누르거나, <a href="' + link + '" target="_blank">여기서 성적표를 여세요</a>.'));
     box.querySelector('[data-c]').onclick = function () { copy(this); };
     try { await navigator.clipboard.writeText(text); box.querySelector('[data-c]').textContent = K('✓ Copied', '✓ 복사됨'); } catch (e) {}
@@ -2183,10 +2190,39 @@ async function onlineToken(tok) {
   let data; try { data = await unsqueeze(tok); } catch (e) { onlineBanner('That online homework link is damaged. Read it from TOPIA again.'); return; }
   if (data && data.app === 'gs-online') onlineGo(data);
 }
+/* If a gradesheet is already open in another tab on this device, that tab ticks the boxes (so the two tabs never
+   save over each other) and this new tab closes itself. With no other tab open, this tab does it. */
+const GS_TAB = Math.random().toString(36).slice(2);
+let gsHandingOff = false;
+const gsChan = (() => { try { return new BroadcastChannel('gradesheet-online'); } catch (e) { return null; } })();
+if (gsChan) gsChan.onmessage = e => {
+  const d = e.data || {};
+  if (d.t === 'ping' && !gsHandingOff) gsChan.postMessage({ t: 'pong', id: d.id, from: GS_TAB });
+  else if (d.t === 'apply' && d.to === GS_TAB) {
+    onlineToken(d.tok); gsChan.postMessage({ t: 'done', id: d.id });
+    const t0 = document.title; document.title = '✓ ' + L('Online homework ticked', '온라인 숙제 체크됨'); setTimeout(() => { document.title = t0; }, 15000);
+  }
+};
+function onlineHandOff(tok) {
+  if (!gsChan) return Promise.resolve(false);
+  gsHandingOff = true; const id = GS_TAB + Date.now();
+  return new Promise(res => {
+    let to = null, timer = setTimeout(() => finish(false), 700);
+    const finish = ok => { clearTimeout(timer); gsChan.removeEventListener('message', on); gsHandingOff = false; res(ok); };
+    const on = e => { const d = e.data || {}; if (d.id !== id) return;
+      if (d.t === 'pong' && !to) { to = d.from; clearTimeout(timer); timer = setTimeout(() => finish(false), 4000); gsChan.postMessage({ t: 'apply', id, to, tok }); }
+      else if (d.t === 'done') finish(true); };
+    gsChan.addEventListener('message', on); gsChan.postMessage({ t: 'ping', id });
+  });
+}
 function onlineFromLink() {
   const m = location.hash.match(/^#online=([jz][A-Za-z0-9_-]+)$/); if (!m) return;
   history.replaceState(null, '', location.pathname + location.search);
-  onlineToken(m[1]);
+  onlineHandOff(m[1]).then(ok => {
+    if (!ok) { onlineToken(m[1]); return; }
+    document.body.innerHTML = '<p style="font:17px/1.5 system-ui,sans-serif;padding:32px;max-width:520px">✓ ' + L('Ticked in your open gradesheet tab. You can close this tab.', '열려 있는 성적표 탭에 체크했습니다. 이 탭은 닫아도 됩니다.') + '</p>';
+    setTimeout(() => { try { window.close(); } catch (e) {} }, 1500);
+  });
 }
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act="hwpaste"]'); if (!b) return;
