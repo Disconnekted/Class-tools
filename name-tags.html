@@ -2266,10 +2266,12 @@ load(); // signs the same teacher back in after a reload, otherwise asks who's u
   // inside the Grade Prep Station the desktop-app offer doesn't apply (this copy lives in the downloaded folder)
   const appBtn = document.getElementById('app-btn'); if (appBtn) { appBtn.hidden = true; st.textContent += '#app-btn{display:none!important}'; }
   // the class list from Class Prep goes in by itself once a teacher is signed in (and any tour is closed)
-  const take = () => { try { const h = JSON.parse(localStorage.getItem('prep.tagsHandoff') || 'null'); if (!h || Date.now() - h.at > 30 * 60 * 1000) return null; return h.t; } catch (e) { return null; } };
+  // the list also comes in the link itself (#prep=…), so it works when the browser keeps no storage (incognito, Firefox, Safari)
+  let hashT = null; try { const m = /^#prep=([\s\S]*)$/.exec(location.hash); if (m) { hashT = decodeURIComponent(m[1]); history.replaceState(null, '', location.pathname + location.search); } } catch (e) {}
+  const take = () => { if (hashT) return hashT; try { const h = JSON.parse(localStorage.getItem('prep.tagsHandoff') || 'null'); if (!h || Date.now() - h.at > 30 * 60 * 1000) return null; return h.t; } catch (e) { return null; } };
   if (take()) { const iv = setInterval(() => {
     const box = document.getElementById('paste'); if (!currentId || tourAt >= 0 || !box) return;
-    clearInterval(iv); const t = take(); try { localStorage.removeItem('prep.tagsHandoff'); } catch (e) {} if (!t) return;
+    clearInterval(iv); const t = take(); hashT = null; try { localStorage.removeItem('prep.tagsHandoff'); } catch (e) {} if (!t) return;
     const dt = new DataTransfer(); dt.setData('text/plain', t);
     box.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
   }, 400); setTimeout(() => clearInterval(iv), 30 * 60 * 1000); }
