@@ -3429,10 +3429,24 @@ Promise.resolve(useDb).catch(() => null).then(d => { if (d) startCloud(d); else 
 (function () {
   if (new URLSearchParams(location.search).get('from') !== 'prep') return;
   const a = document.createElement('a');
-  a.href = 'class-prep.html?back=grades'; a.className = 'prepback'; a.textContent = '← Back to Class Prep';
+  // Prep sends its own file name (ret=), so Back works even if the Prep file was renamed
+  const ret = new URLSearchParams(location.search).get('ret');
+  a.href = (ret && !/[\/\\:]/.test(ret) ? ret : 'class-prep.html') + '?back=grades'; a.className = 'prepback'; a.textContent = '← Back to Class Prep';
   const st = document.createElement('style');
   st.textContent = '.prepback{position:fixed;left:16px;bottom:16px;z-index:900;background:#2f86c9;color:#fff;font:600 15px/1 system-ui,sans-serif;padding:12px 16px;border-radius:999px;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.25)}@media print{.prepback{display:none}}';
   document.head.appendChild(st); document.body.appendChild(a);
+  // the class list from Prep goes in by itself: it travels in the link (#prep=…, works in incognito and every browser),
+  // with browser storage as a backup
+  let t = null;
+  try { const m = /^#prep=([\s\S]*)$/.exec(location.hash); if (m) { t = decodeURIComponent(m[1]); history.replaceState(null, '', location.pathname + location.search); } } catch (e) {}
+  if (!t) try { const h = JSON.parse(localStorage.getItem('prep.gradesHandoff') || 'null'); if (h && Date.now() - h.at < 30 * 60 * 1000) t = h.t; } catch (e) {}
+  try { localStorage.removeItem('prep.gradesHandoff'); } catch (e) {}
+  // wait until the teacher has typed their name ("Who is marking?"), then add the class
+  if (t) { const iv = setInterval(() => {
+    const box = document.getElementById('paste'); if (!box || typeof me === 'undefined' || !me) return; clearInterval(iv);
+    if (t.startsWith('#TOPIA-NAMETAGS')) { const dt = new DataTransfer(); dt.setData('text/plain', t); box.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); }
+    else { box.value = t; document.getElementById('importBtn').click(); }
+  }, 400); setTimeout(() => clearInterval(iv), 30 * 60 * 1000); }
 })();
 </script>
 <script>
