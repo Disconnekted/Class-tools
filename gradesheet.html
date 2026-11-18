@@ -2733,121 +2733,133 @@ const PDF = { blue: [47, 134, 201], light: [156, 199, 232], band: [236, 244, 251
 function pdfText(doc, str, x, y, size, opts = {}) {
   str = String(str ?? '');
   if (!str) return;
-  if (!/[^\x00-\xFF]/.test(str)) { doc.setFontSize(size); doc.text(str, x, y, opts); return; }
-  const px = 12, mmPerPt = 0.3528, hMM = size * mmPerPt * 1.25;
+  if (!/[^\x00-\xFF]/.test(str)) { const f = doc.getFont().fontStyle; doc.setFontSize(size); if (opts.bold) doc.setFont('helvetica', 'bold'); doc.text(str, x, y, opts); if (opts.bold) doc.setFont('helvetica', f); return; }
+  const px = size < 10 ? 10 : 7, mmPerPt = 0.3528, hMM = size * mmPerPt * 1.25;
   const cv = document.createElement('canvas'), g = cv.getContext('2d');
   const font = `${opts.bold ? 'bold ' : ''}${size * px}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
   g.font = font;
   const w = Math.ceil(g.measureText(str).width) + 4;
   cv.width = w; cv.height = Math.ceil(size * px * 1.3);
-  g.font = font; g.fillStyle = '#18233a'; g.textBaseline = 'middle'; g.fillText(str, 2, cv.height / 2);
+  g.font = font; { const tc = doc.getTextColor(); g.fillStyle = /^#[0-9a-f]{6}$/i.test(tc) ? tc : '#18233a'; } g.textBaseline = 'middle'; g.fillText(str, 2, cv.height / 2);
   const wMM = hMM * cv.width / cv.height;
   let left = x; if (opts.align === 'center') left = x - wMM / 2; else if (opts.align === 'right') left = x - wMM;
   const top = opts.baseline === 'middle' ? y - hMM / 2 : y - hMM * 0.8;
-  doc.addImage(cv.toDataURL('image/png'), 'PNG', left, top, Math.min(wMM, opts.maxWidth || wMM) , hMM * Math.min(1, (opts.maxWidth || wMM) / wMM));
+  // the same words in the same style are stored once in the PDF (alias), compressed
+  const alias = 't' + [str, size, g.fillStyle, opts.bold ? 1 : 0].join('|').split('').reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7);
+  doc.addImage(cv.toDataURL('image/png'), 'PNG', left, top, Math.min(wMM, opts.maxWidth || wMM) , hMM * Math.min(1, (opts.maxWidth || wMM) / wMM), alias, 'FAST');
 }
 function drawTick(doc, cx, cy, s) { doc.setLineWidth(0.35); doc.line(cx - s * 0.5, cy, cx - s * 0.15, cy + s * 0.4); doc.line(cx - s * 0.15, cy + s * 0.4, cx + s * 0.55, cy - s * 0.45); doc.setLineWidth(0.15); }
 
-/* Class summary: one page with every student's column averages, attendance, overall %, recent progress and
-   online homework (units passed out of the units set so far, i.e. passed by anyone in the class). Shared by the
-   class's own teacher as a snapshot; the student pages follow it. */
+/* Class summary PDF, Korean first with English beside or under it (John, 2026-11-18). Page 1: the whole class
+   (column averages, attendance, online homework passed / set so far, overall %, recent progress); then a page per student. */
+const PKO = { 'Attendance': '출석', 'Participation': '참여도', 'Summary Handed In': '요약 제출', 'Word Test': '단어 시험', 'Monthly Test': '월말 평가', 'Shadowing': '쉐도잉',
+  'Vocabulary': '단어', 'Vocabulary Test': '단어 시험', 'Idioms Test': '숙어 시험', 'Writing': '작문', 'Essay': '에세이', 'Presentation': '발표', 'Debate': '토론', 'Speech': '스피치',
+  'Online Word Test': '온라인 단어 학습', 'Online Voca': '온라인 단어 학습', 'Online homework': '온라인 숙제', 'eBook': 'eBook', 'Unit Test': '단원 평가', 'Overall': '전체', 'Progress': '변화',
+  'Integrated': '통합', 'Integrated Reading': '통합 리딩', 'Phonics': '파닉스', 'Grammar': '문법', 'TOEFL Reading': '토플 리딩', 'Language Arts': '랭귀지 아츠', 'Speaking': '스피킹' };
+const pko = en => { const k = String(en || '').replace(/\s*\/\s*\d+\s*$/, '').trim(); return PKO[k] || (/online/i.test(k) && /voca|word/i.test(k) ? '온라인 단어' : /shadow/i.test(k) ? '쉐도잉' : /word|vocab/i.test(k) ? '단어' : ''); };
+const PDAYS = { 'Mon / Wed': '월/수', 'Tues / Thurs': '화/목', 'Fri': '금' };
+const PVAL = { P: '출석', L: '지각', A: '결석', Y: '제출', N: '미제출', O: '○', T: '△', X: '✗' };
 function lastLesson(c) { let last = -1; c.students.forEach(s => Object.values(c.scores[s.id] || {}).forEach(a => (a || []).forEach((v, j) => { if (v && j > last) last = j; }))); return last; }
 function trendOf(c, s, last) {
   if (last < 3) return null;
   const part = (from, to) => { const ps = c.cats.filter(k => k.kind === 'score').map(k => rowStats(c, s, k, from, to)).filter(Boolean).map(r => r.pct); return ps.length ? ps.reduce((x, y) => x + y, 0) / ps.length : null; };
   const now = part(Math.max(0, last - 3), last + 1), before = part(0, Math.max(0, last - 3));
   if (now === null || before === null) return null;
-  const d = Math.round(now - before); return { d, text: d >= 5 ? '+' + d : d <= -5 ? String(d) : 'steady' };
+  const d = Math.round(now - before); return { d, text: d >= 5 ? '+' + d : d <= -5 ? String(d) : '유지 steady' };
+}
+const unitsSet = (c, x) => { let n = 0; c.students.forEach(s => { const v = (c.extra[s.id] || {})[x.id]; if (Array.isArray(v)) v.forEach(u => { n = Math.max(n, +u || 0); }); }); return n; };
+function classLine(c, last) {
+  const subj = SUBJECTS[c.subject];
+  return [(c.sem || 'B') + '학기 Semester ' + (c.sem || 'B'), (PDAYS[c.days] ? PDAYS[c.days] + ' ' : '') + c.days, c.room ? '강의실 Room ' + c.room : '', c.hr ? '담임 HR ' + c.hr : '',
+    last === undefined ? '' : last >= 0 ? (last + 1) + '회차까지 Up to Day ' + (last + 1) + (dateFor(c, last) ? ' (' + dateFor(c, last) + ')' : '') : '점수 없음 No marks yet'].filter(Boolean).join('  ·  ');
 }
 function summaryPage(doc, c) {
   const subj = SUBJECTS[c.subject], hw = (c.extras || []).filter(x => x.type === 'units');
   const cats = c.cats.filter(k => k.kind !== 'att'), att = c.cats.find(k => k.kind === 'att'), last = lastLesson(c);
-  const setN = x => { let n = 0; c.students.forEach(s => { const v = (c.extra[s.id] || {})[x.id]; if (Array.isArray(v)) v.forEach(u => { n = Math.max(n, +u || 0); }); }); return n; };
-  const cols = [...cats.map(k => ({ h: k.label + (k.kind === 'score' && k.outOf ? ' /' + k.outOf : ''), v: s => { const r = rowStats(c, s, k); return r ? (r.full || r.text) : '–'; } })),
-    ...(att ? [{ h: 'Attendance', v: s => { const r = rowStats(c, s, att); return r ? r.text : '–'; } }] : []),
-    ...hw.map(x => { const n = setN(x); return { h: x.label, v: s => { const v = (c.extra[s.id] || {})[x.id]; return n ? (Array.isArray(v) ? v.length : 0) + '/' + n : '–'; } }; }),
-    { h: 'Overall', v: s => { const ov = overall(c, s); return ov === null ? '–' : ov + '%'; }, bold: 1 },
-    { h: 'Progress', v: s => { const t = trendOf(c, s, last); return t ? t.text : '–'; }, color: s => { const t = trendOf(c, s, last); return !t ? null : t.d >= 5 ? [29, 122, 70] : t.d <= -5 ? [176, 60, 40] : null; } }];
+  const cols = [...cats.map(k => ({ en: k.label + (k.kind === 'score' && k.outOf ? ' /' + k.outOf : ''), v: s => { const r = rowStats(c, s, k); return r ? (r.full || r.text) : '-'; } })),
+    ...(att ? [{ en: 'Attendance', v: s => { const r = rowStats(c, s, att); return r ? r.text : '-'; } }] : []),
+    ...hw.map(x => { const n = unitsSet(c, x); return { en: x.label, v: s => { const v = (c.extra[s.id] || {})[x.id]; return n ? (Array.isArray(v) ? v.length : 0) + '/' + n : '-'; } }; }),
+    { en: 'Overall', v: s => { const ov = overall(c, s); return ov === null ? '-' : ov + '%'; }, bold: 1 },
+    { en: 'Progress', v: s => { const t = trendOf(c, s, last); return t ? t.text : '-'; }, color: s => { const t = trendOf(c, s, last); return !t ? null : t.d >= 5 ? [29, 122, 70] : t.d <= -5 ? [176, 60, 40] : null; } }];
   const wide = cols.length > 7, W = wide ? 277 : 190, M = 10, H = wide ? 210 : 297;
-  if (wide) doc.addPage('a4', 'landscape'); else doc.addPage('a4', 'portrait');
-  let y = 18;
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(24, 35, 58);
-  doc.text(clean(c.name) + ' ' + (subj ? subj.name : '') + ': class summary', M, y);
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(90, 101, 121);
-  doc.text(['Semester ' + (c.sem || 'B'), c.days, c.room ? 'Room ' + c.room : '', c.hr ? 'HR ' + c.hr : '', last >= 0 ? 'Up to Day ' + (last + 1) + (dateFor(c, last) ? ' (' + dateFor(c, last) + ')' : '') : 'No marks yet', 'Made ' + new Date().toLocaleDateString()].filter(Boolean).join('   ·   '), M, y + 6);
-  y += 13;
-  const list = c.students, nameW = wide ? 46 : 42, cw = (W - 8 - nameW) / cols.length, rh = Math.min(9, Math.max(5.2, (H - y - 22) / Math.max(1, list.length + 1)));
-  const hdrH = 10;
-  doc.setFillColor(47, 134, 201); doc.rect(M, y, W, hdrH, 'F'); doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.6);
-  doc.text('No', M + 1.5, y + 6); doc.text('Name', M + 9, y + 6);
-  cols.forEach((col, j) => { const cx = M + 8 + nameW + cw * j + cw / 2; if (/[^\x00-\xFF]/.test(col.h)) pdfText(doc, col.h, cx, y + 6, 7.6, { align: 'center', maxWidth: cw - 1 }); else { doc.setFontSize(7.6); const l = doc.splitTextToSize(col.h, cw - 2).slice(0, 2); doc.text(l, cx, y + (l.length > 1 ? 4 : 6), { align: 'center' }); } });
+  doc.addPage('a4', wide ? 'landscape' : 'portrait');
+  let y = 17;
+  doc.setTextColor(24, 35, 58);
+  pdfText(doc, clean(c.name) + ' ' + (pko(subj && subj.name) || (subj ? subj.name : '')) + ' 반 요약', M, y, 17, { bold: true });
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(90, 101, 121);
+  doc.text(clean(c.name) + ' ' + (subj ? subj.name : '') + ': class summary', M, y + 7);
+  doc.setFont('helvetica', 'normal');
+  pdfText(doc, classLine(c, last) + '  ·  작성 Made ' + new Date().toLocaleDateString(), M, y + 13, 8.5);
+  y += 19;
+  const list = c.students, nameW = wide ? 46 : 42, cw = (W - 8 - nameW) / cols.length, rh = Math.min(9, Math.max(5.2, (H - y - 26) / Math.max(1, list.length + 1)));
+  const hdrH = 12;
+  doc.setFillColor(47, 134, 201); doc.rect(M, y, W, hdrH, 'F'); doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold');
+  const head = (ko, en, x, align) => { if (ko) pdfTextW(doc, ko, x, y + 5, 7.8, { align, bold: true, maxWidth: (align === 'center' ? cw : nameW) - 1 }); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.3); doc.text(doc.splitTextToSize(en, (align === 'center' ? cw : nameW) - 1.5)[0], x, y + (ko ? 9.6 : 7), { align }); doc.setFont('helvetica', 'bold'); };
+  head('번호', 'No', M + 1.2, 'left'); head('이름', 'Name', M + 9, 'left');
+  cols.forEach((col, j) => head(pko(col.en), col.en, M + 8 + nameW + cw * j + cw / 2, 'center'));
   y += hdrH;
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(rh < 6.5 ? 8 : 9);
+  doc.setFont('helvetica', 'normal'); const fs = rh < 6.5 ? 8 : 9;
   list.forEach((s, i) => {
     if (i % 2) { doc.setFillColor(236, 244, 251); doc.rect(M, y, W, rh, 'F'); }
-    doc.setTextColor(left(s) ? 150 : 24, left(s) ? 158 : 35, left(s) ? 170 : 58);
-    doc.text(String(i + 1), M + 1.5, y + rh / 2 + 1.2);
-    pdfText(doc, (s.eng || '') + (s.kor ? (s.eng ? ' ' : '') + s.kor : '') + (hasLeft(s) ? ' (left)' : ''), M + 9, y + rh / 2 + 1.2, rh < 6.5 ? 8 : 9, { maxWidth: nameW - 2 });
-    cols.forEach((col, j) => { const v = col.v(s), cc = col.color && col.color(s); doc.setFont('helvetica', col.bold ? 'bold' : 'normal'); if (cc) doc.setTextColor(...cc); pdfText(doc, v, M + 8 + nameW + cw * j + cw / 2, y + rh / 2 + 1.2, rh < 6.5 ? 8 : 9, { align: 'center' }); doc.setTextColor(24, 35, 58); });
+    const gone = hasLeft(s); doc.setTextColor(gone ? 150 : 24, gone ? 158 : 35, gone ? 170 : 58);
+    doc.setFontSize(fs); doc.text(String(i + 1), M + 1.5, y + rh / 2 + 1.2);
+    pdfText(doc, (s.kor ? s.kor + (s.eng ? ' ' : '') : '') + (s.eng || '') + (gone ? ' (퇴원 left)' : ''), M + 9, y + rh / 2 + 1.2, fs, { maxWidth: nameW - 2 });
+    cols.forEach((col, j) => { const v = col.v(s), cc = col.color && col.color(s); doc.setFont('helvetica', col.bold ? 'bold' : 'normal'); if (cc) doc.setTextColor(...cc); pdfText(doc, v, M + 8 + nameW + cw * j + cw / 2, y + rh / 2 + 1.2, fs, { align: 'center', bold: !!col.bold }); doc.setTextColor(24, 35, 58); });
     doc.setFont('helvetica', 'normal'); y += rh;
   });
   doc.setDrawColor(207, 214, 224); doc.setLineWidth(0.2); doc.rect(M, y - rh * list.length - hdrH, W, rh * list.length + hdrH);
-  doc.setFontSize(8); doc.setTextColor(120, 130, 145);
-  const key = 'Averages are over the lessons marked so far. Online homework: units passed / units set so far (passed by anyone in the class). Progress: the last 4 lessons compared with the lessons before (5 points or more). Each student\'s marks and notes follow on their own page.';
-  doc.text(doc.splitTextToSize(key, W), M, Math.min(H - 12, y + 7));
-  function left(s) { return hasLeft(s); }
+  doc.setTextColor(110, 120, 135); y += 6;
+  pdfText(doc, '평균은 지금까지 채점한 수업 기준입니다. 온라인 숙제: 통과한 유닛 / 지금까지 나간 유닛. 변화: 최근 4회 수업과 그 전 수업 비교 (5점 이상). 학생별 점수와 메모는 다음 장부터 있습니다.', M, y, 7.6, { maxWidth: W });
+  doc.setFontSize(7.4); doc.text(doc.splitTextToSize('Averages are over the lessons marked so far. Online homework: units passed / units set so far. Progress: the last 4 lessons compared with the lessons before (5 points or more). Each student\'s marks and notes follow on their own page.', W), M, y + 4.5);
 }
-/* One page per student: every column's marks by day, its average, attendance, and the notes.
+// pdfText with a width cap that shrinks Korean pictures instead of cutting them
+function pdfTextW(doc, str, x, y, size, opts) { pdfText(doc, str, x, y, size, opts); }
+/* One page per student: every column's marks by lesson, its average, online homework and the notes.
    With summary, the class summary page comes first. */
 function reportDoc(c, list, summary) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   if (summary) { summaryPage(doc, c); doc.deletePage(1); }
   const subj = SUBJECTS[c.subject], M = 16, W = 178;
-  const shown = { P: 'Here', L: 'Late', A: 'Absent', Y: 'In', N: 'Not in', O: 'O', T: 'Tri', X: 'X' };
+  const say = (str, x, y, size, opts = {}) => pdfText(doc, str, x, y, size, opts);
   list.forEach((s, n) => {
     if (n || summary) doc.addPage('a4', 'portrait');
     let y = 22;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(24, 35, 58);
-    doc.text(String(s.eng || s.kor || 'Student'), M, y);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(90, 101, 121);
-    doc.text([c.name, subj ? subj.name : '', 'Semester ' + (c.sem || 'B'), c.room ? 'Room ' + c.room : '', c.hr ? 'HR ' + c.hr : ''].filter(Boolean).join('   ·   '), M, y + 7);
+    doc.setTextColor(24, 35, 58);
+    if (s.kor) { say(s.kor, M, y, 20, { bold: true }); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(90, 101, 121); if (s.eng) doc.text(String(s.eng), M, y + 6.5); }
+    else { doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.text(String(s.eng || 'Student'), M, y); }
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(90, 101, 121);
+    say([c.name, subj ? (pko(subj.name) ? pko(subj.name) + ' ' : '') + subj.name : '', classLine(c)].filter(Boolean).join('  ·  '), M, y + (s.kor && s.eng ? 12.5 : 7), 8.8);
     const ov = overall(c, s);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(29, 95, 158);
-    doc.text(ov === null ? 'No scores yet' : `Overall ${ov}%`, M + W, y, { align: 'right' });
-    if (statusText(s)) { doc.setFontSize(9.5); doc.setTextColor(150, 90, 20); doc.text(statusText(s), M + W, y + 7, { align: 'right' }); }
-    y += 16; doc.setDrawColor(207, 214, 224); doc.line(M, y, M + W, y); y += 8;
+    doc.setTextColor(29, 95, 158);
+    say(ov === null ? '점수 없음 No scores yet' : `전체 Overall ${ov}%`, M + W, y, 13, { align: 'right', bold: true });
+    if (statusText(s)) { doc.setTextColor(150, 90, 20); say(statusText(s).replace(/Joined Day (\d+)/, '$1회차 합류 Joined Day $1').replace(/Left Day (\d+)/, '$1회차 퇴원 Left Day $1'), M + W, y + 7, 8.8, { align: 'right' }); }
+    y += s.kor && s.eng ? 19 : 16; doc.setDrawColor(207, 214, 224); doc.line(M, y, M + W, y); y += 8;
+    const block = (title, right, text) => {
+      const lines = doc.splitTextToSize(text, W);
+      if (y + 6 + lines.length * 4.4 > 285) { doc.addPage('a4', 'portrait'); y = 22; }
+      doc.setTextColor(24, 35, 58); say(title, M, y, 11, { bold: true }); say(right, M + W, y, 11, { align: 'right', bold: true });
+      doc.setTextColor(70, 80, 100); lines.forEach((l, i) => say(l, M, y + 5.5 + i * 4.4, 9));
+      y += 8 + lines.length * 4.4;
+    };
     c.cats.forEach(k => {
       const vals = ((c.scores[s.id] || {})[k.id] || []);
-      const marks = vals.map((v, i) => v ? `D${i + 1}: ${shown[v] && k.kind !== 'score' ? shown[v] : v}` : '').filter(Boolean);
+      const marks = vals.map((v, i) => v ? `${i + 1}회 ${PVAL[v] && k.kind !== 'score' ? PVAL[v] : v}` : '').filter(Boolean);
       const st = rowStats(c, s, k);
-      if (y > 260) { doc.addPage(); y = 22; }
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(24, 35, 58);
-      doc.text(k.label + (k.kind === 'score' && k.outOf ? ` /${k.outOf}` : ''), M, y);
-      doc.text(st ? st.text : '–', M + W, y, { align: 'right' });
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(70, 80, 100);
-      const lines = doc.splitTextToSize(marks.length ? marks.join('    ') : 'Nothing marked yet', W);
-      doc.text(lines, M, y + 5.5); y += 8 + lines.length * 4.4;
+      block((pko(k.label) ? pko(k.label) + ' ' : '') + k.label + (k.kind === 'score' && k.outOf ? ` /${k.outOf}` : ''), st ? (st.full || st.text) : '-', marks.length ? marks.join('    ') : '아직 없음 Nothing marked yet');
     });
-    // Online homework (units passed), as in the class summary
     (c.extras || []).filter(x => x.type === 'units').forEach(x => {
-      const v = (c.extra[s.id] || {})[x.id], got = Array.isArray(v) ? v : [];
-      let set = 0; c.students.forEach(t => { const w = (c.extra[t.id] || {})[x.id]; if (Array.isArray(w)) w.forEach(u => { set = Math.max(set, +u || 0); }); });
-      if (y > 260) { doc.addPage(); y = 22; }
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(24, 35, 58);
-      doc.text(x.label, M, y); doc.text(set ? got.length + '/' + set : '-', M + W, y, { align: 'right' });
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(70, 80, 100);
-      const labs = x.labels || []; const miss = [...Array(set).keys()].map(u => u + 1).filter(u => !got.includes(u));
-      const line = (got.length ? 'Passed: ' + got.map(u => labs[u - 1] || u).join(', ') : 'Nothing passed yet') + (miss.length ? '    Not yet: ' + miss.map(u => labs[u - 1] || u).join(', ') : '');
-      const lines = doc.splitTextToSize(line, W); doc.text(lines, M, y + 5.5); y += 8 + lines.length * 4.4;
+      const v = (c.extra[s.id] || {})[x.id], got = Array.isArray(v) ? v : [], set = unitsSet(c, x), labs = x.labels || [];
+      const miss = [...Array(set).keys()].map(u => u + 1).filter(u => !got.includes(u));
+      block((pko(x.label) ? pko(x.label) + ' ' : '') + x.label, set ? got.length + '/' + set : '-', (got.length ? '통과 Passed: ' + got.map(u => labs[u - 1] || u).join(', ') : '아직 통과 없음 Nothing passed yet') + (miss.length ? '    미통과 Not yet: ' + miss.map(u => labs[u - 1] || u).join(', ') : ''));
     });
     const notes = String(c.notes[s.id] || '').split('\n').map(x => x.trim()).filter(Boolean);
-    if (y > 250) { doc.addPage(); y = 22; }
+    if (y > 250) { doc.addPage('a4', 'portrait'); y = 22; }
     y += 2; doc.line(M, y, M + W, y); y += 8;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(24, 35, 58); doc.text('Notes', M, y); y += 6;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(50, 60, 80);
-    (notes.length ? notes : ['No notes.']).forEach(t => { const l = doc.splitTextToSize(t, W); if (y + l.length * 4.6 > 285) { doc.addPage(); y = 22; } doc.text(l, M, y); y += l.length * 4.6 + 1.5; });
-    doc.setFontSize(8); doc.setTextColor(140, 150, 165); doc.text('Made ' + new Date().toLocaleDateString(), M, 290);
+    doc.setTextColor(24, 35, 58); say('메모 Notes', M, y, 11, { bold: true }); y += 6;
+    doc.setTextColor(50, 60, 80);
+    (notes.length ? notes : ['메모 없음 No notes.']).forEach(t => { const l = doc.splitTextToSize(t, W); if (y + l.length * 4.6 > 280) { doc.addPage('a4', 'portrait'); y = 22; } l.forEach((x, i) => say(x, M, y + i * 4.6, 9.5)); y += l.length * 4.6 + 1.5; });
+    doc.setTextColor(120, 130, 145); say('출석 = Here · 지각 = Late · 결석 = Absent · 제출 = In · 미제출 = Not in · 회 = lesson (Day)   ·   작성 Made ' + new Date().toLocaleDateString(), M, 290, 7.5);
   });
   return doc;
 }
