@@ -1169,7 +1169,7 @@ function render() {
           ${thumbHTML('scored')}
           <div class="prevside">
             <span class="seglab">Send as</span><div class="seg sendfmt" role="group" aria-label="Send as"><button type="button" data-fmt="pdf" aria-pressed="${sendFmt === 'pdf'}">PDF</button><button type="button" data-fmt="xlsx" aria-pressed="${sendFmt === 'xlsx'}">Excel</button><button type="button" data-fmt="both" aria-pressed="${sendFmt === 'both'}">Both</button></div>
-            <div class="outrow"><button type="button" class="primary" data-act="send-email">✉ Email</button><button type="button" class="primary" data-act="send-slack"># Slack</button><button type="button" data-act="pdf-full">⤓ PDF with scores</button><button type="button" data-act="print-full">🖨 Print</button><button type="button" data-act="reports" title="One page per student: scores, averages and notes">📄 Student reports</button></div>
+            <div class="outrow"><button type="button" class="primary" data-act="send-email">✉ Email</button><button type="button" class="primary" data-act="send-slack"># Slack</button><button type="button" data-act="pdf-full">⤓ PDF with scores</button><button type="button" data-act="print-full">🖨 Print</button><button type="button" data-act="reports" title="One page for the whole class (averages, overall, progress, online homework), then a page per student">📊 Class summary</button></div>
           </div>
         </div>
         <div id="sendOut"></div>
@@ -1402,7 +1402,7 @@ main.addEventListener('click', e => {
   const sidOf = () => (b.closest('[data-sid]') || {}).dataset.sid;
   if (act === 'stools') { const id = sidOf(); if (toolsOpen.has(id)) toolsOpen.delete(id); else toolsOpen.add(id); render(); }
   else if (act === 'report') { const s = c.students.find(x => x.id === sidOf()); if (s) saveFile(`${s.eng || s.kor} - ${c.name} report.pdf`, reportDoc(c, [s]).output('blob')); }
-  else if (act === 'reports') { if (c.students.length) saveFile(`${c.name} student reports.pdf`, reportDoc(c, c.students).output('blob')); }
+  else if (act === 'reports') { if (c.students.length) saveFile(`${c.name} class summary.pdf`, reportDoc(c, c.students, true).output('blob')); }
   else if (act === 'leave-ask') { confirmLeave = sidOf(); render(); }
   else if (act === 'leave-no') { confirmLeave = null; confirmDelete = null; render(); }
   else if (act === 'leave-yes') { const s = c.students.find(x => x.id === sidOf()); s.left = +document.getElementById('leaveDay-' + s.id).value; confirmLeave = null; keep(c); render(); }
@@ -2660,7 +2660,7 @@ main.addEventListener('submit', e => {
     'Delete this class…': '이 반 삭제…', '% Score chart': '% 점수표', 'Score chart': '점수표', 'Send as': '보낼 형식', "⇪ All of today's classes": '⇪ 오늘 수업 반 모두', "No scores yet in today's classes.": '오늘 수업 반에 아직 점수가 없습니다.', '🗑 Delete all classes…': '🗑 모든 반 삭제…', 'Delete all': '모두 삭제', 'Cancel': '취소', '⤓ Back up first': '⤓ 먼저 백업', "Every student, score and note in them is removed from this device. This can't be undone.": '모든 학생, 점수, 메모가 이 기기에서 삭제됩니다. 되돌릴 수 없습니다.', 'There are no classes to delete.': '삭제할 반이 없습니다.', "☑ Open on today's class": '☑ 오늘 수업 반으로 열기', "☐ Open on today's class": '☐ 오늘 수업 반으로 열기', "Don't do this": '사용 안 함', "Always open the class you used last": '항상 마지막에 쓴 반으로 열기', "OK. It will open the class you used last. Turn it back on under ⋯ More.": '마지막에 쓴 반으로 열립니다. ⋯ 더보기에서 다시 켤 수 있어요.', 'Type your name to start.': '이름을 입력해 시작하세요.', 'Disruptive': '수업 방해', 'Sent outside': '밖으로 내보냄', 'Retest': '재시험', 'No book': '책 없음', '+ Disruptive': '+ 수업 방해', '+ Sent outside': '+ 밖으로 내보냄', '+ Retest': '+ 재시험', '+ No book': '+ 책 없음', 'Switch': '전환', "On TOPIA's Attendance page click": 'TOPIA 출석 페이지에서', ', then paste here.': '을(를) 누른 뒤 여기에 붙여넣으세요.', 'No students yet. Tap + Add students at the top to paste the class list.': '아직 학생이 없습니다. 위의 + 학생 추가를 눌러 명단을 붙여넣으세요.', 'No students yet. Tap + Add students at the top, or + Add a student below.': '아직 학생이 없습니다. 위의 + 학생 추가 또는 아래의 + 학생 추가를 누르세요.', 'Tap + Add students at the top to paste your class list, or add a class by hand.': '위의 + 학생 추가를 눌러 명단을 붙여넣거나 반을 직접 추가하세요.', 'No class yet': '아직 반이 없습니다', 'Tap to change this date': '눌러서 날짜 변경', 'Tap a date to change it if a lesson moved': '수업이 옮겨지면 날짜를 눌러 바꾸세요', '⇩ Paste online homework': '⇩ 온라인 숙제 붙여넣기',
     'Fill from gradesheet': '성적표에서 채우기', 'Online homework from TOPIA': 'TOPIA 온라인 숙제', 'TOPIA Helper': 'TOPIA 도우미',
     '⤓ Back up': '⤓ 백업', '⤒ Restore': '⤒ 복원', '📱 Send to iPad': '📱 iPad로 보내기', '📥 Receive from PC': '📥 PC에서 받기', 'Name tags': '이름표', 'Name tags ↗': '이름표 ↗',
-    'Copy classes for name tags': '이름표용 반 목록 복사', '📄 Student reports': '📄 학생 리포트', '🖨 Print': '🖨 인쇄', '✉ Email': '✉ 이메일', '⤓ PDF with scores': '⤓ 점수 포함 PDF',
+    'Copy classes for name tags': '이름표용 반 목록 복사', '📄 Student reports': '📄 학생 리포트', '📊 Class summary': '📊 반 요약', 'One page for the whole class (averages, overall, progress, online homework), then a page per student': '반 전체 한 장 (평균, 전체 점수, 변화, 온라인 숙제) + 학생별 한 장', '🖨 Print': '🖨 인쇄', '✉ Email': '✉ 이메일', '⤓ PDF with scores': '⤓ 점수 포함 PDF',
     'PDF with scores': '점수 포함 PDF', 'Blank gradesheets': '빈 성적표', 'Download blank sheet (PDF)': '빈 양식 다운로드 (PDF)', 'Every subject (PDF)': '모든 과목 (PDF)', 'Excel': '엑셀',
     'Subject': '과목', 'Semester': '학기', 'Days': '수업 요일', 'Day 1 date': '1회차 날짜', 'Room': '강의실', 'HR': '담임', 'Homeroom': '담임', 'Mon / Wed': '월 / 수', 'Tues / Thurs': '화 / 목', 'Fri': '금',
     'Who is marking?': '누가 채점하나요?', 'No scores yet': '아직 점수 없음', 'Columns ': '항목 ', 'Start': '시작', 'Example class': '예시 반', 'Joins on': '합류일', 'Any day': '아무 날',
@@ -2748,14 +2748,65 @@ function pdfText(doc, str, x, y, size, opts = {}) {
 }
 function drawTick(doc, cx, cy, s) { doc.setLineWidth(0.35); doc.line(cx - s * 0.5, cy, cx - s * 0.15, cy + s * 0.4); doc.line(cx - s * 0.15, cy + s * 0.4, cx + s * 0.55, cy - s * 0.45); doc.setLineWidth(0.15); }
 
-/* One page per student: every column's marks by day, its average, attendance, and the notes. */
-function reportDoc(c, list) {
+/* Class summary: one page with every student's column averages, attendance, overall %, recent progress and
+   online homework (units passed out of the units set so far, i.e. passed by anyone in the class). Shared by the
+   class's own teacher as a snapshot; the student pages follow it. */
+function lastLesson(c) { let last = -1; c.students.forEach(s => Object.values(c.scores[s.id] || {}).forEach(a => (a || []).forEach((v, j) => { if (v && j > last) last = j; }))); return last; }
+function trendOf(c, s, last) {
+  if (last < 3) return null;
+  const part = (from, to) => { const ps = c.cats.filter(k => k.kind === 'score').map(k => rowStats(c, s, k, from, to)).filter(Boolean).map(r => r.pct); return ps.length ? ps.reduce((x, y) => x + y, 0) / ps.length : null; };
+  const now = part(Math.max(0, last - 3), last + 1), before = part(0, Math.max(0, last - 3));
+  if (now === null || before === null) return null;
+  const d = Math.round(now - before); return { d, text: d >= 5 ? '+' + d : d <= -5 ? String(d) : 'steady' };
+}
+function summaryPage(doc, c) {
+  const subj = SUBJECTS[c.subject], hw = (c.extras || []).filter(x => x.type === 'units');
+  const cats = c.cats.filter(k => k.kind !== 'att'), att = c.cats.find(k => k.kind === 'att'), last = lastLesson(c);
+  const setN = x => { let n = 0; c.students.forEach(s => { const v = (c.extra[s.id] || {})[x.id]; if (Array.isArray(v)) v.forEach(u => { n = Math.max(n, +u || 0); }); }); return n; };
+  const cols = [...cats.map(k => ({ h: k.label + (k.kind === 'score' && k.outOf ? ' /' + k.outOf : ''), v: s => { const r = rowStats(c, s, k); return r ? (r.full || r.text) : '–'; } })),
+    ...(att ? [{ h: 'Attendance', v: s => { const r = rowStats(c, s, att); return r ? r.text : '–'; } }] : []),
+    ...hw.map(x => { const n = setN(x); return { h: x.label, v: s => { const v = (c.extra[s.id] || {})[x.id]; return n ? (Array.isArray(v) ? v.length : 0) + '/' + n : '–'; } }; }),
+    { h: 'Overall', v: s => { const ov = overall(c, s); return ov === null ? '–' : ov + '%'; }, bold: 1 },
+    { h: 'Progress', v: s => { const t = trendOf(c, s, last); return t ? t.text : '–'; }, color: s => { const t = trendOf(c, s, last); return !t ? null : t.d >= 5 ? [29, 122, 70] : t.d <= -5 ? [176, 60, 40] : null; } }];
+  const wide = cols.length > 7, W = wide ? 277 : 190, M = 10, H = wide ? 210 : 297;
+  if (wide) doc.addPage('a4', 'landscape'); else doc.addPage('a4', 'portrait');
+  let y = 18;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(24, 35, 58);
+  doc.text(clean(c.name) + ' ' + (subj ? subj.name : '') + ': class summary', M, y);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(90, 101, 121);
+  doc.text(['Semester ' + (c.sem || 'B'), c.days, c.room ? 'Room ' + c.room : '', c.hr ? 'HR ' + c.hr : '', last >= 0 ? 'Up to Day ' + (last + 1) + (dateFor(c, last) ? ' (' + dateFor(c, last) + ')' : '') : 'No marks yet', 'Made ' + new Date().toLocaleDateString()].filter(Boolean).join('   ·   '), M, y + 6);
+  y += 13;
+  const list = c.students, nameW = wide ? 46 : 42, cw = (W - 8 - nameW) / cols.length, rh = Math.min(9, Math.max(5.2, (H - y - 22) / Math.max(1, list.length + 1)));
+  const hdrH = 10;
+  doc.setFillColor(47, 134, 201); doc.rect(M, y, W, hdrH, 'F'); doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.6);
+  doc.text('No', M + 1.5, y + 6); doc.text('Name', M + 9, y + 6);
+  cols.forEach((col, j) => { const cx = M + 8 + nameW + cw * j + cw / 2; if (/[^\x00-\xFF]/.test(col.h)) pdfText(doc, col.h, cx, y + 6, 7.6, { align: 'center', maxWidth: cw - 1 }); else { doc.setFontSize(7.6); const l = doc.splitTextToSize(col.h, cw - 2).slice(0, 2); doc.text(l, cx, y + (l.length > 1 ? 4 : 6), { align: 'center' }); } });
+  y += hdrH;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(rh < 6.5 ? 8 : 9);
+  list.forEach((s, i) => {
+    if (i % 2) { doc.setFillColor(236, 244, 251); doc.rect(M, y, W, rh, 'F'); }
+    doc.setTextColor(left(s) ? 150 : 24, left(s) ? 158 : 35, left(s) ? 170 : 58);
+    doc.text(String(i + 1), M + 1.5, y + rh / 2 + 1.2);
+    pdfText(doc, (s.eng || '') + (s.kor ? (s.eng ? ' ' : '') + s.kor : '') + (hasLeft(s) ? ' (left)' : ''), M + 9, y + rh / 2 + 1.2, rh < 6.5 ? 8 : 9, { maxWidth: nameW - 2 });
+    cols.forEach((col, j) => { const v = col.v(s), cc = col.color && col.color(s); doc.setFont('helvetica', col.bold ? 'bold' : 'normal'); if (cc) doc.setTextColor(...cc); pdfText(doc, v, M + 8 + nameW + cw * j + cw / 2, y + rh / 2 + 1.2, rh < 6.5 ? 8 : 9, { align: 'center' }); doc.setTextColor(24, 35, 58); });
+    doc.setFont('helvetica', 'normal'); y += rh;
+  });
+  doc.setDrawColor(207, 214, 224); doc.setLineWidth(0.2); doc.rect(M, y - rh * list.length - hdrH, W, rh * list.length + hdrH);
+  doc.setFontSize(8); doc.setTextColor(120, 130, 145);
+  const key = 'Averages are over the lessons marked so far. Online homework: units passed / units set so far (passed by anyone in the class). Progress: the last 4 lessons compared with the lessons before (5 points or more). Each student\'s marks and notes follow on their own page.';
+  doc.text(doc.splitTextToSize(key, W), M, Math.min(H - 12, y + 7));
+  function left(s) { return hasLeft(s); }
+}
+/* One page per student: every column's marks by day, its average, attendance, and the notes.
+   With summary, the class summary page comes first. */
+function reportDoc(c, list, summary) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  if (summary) { summaryPage(doc, c); doc.deletePage(1); }
   const subj = SUBJECTS[c.subject], M = 16, W = 178;
   const shown = { P: 'Here', L: 'Late', A: 'Absent', Y: 'In', N: 'Not in', O: 'O', T: 'Tri', X: 'X' };
   list.forEach((s, n) => {
-    if (n) doc.addPage();
+    if (n || summary) doc.addPage('a4', 'portrait');
     let y = 22;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(24, 35, 58);
     doc.text(String(s.eng || s.kor || 'Student'), M, y);
@@ -2777,6 +2828,18 @@ function reportDoc(c, list) {
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(70, 80, 100);
       const lines = doc.splitTextToSize(marks.length ? marks.join('    ') : 'Nothing marked yet', W);
       doc.text(lines, M, y + 5.5); y += 8 + lines.length * 4.4;
+    });
+    // Online homework (units passed), as in the class summary
+    (c.extras || []).filter(x => x.type === 'units').forEach(x => {
+      const v = (c.extra[s.id] || {})[x.id], got = Array.isArray(v) ? v : [];
+      let set = 0; c.students.forEach(t => { const w = (c.extra[t.id] || {})[x.id]; if (Array.isArray(w)) w.forEach(u => { set = Math.max(set, +u || 0); }); });
+      if (y > 260) { doc.addPage(); y = 22; }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(24, 35, 58);
+      doc.text(x.label, M, y); doc.text(set ? got.length + '/' + set : '-', M + W, y, { align: 'right' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(70, 80, 100);
+      const labs = x.labels || []; const miss = [...Array(set).keys()].map(u => u + 1).filter(u => !got.includes(u));
+      const line = (got.length ? 'Passed: ' + got.map(u => labs[u - 1] || u).join(', ') : 'Nothing passed yet') + (miss.length ? '    Not yet: ' + miss.map(u => labs[u - 1] || u).join(', ') : '');
+      const lines = doc.splitTextToSize(line, W); doc.text(lines, M, y + 5.5); y += 8 + lines.length * 4.4;
     });
     const notes = String(c.notes[s.id] || '').split('\n').map(x => x.trim()).filter(Boolean);
     if (y > 250) { doc.addPage(); y = 22; }
