@@ -2506,7 +2506,7 @@ function pick(v) {
   const c = cur(); if (!pad) return;
   setCell(c, pad.sid, pad.cat, pad.i, v);
   paint(pad.sid, pad.cat, pad.i); keep(c);
-  if (padAuto && v !== '') movePad(1); else openPad(pad.sid, pad.cat, pad.i);
+  if (padAuto) movePad(1); else openPad(pad.sid, pad.cat, pad.i);
 }
 document.getElementById('pad').addEventListener('click', e => {
   const p = e.target.closest('[data-pick]');
