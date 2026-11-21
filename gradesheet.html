@@ -1056,7 +1056,9 @@ function meetsToday(c) { return !c.example && (DAYNUMS[c.days] || []).includes(n
 const localYMD = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 /* Today's classes for TOPIA: every class you marked today (whatever its Days setting), plus any that meets today. */
 const markedToday = c => !c.example && c.marked && c.marked.on === localYMD();
-const todaysClasses = () => classes.filter(c => markedToday(c) || meetsToday(c));
+const touchDay = (c, i) => { if (!c.example) c.marked = { on: localYMD(), day: i }; }; // also on Everyone present / 100% / Send, even when nothing changed
+const scoredOnToday = c => { if (c.example) return false; const t = `${new Date().getMonth() + 1}/${new Date().getDate()}`; for (let j = 0; j < NDAYS; j++) if (dateFor(c, j) === t) return c.students.some(s => c.cats.some(k => val(c, s.id, k.id, j))); return false; };
+const todaysClasses = (also) => classes.filter(c => c === also || markedToday(c) || meetsToday(c) || scoredOnToday(c));
 function autoPickHTML() {
   if (!autoPick || autoPick.to !== current) { autoPick = null; return ''; }
   const from = classes.find(c => c.id === autoPick.from), to = cur();
@@ -1952,6 +1954,7 @@ document.addEventListener('click', async e => {
   const c = cur(), i = pickDay(c), t = topiaPayload(c, i), m = b.parentNode.querySelector('.topiamsg');
   const n = JSON.parse(t.slice(10)).rows.length;
   if (!n) { m.hidden = false; m.textContent = 'No scores on this day yet.'; return; }
+  touchDay(c, i); keep(c);
   // Opens the Weekly Report with the scores in the link; TOPIA Helper fills them in there (the teacher presses Save).
   const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(t.slice(10)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const w = window.open('https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report#gs-topia=' + b64, 'gsTopia');
@@ -1963,7 +1966,8 @@ document.addEventListener('click', async e => {
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act="topiaall"]'); if (!b) return;
   const m = b.parentNode.querySelector('.topiamsg');
-  const t0 = todayMD(), items = todaysClasses().map(c => {
+  const t0 = todayMD(), here = cur(), items = todaysClasses(here).map(c => {
+    if (c === here && !markedToday(c)) { touchDay(c, pickDay(c)); keep(c); }
     // the day marked today; else today's lesson by date; else the last marked day
     let i = markedToday(c) ? c.marked.day : [...Array(NDAYS).keys()].find(j => dateFor(c, j) === t0); if (i === undefined) i = Math.max(0, lastMarked(c));
     return JSON.parse(topiaPayload(c, i, dateFor(c, i) || (meetsToday(c) || markedToday(c) ? t0 : '')).slice(10)); }).filter(x => x.rows.length);
@@ -2436,7 +2440,7 @@ function dayHTML(c, syl) {
     h += `<div class="dnote"><span class="lab">Notes</span>${noteBoxHTML(c, s.id)}</div>${open ? `<div class="cardfoot"><button type="button" class="small" data-act="report">📄 Report</button>${leaveTools(c, s)}</div>` : ''}<button type="button" class="linkbtn morebtn" data-more aria-expanded="${open}">${open ? 'Less ▴' : `More for ${esc(s.eng || s.kor)}${extra ? ` (${extra})` : ''} ▾`}</button></article>`;
   });
   h += '</div>';
-  h += `<div class="topiarow"><button type="button" class="small" data-act="topia" title="Opens TOPIA\'s Weekly Report with this day\'s scores filled in by TOPIA Helper">⇪ Send Day ${i + 1} to TOPIA</button>${todaysClasses().length > 1 && todaysClasses().includes(c) ? `<button type="button" class="small" data-act="topiaall" title="Every class you marked today or that meets today, one after another: TOPIA Helper fills each, you check and press Save">⇪ All of today's classes</button>` : ''}<button type="button" class="info" data-info="topiahelp" aria-label="How to send scores to TOPIA">ⓘ</button>${hwTarget(c) || shTarget(c) ? `<button type="button" class="small" data-act="hwpaste">⇩ Paste online homework</button>` : ''}<span class="topiamsg hint" hidden></span>
+  h += `<div class="topiarow"><button type="button" class="small" data-act="topia" title="Opens TOPIA\'s Weekly Report with this day\'s scores filled in by TOPIA Helper">⇪ Send Day ${i + 1} to TOPIA</button>${todaysClasses(c).length > 1 ? `<button type="button" class="small" data-act="topiaall" title="Every class you marked today or that meets today, one after another: TOPIA Helper fills each, you check and press Save">⇪ All of today's classes</button>` : ''}<button type="button" class="info" data-info="topiahelp" aria-label="How to send scores to TOPIA">ⓘ</button>${hwTarget(c) || shTarget(c) ? `<button type="button" class="small" data-act="hwpaste">⇩ Paste online homework</button>` : ''}<span class="topiamsg hint" hidden></span>
     <div class="hint infotext" id="topiahelp" hidden>${window.gsKO ? `<b>⇪ N회차 TOPIA로 보내기</b>를 누르세요 (<a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">TOPIA Weekly Report ↗</a>가 열립니다). 칸이 아직 안 채워졌으면 TOPIA에서 <b>📒 TOPIA Helper</b> 북마크를 누르고, 확인한 뒤 Save를 누르세요. 점수는 TOPIA 만점에 맞춰 환산됩니다 (8/9 → 89/100).${hwTarget(c) || shTarget(c) ? `<br><br><b>온라인 숙제:</b> TOPIA 아무 페이지에서 TOPIA Helper → <b>온라인 숙제 → 성적표</b>를 누르세요. 통과한 단어 유닛과 쉐도잉이 자동으로 체크됩니다 (iPad에서는 여기서 <b>온라인 숙제 붙여넣기</b>). 단어 통과 = Word Study와 Matching Game 완료, 그리고 테스트 1–3 각각 80% 이상 또는 테스트 5개 모두 완료.` : ''}<br><br>북마크가 아직 없나요? 기기마다 한 번 <a href="https://disconnekted.github.io/Class-tools/topia-helper.html" target="_blank" rel="noopener">TOPIA Helper 설정</a>을 하세요.` : `Tap <b>Send Day N to TOPIA</b> (it opens <a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">TOPIA's Weekly Report ↗</a>). On TOPIA, tap your <b>📒 TOPIA Helper</b> bookmark if the boxes aren't filled yet, check them and press Save. Scores go in as a share of TOPIA's totals (8/9 → 89/100).${hwTarget(c) || shTarget(c) ? `<br><br><b>Online homework:</b> on any TOPIA page tap TOPIA Helper → <b>Online homework</b>. The gradesheet ticks passed word units and shadowing by itself (on iPad, tap <b>Paste online homework</b> here). Words pass = Word Study and Matching Game done, plus tests 1–3 each 80% or more, or all 5 tests done.` : ''}<br><br>No bookmark yet? <a href="https://disconnekted.github.io/Class-tools/topia-helper.html" target="_blank" rel="noopener">Set up TOPIA Helper</a> once on each device.`}</div></div>`;
   if (away.length) h += `<p class="hint">Not in this class on Day ${i + 1}: ${away.map(s => `${esc(s.eng || s.kor)} (${esc(statusText(s))})`).join(', ')}. Use Whole sheet to bring a student back.</p>`;
   return h;
@@ -2572,7 +2576,7 @@ main.addEventListener('click', e => {
     const i = pickDay(c), att = c.cats.find(k => k.kind === 'att');
     if (!att) return;
     c.students.forEach(s => { if (inClass(s, i) && !val(c, s.id, att.id, i)) { setCell(c, s.id, att.id, i, 'P'); paint(s.id, att.id, i); } });
-    keep(c); render();
+    touchDay(c, i); keep(c); render();
   }
   const cb = e.target.closest('[data-act="clearday"]');
   if (cb) {
@@ -2595,7 +2599,7 @@ main.addEventListener('click', e => {
       if (a === 'A') return; // absent students get nothing
       c.cats.filter(shown).forEach(k => { if (!val(c, s.id, k.id, i)) { setCell(c, s.id, k.id, i, full(k)); n++; } });
     });
-    keep(c); render(); if (typeof flashMsg === 'function') flashMsg(n ? `Filled ${n} empty box${n > 1 ? 'es' : ''} with full marks for Day ${i + 1}. Tap any score to change it.` : 'Nothing to fill: every box for today already has a mark.');
+    touchDay(c, i); keep(c); render(); if (typeof flashMsg === 'function') flashMsg(n ? `Filled ${n} empty box${n > 1 ? 'es' : ''} with full marks for Day ${i + 1}. Tap any score to change it.` : 'Nothing to fill: every box for today already has a mark.');
   }
 });
 main.addEventListener('change', e => {
