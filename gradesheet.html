@@ -103,6 +103,7 @@ table.gs th.m2{background:var(--band2);color:var(--ink)}
 table.gs th.m3{background:var(--band1);color:var(--accent-ink)}
 table.gs td.m2{background:var(--band2-soft)}
 table.gs td.due{background:var(--due)}
+.dueline{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 8px}.dueline [data-duetoggle][aria-pressed=true]{background:var(--due);border-color:var(--warn,#c90);font-weight:700}.dueline .shiftbtns{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-left:auto}
 table.gs tr.r2 th.day{font:500 10.5px var(--f-mono);letter-spacing:0;text-transform:none;line-height:1.15;vertical-align:middle}
 table.gs tr.r2 th.day .tag{display:block;font:700 9.5px var(--f-body);color:inherit;opacity:.9}
 table.gs tr.r3 th.day input{width:100%;height:100%;border:0;border-radius:0;background:transparent;font:400 10.5px var(--f-mono);text-align:center;padding:0}
@@ -735,7 +736,12 @@ function syllabusFor(c) {
   if (!s) return null;
   // Keys: "V1|spc|A" (Sem A), "E2|gr|AB" (both semesters), "V1|spc" (Sem B).
   const k = (c.level || levelOf(c.name)) + '|' + s.code, sem = c.sem === 'A' ? 'A' : 'B';
-  return SYL[k + '|' + sem] || SYL[k + '|AB'] || (sem === 'B' ? SYL[k] : null) || null;
+  const base = SYL[k + '|' + sem] || SYL[k + '|AB'] || (sem === 'B' ? SYL[k] : null) || null;
+  // "We're a lesson behind / ahead" (per class): behind adds a catch-up lesson on that day and pushes the plan on; ahead pulls the next lesson's plan in.
+  if (!base || !(c.sylShift || []).length) return base;
+  const d = base.d.slice();
+  c.sylShift.forEach(x => { if (x.by > 0) d.splice(x.from, 0, [typeof L === 'function' ? L('Catch-up lesson', '보충 수업') : 'Catch-up lesson', '', '']); else d.splice(x.from, 1); });
+  return Object.assign({}, base, { d, moved: c.sylShift.reduce((a, x) => a + x.by, 0) });
 }
 
 /* ---------- scores ---------- */
@@ -1211,6 +1217,7 @@ function dayHead(c, syl, i) {
 const monthOf = i => i < 8 ? 0 : i < 16 ? 1 : 2;
 // due 's' (O2/O3 Integrated summaries): handed in every lesson except Day 1 and monthly test days.
 function isDue(cat, syl, i) {
+  if (cat.dueOn && cat.dueOn[i] !== undefined) return !!cat.dueOn[i]; // teacher's own choice for that day
   if (cat.due === 's') return i > 0 && !(syl && syl.d[i] && syl.d[i][2].includes('m'));
   return !!(cat.due && syl && syl.d[i] && syl.d[i][2].includes(cat.due));
 }
@@ -2412,6 +2419,28 @@ function copyStudentsBookmarklet() {
 }
 const COPY_STUDENTS_BM = 'javascript:' + encodeURIComponent('(' + copyStudentsBookmarklet.toString() + ')()');
 document.querySelectorAll('[data-copystudents]').forEach(a => { a.href = COPY_STUDENTS_BM; });
+// Due today: tap a column to say it is (or isn't) done today. Plus moving the syllabus when the class is behind or ahead.
+const dueCats = c => c.cats.filter(k => k.kind !== 'att' && !/particip/i.test(k.label));
+function dueLine(c, syl, i) {
+  if (c.example) return '';
+  const ks = dueCats(c); if (!ks.length && !syl) return '';
+  const moved = syl && syl.moved, n = Math.abs(moved || 0);
+  return `<div class="row dueline"><span class="hint">${L('Due today:', '오늘 할 것:')}</span>${ks.map(k => `<button type="button" class="small" data-duetoggle="${esc(k.id)}" aria-pressed="${isDue(catAt(c, k, i), syl, i)}" title="${esc(L('Tap to say this is or isn\'t done today', '오늘 하는지 안 하는지 눌러서 바꾸기'))}">${esc(k.label)}</button>`).join('')}${syl ? `<span class="shiftbtns"><button type="button" class="small" data-shift="1" title="${esc(L('Today becomes a catch-up lesson and the plan from today on moves one lesson later. This class only.', '오늘은 보충 수업이 되고, 오늘부터의 계획이 한 수업씩 뒤로 밀립니다. 이 반만.'))}">${L('⏪ We\'re a lesson behind', '⏪ 한 수업 늦음')}</button><button type="button" class="small" data-shift="-1" title="${esc(L('Today gets the next lesson\'s plan and everything after moves one lesson earlier. This class only.', '오늘 다음 수업 계획을 하고, 이후 계획이 한 수업씩 앞당겨집니다. 이 반만.'))}">${L('We\'re a lesson ahead ⏩', '한 수업 빠름 ⏩')}</button>${(c.sylShift || []).length ? `<button type="button" class="small linkbtn" data-shift="undo">${L('Undo last move', '마지막 이동 취소')}</button><span class="hint">${moved ? (moved > 0 ? L(`Syllabus ${n} lesson${n > 1 ? 's' : ''} later for this class`, `이 반 계획: ${n}수업 뒤로`) : L(`Syllabus ${n} lesson${n > 1 ? 's' : ''} earlier for this class`, `이 반 계획: ${n}수업 앞으로`)) : ''}</span>` : ''}</span>` : ''}</div>`;
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-duetoggle],[data-shift]'); if (!t) return;
+  const c = cur(); if (!c || c.example) return;
+  const i = pickDay(c);
+  if (t.dataset.duetoggle) {
+    const k = c.cats.find(x => x.id === t.dataset.duetoggle); if (!k) return;
+    const now = isDue(catAt(c, k, i), syllabusFor(c), i);
+    k.dueOn = k.dueOn || {}; delete k.dueOn[i];
+    if (isDue(catAt(c, k, i), syllabusFor(c), i) === now) k.dueOn[i] = now ? 0 : 1; // differs from the syllabus: remember it
+    if (!Object.keys(k.dueOn).length) delete k.dueOn;
+  } else if (t.dataset.shift === 'undo') { (c.sylShift || []).pop(); if (c.sylShift && !c.sylShift.length) delete c.sylShift; }
+  else { (c.sylShift = c.sylShift || []).push({ from: i, by: +t.dataset.shift }); }
+  keep(c); render();
+});
 function dayHTML(c, syl) {
   const i = pickDay(c), d = syl && syl.d[i];
   const tagWords = { w: 'word test', m: 'monthly test', e: 'essay', p: 'presentation' };
@@ -2424,6 +2453,7 @@ function dayHTML(c, syl) {
     </div>
     <div class="daystrip" aria-label="Jump to a lesson">${[...Array(NDAYS).keys()].map(j => `<button type="button" data-day="${j}" class="m${monthOf(j) + 1}${marked(j) ? ' done' : ''}" aria-current="${j === i}">${j + 1}</button>`).join('')}</div>
     ${!c.start && !c.example ? `<p class="nudge">📅 Set the <b>Day 1 date</b> so this opens on today's lesson: <input type="date" data-setstart aria-label="Day 1 date"></p>` : ''}
+    ${dueLine(c, syl, i)}
     <div class="row dayacts"><button type="button" class="primary" data-act="allpresent">✓ Everyone present</button><button type="button" data-act="allfull" title="Everyone here gets full marks for what is done today: attendance, participation and anything due today. Boxes you already filled stay as they are.">100% everyone</button><button type="button" data-act="clearday" title="Empty every box for this day, for every student. Tap twice to confirm.">Clear all</button>${c.cats.filter(isWordCat).map(k => `<label class="dayout" title="Change this if today's test has a different number of questions. Only Day ${i + 1} changes."><span>${esc(k.label)}</span> ${L('out of', '만점')} <input type="number" inputmode="numeric" min="1" max="200" data-dayout="${esc(k.id)}" value="${esc(outOfAt(c, k, i))}" placeholder="${esc(k.outOf || '')}"></label>`).join('')}${marked(i) ? '' : '<span class="hint">then tap anyone late or absent</span>'}</div>${monthlyHTML(c, syl, i)}`;
   if (!c.students.length) return h + '<p class="hint">No students yet. Tap + Add students at the top to paste the class list.</p>';
   h += '<div class="cards">';
@@ -2662,7 +2692,7 @@ main.addEventListener('submit', e => {
     'Attendance': '출석', 'Participation': '참여도', 'Word Test': '단어 시험', 'Monthly Test': '월말 평가', 'Summary Handed In': '요약 제출',
     'Essay': '에세이', 'Writing': '작문', 'Presentation': '발표', 'Debate': '토론', 'Speech': '스피치', 'Integrated': '통합', 'Speaking': '스피킹',
     'Phonics': '파닉스', 'Grammar': '문법', 'TOEFL Reading': '토플 리딩', 'Language Arts': '랭귀지 아츠', 'Vocabulary Test': '단어 시험', 'Vocabulary': '단어',
-    'Idioms Test': '숙어 시험', 'Reading Practice': '읽기 연습', 'iBT Practice': 'iBT 연습', 'Introduction': '도입', 'Shadowing': '쉐도잉', 'Online': '온라인', 'Online homework': '온라인 숙제', 'Monthly report': '월별 리포트', 'Notes': '메모',
+    'Idioms Test': '숙어 시험', 'Catch-up lesson': '보충 수업', 'Summary': '요약', 'Reading Practice': '읽기 연습', 'iBT Practice': 'iBT 연습', 'Introduction': '도입', 'Shadowing': '쉐도잉', 'Online': '온라인', 'Online homework': '온라인 숙제', 'Monthly report': '월별 리포트', 'Notes': '메모',
     'Avg': '평균', 'No': '번호', 'Name': '이름', 'Date': '날짜', 'Day': '회차', 'Change date': '날짜 변경', 'Score': '점수', 'Kind': '종류', 'Out of': '만점', 'out of': '만점',
     '✓ Everyone present': '✓ 전원 출석', '100% everyone': '전원 100%', 'Clear all': '모두 지우기', 'Word Test out of': '단어 시험 만점',
     'then tap anyone late or absent': '그다음 지각·결석 학생을 누르세요', '✓ Here': '✓ 출석', 'Late': '지각', 'Absent': '결석', '✓ In': '✓ 제출', '✗ Not in': '✗ 미제출',
