@@ -2477,7 +2477,7 @@ document.querySelectorAll('[data-copystudents]').forEach(a => { a.href = COPY_ST
 // Due today: tap a column to say it is (or isn't) done today. Plus moving the syllabus when the class is behind or ahead.
 const dueCats = c => c.cats.filter(k => k.kind !== 'att' && !/particip/i.test(k.label));
 function dueLine(c, syl, i) {
-  if (c.example) return '';
+  if (c.example && !c.tour) return '';
   const ks = dueCats(c); if (!ks.length && !syl) return '';
   const moved = syl && syl.moved, n = Math.abs(moved || 0);
   return `<div class="row dueline"><span class="hint">${L('Due today:', '오늘 할 것:')}</span>${ks.map(k => `<button type="button" class="small" data-duetoggle="${esc(k.id)}" aria-pressed="${isDue(catAt(c, k, i), syl, i)}" title="${esc(L('Tap to say this is or isn\'t done today', '오늘 하는지 안 하는지 눌러서 바꾸기'))}">${esc(k.label)}</button>${/^col-/.test(k.id) ? `<button type="button" class="small ghost duedel" data-duedel="${esc(k.id)}" aria-label="${esc(L('Delete ' + k.label, k.label + ' 삭제'))}" title="${esc(L('Delete this item from every day', '모든 날에서 이 항목 삭제'))}">×</button>` : ''}`).join('')}${ks.some(k => isDue(catAt(c, k, i), syl, i)) ? `<button type="button" class="small" data-dueclear title="${esc(L('Switch off everything due today except attendance and participation. Marks already entered stay.', '출석과 참여도만 남기고 오늘 할 것을 모두 끕니다. 입력한 점수는 그대로 둡니다.'))}">${L('Clear extras', '기타 모두 끄기')}</button>` : ''}<button type="button" class="small" data-dueother aria-expanded="false">${L('+ Other', '+ 기타')}</button><span class="dueother" hidden><input type="text" data-dueothername placeholder="${esc(L('e.g. Quiz, Homework check', '예: 퀴즈, 숙제 검사'))}" aria-label="${esc(L('Name of the item', '항목 이름'))}" maxlength="30"><select data-dueotherkind aria-label="${esc(L('How to mark it', '채점 방식'))}"><option value="check">${L('✓ Done / not done', '✓ 함 / 안 함')}</option><option value="score">${L('Score', '점수')}</option><option value="mark">○ △ ✗</option></select><input type="number" inputmode="numeric" min="1" max="200" data-dueotherout placeholder="${esc(L('out of', '만점'))}" aria-label="${esc(L('Out of', '만점'))}" hidden><button type="button" class="small primary" data-dueotheradd>${L('Add for today', '오늘에 추가')}</button></span>${syl ? `<span class="shiftbtns"><button type="button" class="small" data-shift="1" title="${esc(L('Today becomes a catch-up lesson and the plan from today on moves one lesson later. This class only.', '오늘은 보충 수업이 되고, 오늘부터의 계획이 한 수업씩 뒤로 밀립니다. 이 반만.'))}">${L('⏪ We\'re a lesson behind', '⏪ 한 수업 늦음')}</button><button type="button" class="small" data-shift="-1" title="${esc(L('Today gets the next lesson\'s plan and everything after moves one lesson earlier. This class only.', '오늘 다음 수업 계획을 하고, 이후 계획이 한 수업씩 앞당겨집니다. 이 반만.'))}">${L('We\'re a lesson ahead ⏩', '한 수업 빠름 ⏩')}</button>${(c.sylShift || []).length ? `<button type="button" class="small linkbtn" data-shift="undo">${L('Undo last move', '마지막 이동 취소')}</button><span class="hint">${moved ? (moved > 0 ? L(`Syllabus ${n} lesson${n > 1 ? 's' : ''} later for this class`, `이 반 계획: ${n}수업 뒤로`) : L(`Syllabus ${n} lesson${n > 1 ? 's' : ''} earlier for this class`, `이 반 계획: ${n}수업 앞으로`)) : ''}</span>` : ''}</span>` : ''}</div>`;
@@ -2489,7 +2489,7 @@ document.addEventListener('click', e => {
   const add = e.target.closest('[data-dueotheradd]'); if (!add) return;
   const f = add.closest('.dueother'), nameEl = f.querySelector('[data-dueothername]'), name = clean(nameEl.value);
   if (!name) { nameEl.focus(); nameEl.classList.add('need'); return; }
-  const c = cur(); if (!c || c.example) return;
+  const c = cur(); if (!c || (c.example && !c.tour)) return;
   const i = pickDay(c), kind = f.querySelector('[data-dueotherkind]').value, out = f.querySelector('[data-dueotherout]').value;
   undoSnap(c);
   let k = c.cats.find(x => clean(x.label).toLowerCase() === name.toLowerCase());
@@ -2502,7 +2502,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.cl
 document.addEventListener('click', e => {
   const del = e.target.closest('[data-duedel]');
   if (del) {
-    const c = cur(); if (!c || c.example) return;
+    const c = cur(); if (!c || (c.example && !c.tour)) return;
     const k = c.cats.find(x => x.id === del.dataset.duedel); if (!k) return;
     const has = c.students.some(st => (((c.scores || {})[st.id] || {})[k.id] || []).some(v => v !== '' && v != null));
     if (has && !del.dataset.sure) { del.dataset.sure = '1'; del.textContent = L('Has marks: tap again to delete', '점수 있음: 다시 눌러 삭제'); del.classList.add('danger'); setTimeout(() => { if (del.isConnected) { delete del.dataset.sure; del.textContent = '×'; del.classList.remove('danger'); } }, 4000); return; }
@@ -2512,13 +2512,13 @@ document.addEventListener('click', e => {
     return;
   }
   if (e.target.closest('[data-dueclear]')) {
-    const c = cur(); if (!c || c.example) return;
+    const c = cur(); if (!c || (c.example && !c.tour)) return;
     const i = pickDay(c), syl = syllabusFor(c); undoSnap(c);
     dueCats(c).forEach(k => { if (isDue(catAt(c, k, i), syl, i)) { k.dueOn = k.dueOn || {}; delete k.dueOn[i]; if (isDue(catAt(c, k, i), syl, i)) k.dueOn[i] = 0; if (!Object.keys(k.dueOn).length) delete k.dueOn; } });
     keep(c); render(); return;
   }
   const t = e.target.closest('[data-duetoggle],[data-shift]'); if (!t) return;
-  const c = cur(); if (!c || c.example) return;
+  const c = cur(); if (!c || (c.example && !c.tour)) return;
   const i = pickDay(c);
   undoSnap(c);
   if (t.dataset.duetoggle) {
@@ -2782,7 +2782,7 @@ main.addEventListener('submit', e => {
     'Attendance': '출석', 'Participation': '참여도', 'Word Test': '단어 시험', 'Monthly Test': '월말 평가', 'Summary Handed In': '요약 제출',
     'Essay': '에세이', 'Writing': '작문', 'Presentation': '발표', 'Debate': '토론', 'Speech': '스피치', 'Integrated': '통합', 'Speaking': '스피킹',
     'Phonics': '파닉스', 'Grammar': '문법', 'TOEFL Reading': '토플 리딩', 'Language Arts': '랭귀지 아츠', 'Vocabulary Test': '단어 시험', 'Vocabulary': '단어',
-    'Idioms Test': '숙어 시험', 'Catch-up lesson': '보충 수업', 'Summary': '요약', 'Reading Practice': '읽기 연습', 'iBT Practice': 'iBT 연습', 'Introduction': '도입', 'Shadowing': '쉐도잉', 'Online': '온라인', 'Online homework': '온라인 숙제', 'Monthly report': '월별 리포트', 'Notes': '메모',
+    'Idioms Test': '숙어 시험', '🎓 Tutorial': '🎓 사용 안내', 'A step-by-step tour of every part of the gradesheet': '성적표 모든 기능을 단계별로 안내합니다', 'Practice class': '연습 반', 'Catch-up lesson': '보충 수업', 'Summary': '요약', 'Reading Practice': '읽기 연습', 'iBT Practice': 'iBT 연습', 'Introduction': '도입', 'Shadowing': '쉐도잉', 'Online': '온라인', 'Online homework': '온라인 숙제', 'Monthly report': '월별 리포트', 'Notes': '메모',
     'Avg': '평균', 'No': '번호', 'Name': '이름', 'Date': '날짜', 'Day': '회차', 'Change date': '날짜 변경', 'Score': '점수', 'Kind': '종류', 'Out of': '만점', 'out of': '만점',
     '✓ Everyone present': '✓ 전원 출석', '100% everyone': '전원 100%', 'Clear all': '모두 지우기', 'Word Test out of': '단어 시험 만점',
     'then tap anyone late or absent': '그다음 지각·결석 학생을 누르세요', '✓ Here': '✓ 출석', 'Late': '지각', 'Absent': '결석', '✓ In': '✓ 제출', '✗ Not in': '✗ 미제출',
@@ -2822,7 +2822,7 @@ main.addEventListener('submit', e => {
     [/^Vocabulary Test \/(\d+)$/, '단어 시험 /$1'], [/^Sem ([AB])$/, '$1학기'],
     [/^Date for day (\d+)$/, '$1회차 날짜'], [/^Change this if today's test has a different number of questions\. Only Day (\d+) changes\.$/, '오늘 시험 문항 수가 다르면 바꾸세요. $1회차만 바뀝니다.'], [/^Delete note: (.+)$/, '메모 삭제: $1'], [/^Day (\d+): (.+)$/, '$1회차: $2'], [/^Options for (.+)$/, '$1 옵션'], [/^Copied (\d+) students\. Paste them in the name tag tool$/, '학생 $1명을 복사했습니다. 이름표 도구에 붙여 넣으세요'], [/^Filled (\d+) empty box(?:es)? with full marks for Day (\d+)\. Tap any score to change it\.$/, '$2회차 빈칸 $1개를 만점으로 채웠습니다. 바꿀 점수는 누르세요.'], [/^Tap again to clear Day (\d+)$/, '한 번 더 누르면 $1회차를 지웁니다'], [/^Last backup (\d+) days ago: tap to save a copy$/, '마지막 백업 $1일 전: 눌러서 사본 저장'], [/^Got (\d+) of (\d+) codes\. Keep holding the iPad in front of the screen…$/, '코드 $2개 중 $1개 받음. iPad를 화면 앞에 계속 대고 있으세요…'], [/^Backed up (.+)$/, '백업함: $1'], [/^Code (\d+) of (\d+)$/, '코드 $1 / $2'], [/^(.+) only$/, '$1만'], [/^Monthly Test (I+) today\.$/, '오늘 월말 평가 $1.']
   ];
-  const SKIP = '.tbtn,.nlist,.nsum,td.c-name,.scard header,#clist,script,style,textarea,.nundo,#gsTopiaNote,.foot.raw';
+  const SKIP = '#gsTour,#tourOffer,.tbtn,.nlist,.nsum,td.c-name,.scard header,#clist,script,style,textarea,.nundo,#gsTopiaNote,.foot.raw';
   const tr = s => {
     const t = s.trim(); if (!t) return null;
     let k = KO[t]; if (k === undefined) for (const [re, to] of RULES) { if (re.test(t)) { k = t.replace(re, to); break; } }
@@ -3678,6 +3678,212 @@ classes = [exampleClass()]; current = classes[0].id; render();
 setSync('Connecting…');
 const useDb = window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
 Promise.resolve(useDb).catch(() => null).then(d => { if (d) startCloud(d); else { setSync('Saved on this device'); standaloneMode(); startLocal(); importFromLink(); onlineFromLink(); if (new URLSearchParams(location.search).get('send') === 'ipad' && me) ipadModal(); } });
+</script>
+<style>
+#gsTour{position:fixed;inset:0;z-index:9000;pointer-events:none;font:16px/1.5 var(--f-body)}
+#gsTour .tb{position:fixed;background:transparent;pointer-events:auto}
+#gsTour .hole{position:fixed;border-radius:10px;box-shadow:0 0 0 4px #ffc93c,0 0 0 9999px rgba(10,14,22,.58);transition:all .25s ease;pointer-events:none}
+#gsTour .hole.cover{pointer-events:auto}
+#gsTour .tcard{position:fixed;pointer-events:auto;background:var(--sheet);color:var(--ink);border:2px solid var(--accent);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:16px 18px 14px;width:min(420px,calc(100vw - 32px));transition:top .25s ease,left .25s ease}
+#gsTour .tcard h3{margin:0 0 6px;font:700 19px/1.3 var(--f-display)}
+#gsTour .tcard p{margin:0 0 8px}
+#gsTour .tcard ul{margin:0 0 8px;padding-left:20px}#gsTour .tcard li{margin:2px 0}
+#gsTour .try{background:var(--due);border-radius:8px;padding:6px 10px;font-weight:700;margin:4px 0 8px}
+#gsTour .try.ok{background:var(--ok-soft);color:var(--ok)}
+#gsTour .tnav{display:flex;align-items:center;gap:8px;margin-top:6px}
+#gsTour .tnav .grow{flex:1;color:var(--muted);font-size:14px}
+#gsTour .tbar{height:5px;background:var(--grid);border-radius:3px;margin:0 0 10px;overflow:hidden}#gsTour .tbar i{display:block;height:100%;background:var(--accent);transition:width .25s}
+#gsTour .tlang{position:fixed;inset:0;display:grid;place-items:center;background:rgba(10,14,22,.58);pointer-events:auto}
+#gsTour .tlang .tcard{position:static;text-align:center}
+#gsTour .tlang .big{font-size:18px;padding:12px 22px;margin:6px}
+@media (max-width:700px){#gsTour .tcard{left:16px!important;right:16px;width:auto;top:auto!important;bottom:16px}}
+</style>
+<script>
+/* Guided tour (John, 2026-11-22): language choice first, then a spotlight walks through every part of the
+   gradesheet on a practice class that is never saved. Some steps ask the teacher to try something. */
+(function () {
+  const lsG = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const lsS = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  let T = null; // running tour state
+  const q = s => typeof s === 'function' ? s() : document.querySelector(s);
+  const pageKO = () => lsG('gradesheet.lang') === 'ko';
+  const setPageLang = ko => { if (pageKO() === ko) return; const b = [...document.querySelectorAll('header.top .tools .tbtn')].find(x => /^(한|EN)$/.test(x.textContent.trim())); if (b) b.click(); };
+
+  const STEPS = [
+    { sel: null, en: ['Welcome to the Class Gradesheet', 'This tour uses a <b>practice class</b>, so nothing you tap is saved. Use <b>Next</b> and <b>Back</b>, or the arrow keys. Some steps ask you to try something.'],
+      ko: ['학급 성적표에 오신 걸 환영합니다', '이 안내는 <b>연습용 반</b>으로 진행되어 무엇을 눌러도 저장되지 않습니다. <b>다음</b>·<b>이전</b> 또는 방향키로 넘기세요. 직접 눌러 보는 단계도 있습니다.'] },
+    { sel: '#clist', en: ['Your classes', 'Every class you teach is listed here. Tap one to open it. The number is how many students it has. The class that meets today opens by itself.'],
+      ko: ['내 반', '가르치는 반이 모두 여기 있습니다. 반을 눌러 여세요. 숫자는 학생 수입니다. 오늘 수업하는 반이 자동으로 열립니다.'] },
+    { sel: '#addBox', before: () => { const d = document.getElementById('addBox'); if (d) d.open = true; }, after: () => { const d = document.getElementById('addBox'); if (d && T && !T.addWasOpen) d.open = false; },
+      en: ['Add students', 'On TOPIA’s Attendance page, tap <b>TOPIA Helper → Copy students</b>, then paste here and tap <b>Import</b>. Each class becomes its own sheet. You can also add a class by hand.'],
+      ko: ['학생 추가', 'TOPIA 출석부에서 <b>TOPIA Helper → 학생 복사</b>를 누르고, 여기에 붙여 넣은 뒤 <b>가져오기</b>를 누르세요. 반마다 성적표가 하나씩 생깁니다. 반을 직접 추가할 수도 있습니다.'] },
+    { sel: 'header.top .tools', en: ['The top bar', '<ul><li><b>☾ / ☀</b> dark or light</li><li><b>한 / EN</b> Korean or English</li><li><b>↶ Undo</b> takes back your last change</li><li><b>Your name · Switch</b> for shared computers</li><li><b>⋯ More</b>: back up, send to iPad, name tags, this tutorial</li></ul>'],
+      ko: ['위쪽 메뉴', '<ul><li><b>☾ / ☀</b> 다크·라이트 모드</li><li><b>한 / EN</b> 한국어·영어</li><li><b>↶ 되돌리기</b> 마지막 변경 취소</li><li><b>이름 · 전환</b> 함께 쓰는 컴퓨터용</li><li><b>⋯ 더보기</b>: 백업, iPad로 보내기, 이름표, 이 안내</li></ul>'] },
+    { sel: '.classhead', en: ['Class details', 'Tap the line under the class name (<b>✎ Details</b>) to set the subject, semester, class days, <b>Day 1 date</b> and room. With the Day 1 date set, the right lesson opens each day.'],
+      ko: ['반 정보', '반 이름 아래 줄(<b>✎ 세부 정보</b>)을 눌러 과목, 학기, 수업 요일, <b>1회차 날짜</b>, 강의실을 정하세요. 1회차 날짜가 있으면 매일 그날 수업이 열립니다.'] },
+    { sel: 'details.cols', en: ['Columns', 'The things you mark: attendance, participation, tests and so on. They follow the school syllabus. Open <b>Columns</b> to rename, add or remove one, or change what a test is out of.'],
+      ko: ['항목', '채점하는 것들: 출석, 참여도, 시험 등. 학교 실라버스를 따릅니다. <b>항목</b>을 열어 이름을 바꾸거나, 추가·삭제하거나, 시험 만점을 바꾸세요.'] },
+    { sel: '.viewbar', en: ['Two ways to look', '<b>Day by day</b> shows one lesson as big buttons, best on an iPad in class. <b>Whole sheet</b> shows all 24 lessons like the paper gradesheet.'],
+      ko: ['두 가지 보기', '<b>일별</b>은 한 수업을 큰 버튼으로 보여 주어 수업 중 iPad에 좋습니다. <b>전체 보기</b>는 종이 성적표처럼 24회차 전체를 보여 줍니다.'] },
+    { sel: '[data-view=sheet]', act: 'click', en: ['Try it', 'Tap <b>Whole sheet</b>.'], ko: ['해 보세요', '<b>전체 보기</b>를 누르세요.'], tryEn: '👉 Tap Whole sheet', tryKo: '👉 전체 보기를 누르세요' },
+    { sel: 'table.gs', before: () => { if (view !== 'sheet') { view = 'sheet'; render(); } },
+      en: ['The whole sheet', 'One row per column for each student, one box per lesson. Yellow boxes are due that day by the syllabus. Tap a date at the top to change it. On the right: average and the three monthly results. Tap any box to type a score.'],
+      ko: ['전체 보기', '학생마다 항목별 한 줄, 수업마다 한 칸입니다. 노란 칸은 실라버스상 그날 할 것입니다. 위쪽 날짜를 눌러 바꿀 수 있습니다. 오른쪽에는 평균과 월별 결과 3개가 있습니다. 칸을 눌러 점수를 입력하세요.'] },
+    { sel: '[data-view=day]', act: 'click', before: () => { if (view !== 'sheet') { view = 'sheet'; render(); } }, en: ['Back to one lesson', 'Tap <b>Day by day</b>.'], ko: ['한 수업 보기로', '<b>일별</b>을 누르세요.'], tryEn: '👉 Tap Day by day', tryKo: '👉 일별을 누르세요' },
+    { sel: '.daynav', day: true, en: ['Moving between lessons', 'Use <b>‹ ›</b> (or swipe on the iPad) to move a lesson, or tap a number to jump. A green line under a number means it already has marks. <b>Today ↩</b> brings you back to today.'],
+      ko: ['수업 이동', '<b>‹ ›</b>(iPad에서는 밀기)로 한 수업씩 이동하거나 숫자를 눌러 바로 가세요. 숫자 아래 초록 줄은 이미 채점한 날입니다. <b>오늘 ↩</b>을 누르면 오늘로 돌아옵니다.'] },
+    { sel: '.dueline', day: true, en: ['Due today', 'Yellow buttons are what is done today. Tap one to switch it on or off for this lesson only.<ul><li><b>+ Other</b> adds your own item (a quiz, a homework check)</li><li><b>Clear extras</b> leaves only attendance and participation</li><li><b>We’re a lesson behind / ahead</b> moves the syllabus for this class</li></ul>'],
+      ko: ['오늘 할 것', '노란 버튼이 오늘 하는 것입니다. 누르면 이 수업에서만 켜고 끌 수 있습니다.<ul><li><b>+ 기타</b>: 직접 항목 추가 (퀴즈, 숙제 검사)</li><li><b>기타 모두 끄기</b>: 출석과 참여도만 남김</li><li><b>한 수업 늦음 / 빠름</b>: 이 반의 실라버스를 옮김</li></ul>'] },
+    { sel: '.dayacts', day: true, en: ['Quick buttons for the whole class', '<ul><li><b>✓ Everyone present</b> marks everyone here</li><li><b>100% everyone</b> gives full marks for today’s items (boxes you filled stay)</li><li><b>Clear all</b> empties the day (tap twice)</li><li><b>Word Test out of</b> changes today’s test total only</li></ul>'],
+      ko: ['반 전체용 빠른 버튼', '<ul><li><b>✓ 전원 출석</b>: 모두 출석 처리</li><li><b>전원 100%</b>: 오늘 항목에 만점 (채운 칸은 그대로)</li><li><b>모두 지우기</b>: 그날을 비움 (두 번 누름)</li><li><b>단어 시험 만점</b>: 오늘 시험 만점만 변경</li></ul>'] },
+    { sel: '[data-act=allpresent]', day: true, act: 'click', en: ['Try it', 'Tap <b>✓ Everyone present</b>.'], ko: ['해 보세요', '<b>✓ 전원 출석</b>을 누르세요.'], tryEn: '👉 Tap ✓ Everyone present', tryKo: '👉 ✓ 전원 출석을 누르세요' },
+    { sel: '.cards .scard', day: true, en: ['A student card', 'One card per student: English and Korean name, and their overall %. It shows attendance, participation and today’s items. The rest is under <b>More for …</b>.'],
+      ko: ['학생 카드', '학생마다 카드 한 장: 영어·한국어 이름과 전체 %. 출석, 참여도, 오늘 항목이 보이고 나머지는 <b>… 더보기</b>에 있습니다.'] },
+    { sel: () => document.querySelector('.cards .scard .seg .v-L'), day: true, act: 'click', en: ['Try it: someone came late', 'Tap <b>Late</b> for this student. Absent works the same way.'], ko: ['해 보세요: 지각한 학생', '이 학생의 <b>지각</b>을 누르세요. 결석도 같은 방법입니다.'], tryEn: '👉 Tap Late', tryKo: '👉 지각을 누르세요' },
+    { sel: () => document.querySelector('.cards .scard .scorebtn'), day: true, act: 'pad', en: ['Try it: give a score', 'Tap <b>Tap to score</b>.'], ko: ['해 보세요: 점수 주기', '<b>눌러서 점수 입력</b>을 누르세요.'], tryEn: '👉 Tap “Tap to score”', tryKo: '👉 “눌러서 점수 입력”을 누르세요' },
+    { sel: '#pad .padbox', pad: true, en: ['The score pad', 'Tap a number. It saves and jumps to the <b>next student</b>, so you can go down the class quickly.<ul><li><b>AB</b> absent on a test day</li><li><b>Clear</b> empties the box</li><li><b>Other</b> for 17.5, 17/20 or 85%</li><li><b>‹ Prev / Next ›</b> move without scoring</li></ul>Tap <b>Done</b> when finished.'],
+      ko: ['점수 패드', '숫자를 누르면 저장되고 <b>다음 학생</b>으로 넘어가 빠르게 채점할 수 있습니다.<ul><li><b>AB</b> 시험날 결석</li><li><b>지우기</b> 칸 비우기</li><li><b>기타</b> 17.5, 17/20, 85% 입력</li><li><b>‹ 이전 / 다음 ›</b> 채점 없이 이동</li></ul>끝나면 <b>완료</b>를 누르세요.'] },
+    { sel: () => document.querySelector('.cards .scard .dnote'), day: true, before: () => { if (typeof closePad === 'function') closePad(); },
+      en: ['Notes', 'Tap <b>+ Note</b> to write about a student, or use the quick notes: <b>Late, Disruptive, Sent outside, Retest, No book</b>. Notes go into the class summary.'],
+      ko: ['메모', '<b>+ 메모</b>를 눌러 학생에 대해 쓰거나, 빠른 메모 <b>지각, 수업 방해, 밖으로 내보냄, 재시험, 책 없음</b>을 쓰세요. 메모는 반 요약에 들어갑니다.'] },
+    { sel: () => document.querySelector('.cards .scard .morebtn'), day: true, en: ['More for a student', 'The other columns for this student, plus: moved class or left, back in class, or delete a student added by mistake.'],
+      ko: ['학생 더보기', '이 학생의 나머지 항목과 함께: 반 이동·퇴원, 다시 수강, 잘못 추가한 학생 삭제.'] },
+    { sel: '.topiarow', day: true, en: ['TOPIA', '<ul><li><b>⇪ Send Day N to TOPIA</b> opens the Weekly Report and TOPIA Helper fills in the scores. You check and press Save.</li><li><b>⇪ All of today’s classes</b> does every class you taught today, one after another.</li><li><b>⇩ Paste online homework</b> ticks the online word study and shadowing.</li></ul>'],
+      ko: ['TOPIA', '<ul><li><b>⇪ N회차 TOPIA로 보내기</b>: Weekly Report를 열고 TOPIA Helper가 점수를 채웁니다. 확인 후 Save를 누르세요.</li><li><b>⇪ 오늘 수업 반 모두</b>: 오늘 수업한 반을 차례로 보냅니다.</li><li><b>⇩ 온라인 숙제 붙여넣기</b>: 온라인 단어 학습과 쉐도잉을 체크합니다.</li></ul>'] },
+    { sel: '.foldrow', day: true, en: ['New student or class notes', '<b>+ Add a student</b> for someone who joins mid-semester. <b>Class notes</b> for anything about the whole class.'],
+      ko: ['새 학생과 반 메모', '<b>+ 학생 추가</b>: 학기 중에 들어온 학생. <b>반 메모</b>: 반 전체에 관한 내용.'] },
+    { sel: '.sendpanel', day: true, before: () => { const d = document.querySelector('.sendpanel'); if (d) { T.sendWasOpen = d.open; d.open = true; } }, after: () => { const d = document.querySelector('.sendpanel'); if (d && T && !T.sendWasOpen) d.open = false; },
+      en: ['Send or print', 'Print a <b>blank gradesheet</b>, save the filled sheet as PDF or Excel, email it, or make the <b>📊 Class summary</b> PDF (Korean and English) for parents or the head teacher.'],
+      ko: ['보내기·인쇄', '<b>빈 성적표</b>를 인쇄하고, 채운 성적표를 PDF·엑셀로 저장하거나 이메일로 보내고, 학부모나 담당 선생님께 줄 <b>📊 반 요약</b> PDF(한국어·영어)를 만드세요.'] },
+    { sel: '#chartFab', en: ['Score chart', 'The round <b>%</b> button turns a score into a percentage (for tests out of 35, 30, 25, 20 or 15).'],
+      ko: ['점수표', '둥근 <b>%</b> 버튼은 점수를 %로 바꿔 줍니다 (35, 30, 25, 20, 15점 만점 시험).'] },
+    { sel: '#moreBtn', en: ['That’s everything!', 'Remember to <b>⤓ Back up</b> now and then under <b>⋯ More</b>. You can watch this tour again there any time: <b>🎓 Tutorial</b>.'],
+      ko: ['끝났습니다!', '가끔 <b>⋯ 더보기</b>에서 <b>⤓ 백업</b>하세요. 이 안내는 언제든 같은 곳의 <b>🎓 사용 안내</b>에서 다시 볼 수 있습니다.'] },
+  ];
+
+  function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+
+  function start() {
+    if (T) return;
+    document.getElementById('moreMenu') && (document.getElementById('moreMenu').hidden = true);
+    const root = el('div'); root.id = 'gsTour'; root.setAttribute('translate', 'no'); document.body.appendChild(root);
+    const lang = el('div', 'tlang', `<div class="tcard" role="dialog" aria-modal="true"><h3>🎓 Tutorial · 사용 안내</h3><p>Choose a language<br>언어를 고르세요</p><button type="button" class="big primary" data-l="ko">한국어</button><button type="button" class="big primary" data-l="en">English</button><p style="margin-top:10px"><button type="button" class="small ghost" data-l="x">Not now · 나중에</button></p></div>`);
+    root.appendChild(lang);
+    lang.addEventListener('click', e => { const b = e.target.closest('[data-l]'); if (!b) return; if (b.dataset.l === 'x') { root.remove(); lsS('gradesheet.tourSeen', '1'); return; } lang.remove(); begin(root, b.dataset.l === 'ko'); });
+  }
+
+  function begin(root, ko) {
+    lsS('gradesheet.tourSeen', '1');
+    setPageLang(ko);
+    const demo = exampleClass(); demo.level = demo.level || levelOf(demo.name); demo.name = ko ? '연습 반' : 'Practice class'; demo.tour = true;
+    T = { root, ko, i: 0, demo, prevCurrent: current, prevView: view, addWasOpen: !!(document.getElementById('addBox') || {}).open };
+    classes.push(demo); current = demo.id; view = 'day'; render();
+    T.blockers = ['t', 'b', 'l', 'r'].map(() => { const b = el('div', 'tb'); root.appendChild(b); return b; });
+    T.hole = el('div', 'hole'); root.appendChild(T.hole);
+    T.card = el('div', 'tcard'); T.card.setAttribute('role', 'dialog'); T.card.setAttribute('aria-live', 'polite'); root.appendChild(T.card);
+    T.card.addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (!b) return; const a = b.dataset.t; if (a === 'next') go(T.i + 1); else if (a === 'back') go(T.i - 1); else if (a === 'end') end(); });
+    T.onKey = e => { if (!T) return; if (e.key === 'Escape') end(); else if (e.key === 'ArrowRight' && !e.target.closest('input,textarea,select') && !document.body.classList.contains('padopen')) go(T.i + 1); else if (e.key === 'ArrowLeft' && !e.target.closest('input,textarea,select') && !document.body.classList.contains('padopen')) go(T.i - 1); };
+    document.addEventListener('keydown', T.onKey);
+    T.onMove = () => place(); addEventListener('resize', T.onMove); addEventListener('scroll', T.onMove, true);
+    T.onClick = e => onAct(e); document.addEventListener('click', T.onClick, true);
+    go(0);
+  }
+
+  function step() { return STEPS[T.i]; }
+  function target() { const s = step(); return s.sel ? q(s.sel) : null; }
+
+  function go(i) {
+    if (!T) return;
+    if (i < 0) i = 0;
+    if (i >= STEPS.length) return end();
+    const prev = STEPS[T.i]; if (prev && prev.after && i !== T.i) try { prev.after(); } catch (e) {}
+    T.i = i; T.done = false;
+    const s = step();
+    if (current !== T.demo.id) { current = T.demo.id; render(); }
+    if (s.day && view !== 'day') { view = 'day'; render(); }
+    if (!s.pad && document.body.classList.contains('padopen') && typeof closePad === 'function') closePad();
+    if (s.pad && !document.body.classList.contains('padopen')) { const b = document.querySelector('.cards .scard .scorebtn'); if (b) b.click(); }
+    if (s.before) try { s.before(); } catch (e) {}
+    paintCard();
+    const t = target();
+    if (t && !s.pad) { const r = t.getBoundingClientRect(); if (r.top < 70 || r.bottom > innerHeight - 40) t.scrollIntoView({ block: r.height > innerHeight * .6 ? 'start' : 'center', behavior: 'instant' in document.documentElement.style ? 'instant' : 'auto' }); }
+    requestAnimationFrame(place); setTimeout(place, 120);
+  }
+
+  function paintCard() {
+    const s = step(), ko = T.ko, [h, p] = ko ? s.ko : s.en, last = T.i === STEPS.length - 1;
+    const tryTxt = s.act ? (T.done ? (ko ? '✓ 잘했어요!' : '✓ Well done!') : (ko ? s.tryKo : s.tryEn)) : '';
+    T.card.innerHTML = `<div class="tbar"><i style="width:${Math.round((T.i + 1) / STEPS.length * 100)}%"></i></div><h3>${h}</h3><p>${p}</p>${tryTxt ? `<div class="try${T.done ? ' ok' : ''}">${tryTxt}</div>` : ''}
+      <div class="tnav"><button type="button" class="small ghost" data-t="end">${ko ? '안내 끝내기' : 'End tour'}</button><span class="grow">${T.i + 1} / ${STEPS.length}</span>${T.i ? `<button type="button" class="small" data-t="back">${ko ? '‹ 이전' : '‹ Back'}</button>` : ''}<button type="button" class="small primary" data-t="next">${last ? (ko ? '완료' : 'Finish') : s.act && !T.done ? (ko ? '건너뛰기 ›' : 'Skip ›') : (ko ? '다음 ›' : 'Next ›')}</button></div>`;
+  }
+
+  function place() {
+    if (!T) return;
+    const s = step(), t = target(), pad = 8;
+    let r = t ? t.getBoundingClientRect() : null;
+    if (r && !r.width && !r.height) r = null;
+    const [bt, bb, bl, br] = T.blockers;
+    if (!r) {
+      T.hole.style.cssText = `left:50%;top:40%;width:0;height:0`;
+      [bt, bb, bl, br].forEach(b => { b.style.cssText = 'left:0;top:0;width:0;height:0'; }); bt.style.cssText = 'left:0;top:0;right:0;bottom:0';
+      T.card.style.left = Math.max(16, (innerWidth - T.card.offsetWidth) / 2) + 'px'; T.card.style.top = Math.max(16, (innerHeight - T.card.offsetHeight) / 2) + 'px';
+      return;
+    }
+    const x = Math.max(0, r.left - pad), y = Math.max(0, r.top - pad), w = Math.min(innerWidth, r.right + pad) - x, h = Math.min(innerHeight, r.bottom + pad) - y;
+    T.hole.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px`;
+    // Clicks outside the highlighted part are blocked; inside only on "try it" steps and the score pad.
+    T.hole.classList.toggle('cover', !s.act && !s.pad);
+    bt.style.cssText = `left:0;top:0;width:100vw;height:${y}px`;
+    bb.style.cssText = `left:0;top:${y + h}px;width:100vw;bottom:0`;
+    bl.style.cssText = `left:0;top:${y}px;width:${x}px;height:${h}px`;
+    br.style.cssText = `left:${x + w}px;top:${y}px;right:0;height:${h}px`;
+    if (innerWidth <= 700) return; // bottom sheet on phones (CSS)
+    const cw = T.card.offsetWidth, ch = T.card.offsetHeight;
+    let top = y + h + 12, left = Math.min(Math.max(16, x), innerWidth - cw - 16);
+    if (top + ch > innerHeight - 12) top = y - ch - 12;
+    if (top < 12) { top = Math.min(innerHeight - ch - 12, Math.max(12, y + 12)); left = x + w + 12 + cw < innerWidth ? x + w + 12 : Math.max(16, x - cw - 12); if (left < 16) left = innerWidth - cw - 16; }
+    T.card.style.left = left + 'px'; T.card.style.top = top + 'px';
+  }
+
+  function onAct(e) {
+    if (!T) return;
+    const s = step(); if (!s.act || T.done) return;
+    const t = target(); if (!t || !t.contains(e.target)) return;
+    setTimeout(() => {
+      if (!T) return;
+      if (s.act === 'pad' && !document.body.classList.contains('padopen')) return;
+      T.done = true; paintCard(); place();
+      setTimeout(() => { if (T && T.done && step() === s) go(T.i + 1); }, s.act === 'pad' ? 500 : 900);
+    }, 60);
+  }
+
+  function end() {
+    if (!T) return;
+    const s = step(); if (s && s.after) try { s.after(); } catch (e) {}
+    if (document.body.classList.contains('padopen') && typeof closePad === 'function') closePad();
+    document.removeEventListener('keydown', T.onKey); document.removeEventListener('click', T.onClick, true);
+    removeEventListener('resize', T.onMove); removeEventListener('scroll', T.onMove, true);
+    classes = classes.filter(c => c !== T.demo);
+    current = classes.some(c => c.id === T.prevCurrent) ? T.prevCurrent : (classes[0] || {}).id;
+    if (!classes.length) { classes = [exampleClass()]; current = classes[0].id; }
+    view = T.prevView || 'day';
+    T.root.remove(); T = null; render(); scrollTo(0, 0);
+  }
+
+  // ⋯ More → 🎓 Tutorial, and a one-time offer for new teachers.
+  const menu = document.getElementById('moreMenu');
+  if (menu) { const b = el('button', null, '🎓 Tutorial'); b.type = 'button'; b.id = 'tourBtn'; b.title = 'A step-by-step tour of every part of the gradesheet'; menu.insertBefore(b, menu.firstChild); b.addEventListener('click', start); }
+  window.gsTour = start;
+  function offer() {
+    if (lsG('gradesheet.tourSeen') || document.getElementById('tourOffer')) return;
+    const who = document.getElementById('who'); if (who && !who.hidden) return setTimeout(offer, 1500);
+    const o = el('div', 'nudge', `🎓 <b>${pageKO() ? '처음이신가요?' : 'New here?'}</b> ${pageKO() ? '2분 사용 안내를 받아 보세요.' : 'Take the 2-minute tour.'} <button type="button" class="small primary" data-go>${pageKO() ? '안내 시작' : 'Start the tour'}</button> <button type="button" class="small ghost" data-no>${pageKO() ? '괜찮아요' : 'No thanks'}</button>`);
+    o.id = 'tourOffer'; o.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:800;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:calc(100vw - 32px)';
+    o.addEventListener('click', e => { if (e.target.closest('[data-go]')) { o.remove(); start(); } else if (e.target.closest('[data-no]')) { o.remove(); lsS('gradesheet.tourSeen', '1'); } });
+    document.body.appendChild(o);
+  }
+  if (!/[?&](embed|from)=/.test(location.search)) setTimeout(offer, 1200);
+})();
 </script>
 
 <script>
