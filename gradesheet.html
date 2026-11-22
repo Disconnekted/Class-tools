@@ -2154,10 +2154,12 @@ function topiaHomeworkBookmarklet() {
     if (back) { doneMsg(); return; }
     /* The teacher uses the downloaded gradesheet file: websites can't open it, so copy and say where to paste (never open the website copy). */
     var src = ''; try { src = localStorage.getItem('gsSrc') || ''; } catch (e) {}
-    if (src === 'file' && !iPad) {
+    /* Unless this device is known to use the website copy, never open it: copy and say where to paste. */
+    if (src !== 'web' && !iPad) {
       copy();
-      var fb = note(K('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes, and copied them. Go to your gradesheet tab and tap <b>⇩ Paste online homework</b>. (Next time, open TOPIA from the gradesheet and they go straight in.) <button data-c style="font:inherit;padding:4px 10px">Copy again</button>', '✓ ' + out.length + '개 반에서 단어 유닛·쉐도잉 ' + nUnits + '개를 읽고 복사했습니다. 성적표 탭에서 <b>⇩ 온라인 숙제 붙여넣기</b>를 누르세요. (다음에는 성적표에서 TOPIA를 열면 바로 들어갑니다.) <button data-c style="font:inherit;padding:4px 10px">다시 복사</button>'));
+      var fb = note(K('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes, and copied them. Go to your gradesheet tab and tap <b>⇩ Paste online homework</b>. (Next time, open TOPIA from the gradesheet and they go straight in.) <button data-c style="font:inherit;padding:4px 10px">Copy again</button> <a href="#" data-web style="margin-left:6px">I use the website gradesheet</a>', '✓ ' + out.length + '개 반에서 단어 유닛·쉐도잉 ' + nUnits + '개를 읽고 복사했습니다. 성적표 탭에서 <b>⇩ 온라인 숙제 붙여넣기</b>를 누르세요. (다음에는 성적표에서 TOPIA를 열면 바로 들어갑니다.) <button data-c style="font:inherit;padding:4px 10px">다시 복사</button> <a href="#" data-web style="margin-left:6px">웹사이트 성적표를 씁니다</a>'));
       fb.querySelector('[data-c]').onclick = function () { copy(this); };
+      fb.querySelector('[data-web]').onclick = function (e) { e.preventDefault(); try { localStorage.setItem('gsSrc', 'web'); } catch (x) {} window.open(link, 'gsOnline'); doneMsg(); };
       return;
     }
     /* PC: open the gradesheet (it hands the ticks to an open gradesheet tab). If the browser blocks it after the long read, one tap does it. */
