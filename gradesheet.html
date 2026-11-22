@@ -103,6 +103,7 @@ table.gs th.m2{background:var(--band2);color:var(--ink)}
 table.gs th.m3{background:var(--band1);color:var(--accent-ink)}
 table.gs td.m2{background:var(--band2-soft)}
 table.gs td.due{background:var(--due)}
+.padhead .padkor{font-weight:700;font-size:1.05em;margin-left:4px}
 .dueline{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 8px}.dueline [data-duetoggle][aria-pressed=true]{background:var(--due);border-color:var(--warn,#c90);font-weight:700}.dueline .dueother:not([hidden]){display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center}.dueline .dueother input[type=text]{width:180px}.dueline .dueother input[type=number]{width:80px}.dueline .dueother .need{outline:2px solid var(--bad)}.dueline .duedel{margin-left:-4px;padding:2px 7px;color:var(--muted)}.dueline .duedel.danger{color:var(--bad);border-color:var(--bad)}.dueline .shiftbtns{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-left:auto}
 table.gs tr.r2 th.day{font:500 10.5px var(--f-mono);letter-spacing:0;text-transform:none;line-height:1.15;vertical-align:middle}
 table.gs tr.r2 th.day .tag{display:block;font:700 9.5px var(--f-body);color:inherit;opacity:.9}
@@ -2552,7 +2553,7 @@ function openPad(sid, catId, i) {
   const v = val(c, sid, catId, i);
   const el = document.getElementById('pad');
   el.innerHTML = `<div class="padbox" role="dialog" aria-label="Pick a score">
-    <div class="padhead"><div><b>${esc(s.eng || s.kor)}</b> · ${esc(k.label)}${k.outOf ? ' /' + esc(k.outOf) : ''}<small>Day ${i + 1}${dateFor(c, i) ? ' · ' + esc(dateFor(c, i)) : ''}</small></div><button type="button" data-pad-act="close">Done</button></div>
+    <div class="padhead"><div><b>${esc(s.eng || s.kor)}</b>${s.eng && s.kor ? ` <span class="padkor">${esc(s.kor)}</span>` : ''} · ${esc(k.label)}${k.outOf ? ' /' + esc(k.outOf) : ''}<small>Day ${i + 1}${dateFor(c, i) ? ' · ' + esc(dateFor(c, i)) : ''}</small></div><button type="button" data-pad-act="close">Done</button></div>
     <div class="padgrid${choices(k).length > 26 ? ' dense' : ''}">${choices(k).map(n => `<button type="button" data-pick="${n}" aria-pressed="${String(v) === String(n)}">${n}${k.outOf ? `<small>${round(n / k.outOf * 100)}%</small>` : ''}</button>`).join('')}</div>
     <div class="padfoot">
       <button type="button" data-pick="AB">AB absent</button>
