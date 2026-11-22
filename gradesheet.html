@@ -103,7 +103,7 @@ table.gs th.m2{background:var(--band2);color:var(--ink)}
 table.gs th.m3{background:var(--band1);color:var(--accent-ink)}
 table.gs td.m2{background:var(--band2-soft)}
 table.gs td.due{background:var(--due)}
-.dueline{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 8px}.dueline [data-duetoggle][aria-pressed=true]{background:var(--due);border-color:var(--warn,#c90);font-weight:700}.dueline .shiftbtns{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-left:auto}
+.dueline{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 8px}.dueline [data-duetoggle][aria-pressed=true]{background:var(--due);border-color:var(--warn,#c90);font-weight:700}.dueline .dueother:not([hidden]){display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center}.dueline .dueother input[type=text]{width:180px}.dueline .dueother input[type=number]{width:80px}.dueline .dueother .need{outline:2px solid var(--bad)}.dueline .shiftbtns{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-left:auto}
 table.gs tr.r2 th.day{font:500 10.5px var(--f-mono);letter-spacing:0;text-transform:none;line-height:1.15;vertical-align:middle}
 table.gs tr.r2 th.day .tag{display:block;font:700 9.5px var(--f-body);color:inherit;opacity:.9}
 table.gs tr.r3 th.day input{width:100%;height:100%;border:0;border-radius:0;background:transparent;font:400 10.5px var(--f-mono);text-align:center;padding:0}
@@ -2438,8 +2438,24 @@ function dueLine(c, syl, i) {
   if (c.example) return '';
   const ks = dueCats(c); if (!ks.length && !syl) return '';
   const moved = syl && syl.moved, n = Math.abs(moved || 0);
-  return `<div class="row dueline"><span class="hint">${L('Due today:', '오늘 할 것:')}</span>${ks.map(k => `<button type="button" class="small" data-duetoggle="${esc(k.id)}" aria-pressed="${isDue(catAt(c, k, i), syl, i)}" title="${esc(L('Tap to say this is or isn\'t done today', '오늘 하는지 안 하는지 눌러서 바꾸기'))}">${esc(k.label)}</button>`).join('')}${syl ? `<span class="shiftbtns"><button type="button" class="small" data-shift="1" title="${esc(L('Today becomes a catch-up lesson and the plan from today on moves one lesson later. This class only.', '오늘은 보충 수업이 되고, 오늘부터의 계획이 한 수업씩 뒤로 밀립니다. 이 반만.'))}">${L('⏪ We\'re a lesson behind', '⏪ 한 수업 늦음')}</button><button type="button" class="small" data-shift="-1" title="${esc(L('Today gets the next lesson\'s plan and everything after moves one lesson earlier. This class only.', '오늘 다음 수업 계획을 하고, 이후 계획이 한 수업씩 앞당겨집니다. 이 반만.'))}">${L('We\'re a lesson ahead ⏩', '한 수업 빠름 ⏩')}</button>${(c.sylShift || []).length ? `<button type="button" class="small linkbtn" data-shift="undo">${L('Undo last move', '마지막 이동 취소')}</button><span class="hint">${moved ? (moved > 0 ? L(`Syllabus ${n} lesson${n > 1 ? 's' : ''} later for this class`, `이 반 계획: ${n}수업 뒤로`) : L(`Syllabus ${n} lesson${n > 1 ? 's' : ''} earlier for this class`, `이 반 계획: ${n}수업 앞으로`)) : ''}</span>` : ''}</span>` : ''}</div>`;
+  return `<div class="row dueline"><span class="hint">${L('Due today:', '오늘 할 것:')}</span>${ks.map(k => `<button type="button" class="small" data-duetoggle="${esc(k.id)}" aria-pressed="${isDue(catAt(c, k, i), syl, i)}" title="${esc(L('Tap to say this is or isn\'t done today', '오늘 하는지 안 하는지 눌러서 바꾸기'))}">${esc(k.label)}</button>`).join('')}<button type="button" class="small" data-dueother aria-expanded="false">${L('+ Other', '+ 기타')}</button><span class="dueother" hidden><input type="text" data-dueothername placeholder="${esc(L('e.g. Quiz, Homework check', '예: 퀴즈, 숙제 검사'))}" aria-label="${esc(L('Name of the item', '항목 이름'))}" maxlength="30"><select data-dueotherkind aria-label="${esc(L('How to mark it', '채점 방식'))}"><option value="check">${L('✓ Done / not done', '✓ 함 / 안 함')}</option><option value="score">${L('Score', '점수')}</option><option value="mark">○ △ ✗</option></select><input type="number" inputmode="numeric" min="1" max="200" data-dueotherout placeholder="${esc(L('out of', '만점'))}" aria-label="${esc(L('Out of', '만점'))}" hidden><button type="button" class="small primary" data-dueotheradd>${L('Add for today', '오늘에 추가')}</button></span>${syl ? `<span class="shiftbtns"><button type="button" class="small" data-shift="1" title="${esc(L('Today becomes a catch-up lesson and the plan from today on moves one lesson later. This class only.', '오늘은 보충 수업이 되고, 오늘부터의 계획이 한 수업씩 뒤로 밀립니다. 이 반만.'))}">${L('⏪ We\'re a lesson behind', '⏪ 한 수업 늦음')}</button><button type="button" class="small" data-shift="-1" title="${esc(L('Today gets the next lesson\'s plan and everything after moves one lesson earlier. This class only.', '오늘 다음 수업 계획을 하고, 이후 계획이 한 수업씩 앞당겨집니다. 이 반만.'))}">${L('We\'re a lesson ahead ⏩', '한 수업 빠름 ⏩')}</button>${(c.sylShift || []).length ? `<button type="button" class="small linkbtn" data-shift="undo">${L('Undo last move', '마지막 이동 취소')}</button><span class="hint">${moved ? (moved > 0 ? L(`Syllabus ${n} lesson${n > 1 ? 's' : ''} later for this class`, `이 반 계획: ${n}수업 뒤로`) : L(`Syllabus ${n} lesson${n > 1 ? 's' : ''} earlier for this class`, `이 반 계획: ${n}수업 앞으로`)) : ''}</span>` : ''}</span>` : ''}</div>`;
 }
+// "+ Other": the teacher's own item for today (a quiz, a homework check…). Reuses a column with the same name, else adds one.
+document.addEventListener('click', e => {
+  const o = e.target.closest('[data-dueother]');
+  if (o) { const f = o.nextElementSibling; f.hidden = !f.hidden; o.setAttribute('aria-expanded', String(!f.hidden)); if (!f.hidden) f.querySelector('input').focus(); return; }
+  const add = e.target.closest('[data-dueotheradd]'); if (!add) return;
+  const f = add.closest('.dueother'), nameEl = f.querySelector('[data-dueothername]'), name = clean(nameEl.value);
+  if (!name) { nameEl.focus(); nameEl.classList.add('need'); return; }
+  const c = cur(); if (!c || c.example) return;
+  const i = pickDay(c), kind = f.querySelector('[data-dueotherkind]').value, out = f.querySelector('[data-dueotherout]').value;
+  let k = c.cats.find(x => clean(x.label).toLowerCase() === name.toLowerCase());
+  if (!k) { k = A(name, { kind, outOf: kind === 'score' ? (out || '') : '' }); k.id = 'col-' + uid(); c.cats.push(k); }
+  k.dueOn = k.dueOn || {}; k.dueOn[i] = 1;
+  keep(c); render();
+});
+document.addEventListener('change', e => { const s = e.target.closest('[data-dueotherkind]'); if (s) { const o = s.parentNode.querySelector('[data-dueotherout]'); o.hidden = s.value !== 'score'; } });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.closest('.dueother input')) { e.preventDefault(); e.target.closest('.dueother').querySelector('[data-dueotheradd]').click(); } });
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-duetoggle],[data-shift]'); if (!t) return;
   const c = cur(); if (!c || c.example) return;
