@@ -17,7 +17,18 @@
   --f-body:"Atkinson Hyperlegible","Segoe UI","Noto Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
 }
-:root{color-scheme:light} /* Paper is the only look (John, 2026-11-22): no dark mode */
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#11161f; --sheet:#18202c; --ink:#e6ebf3; --muted:#9aa6b8; --line:#2f3a4b; --grid:#253041;
+  --band1:#5aa9e6; --band1-soft:#1d3550; --band2:#3d6e96; --band2-soft:#18293b;
+  --accent:#6cb4ee; --accent-ink:#0b1a28;
+  --ok:#6fcf9b; --ok-soft:#163427; --warn:#e5b65a; --warn-soft:#352a12; --bad:#f08a7d; --bad-soft:#3a1c19;
+  --due:#3a3218; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#11161f; --sheet:#18202c; --ink:#e6ebf3; --muted:#9aa6b8; --line:#2f3a4b; --grid:#253041;
+  --band1:#5aa9e6; --band1-soft:#1d3550; --band2:#3d6e96; --band2-soft:#18293b;
+  --accent:#6cb4ee; --accent-ink:#0b1a28;
+  --ok:#6fcf9b; --ok-soft:#163427; --warn:#e5b65a; --warn-soft:#352a12; --bad:#f08a7d; --bad-soft:#3a1c19;
+  --due:#3a3218; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--f-body)}
 .wrap{max-width:1500px;margin:0 auto;padding-block:20px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:16px}
@@ -503,14 +514,15 @@ table.gs td.avg,table.gs td.mon{white-space:nowrap;overflow:hidden;text-overflow
 #delAll .box p{margin:6px 0 14px}
 html:lang(ko) body{word-break:keep-all;overflow-wrap:break-word}
 /* 2026-11-22 "Paper" look (John's choice): cream paper, near-black ink, strong lines, plain headings, bigger text.
-   The only look: dark mode was removed. */
+   Light colours only; dark mode keeps its colours but gets the same readability changes. */
 :root{--paper:#f6f1e7;--sheet:#fffdf8;--ink:#111;--muted:#3b3b3b;--line:#8f8a80;--grid:#c9c2b4;--band1:#245a8a;--band1-soft:#dfe8f1;--band2:#7fa5c6;--band2-soft:#eef3f8;--accent:#1d4f7c;--due:#ffe9a8;
   --f-display:"Noto Sans KR","Segoe UI","Apple SD Gothic Neo",system-ui,sans-serif;--f-body:"Noto Sans KR","Segoe UI","Apple SD Gothic Neo",system-ui,sans-serif}
 body{font-size:16.5px}
 body *{text-transform:none!important;letter-spacing:normal!important}
 button,.btn{font-size:15px}
 button.small{font-size:14px}
-button,.btn{border-width:1.5px}
+:root:not([data-theme="dark"]) button,:root:not([data-theme="dark"]) .btn{border-width:1.5px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) button,:root:not([data-theme="light"]) .btn{border-width:1px}}
 table.gs td,table.gs th{border-color:var(--line)}
 .line .lab{font-size:14.5px;font-weight:700;color:var(--ink)}
 .cell,.padgrid button{font-size:1.05em}
@@ -2717,12 +2729,16 @@ main.addEventListener('submit', e => {
   const get = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const set = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
   const tools = document.querySelector('header.top .tools');
-  const langB = document.createElement('button');
-  langB.type = 'button'; langB.className = 'tbtn';
-  tools.insertBefore(langB, tools.firstChild);
+  const themeB = document.createElement('button'), langB = document.createElement('button');
+  themeB.type = langB.type = 'button'; themeB.className = langB.className = 'tbtn';
+  tools.insertBefore(langB, tools.firstChild); tools.insertBefore(themeB, tools.firstChild);
 
   let ko = get('gradesheet.lang') === 'ko';
-  delete root.dataset.theme; // Paper is the only look
+  const dark = () => root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  const paintTheme = () => { themeB.textContent = dark() ? '☀︎' : '☾'; themeB.title = dark() ? (ko ? '라이트 모드' : 'Light mode') : (ko ? '다크 모드' : 'Dark mode'); themeB.setAttribute('aria-label', themeB.title); };
+  const t0 = get('gradesheet.theme'); if (t0 === 'dark' || t0 === 'light') root.dataset.theme = t0;
+  themeB.onclick = () => { const next = dark() ? 'light' : 'dark'; root.dataset.theme = next; set('gradesheet.theme', next); paintTheme(); };
+  paintTheme();
 
   const KO = {
     'Class': '학급', 'Gradesheet': '성적표', 'My classes': '내 반', '+ Add students': '+ 학생 추가', 'Import': '가져오기', 'Choose file': '파일 선택',
@@ -2802,7 +2818,7 @@ main.addEventListener('submit', e => {
   const mo = new MutationObserver(() => { if (!ko || queued) return; queued = true; requestAnimationFrame(() => { queued = false; mo.disconnect(); apply(document.body); watch(); }); });
   const watch = () => mo.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['title', 'placeholder', 'aria-label'] });
   const paintLang = () => { langB.textContent = ko ? 'EN' : '한'; langB.title = ko ? 'English' : '한국어로 보기'; langB.setAttribute('aria-label', langB.title); root.lang = ko ? 'ko' : 'en'; };
-  langB.onclick = () => { ko = !ko; window.gsKO = ko; set('gradesheet.lang', ko ? 'ko' : 'en'); mo.disconnect(); try { if (typeof renderWho === 'function' && !document.getElementById('who').hidden) renderWho(); render(); } catch (e) {} apply(document.body); paintLang(); if (ko) watch(); };
+  langB.onclick = () => { ko = !ko; window.gsKO = ko; set('gradesheet.lang', ko ? 'ko' : 'en'); mo.disconnect(); try { if (typeof renderWho === 'function' && !document.getElementById('who').hidden) renderWho(); render(); } catch (e) {} apply(document.body); paintLang(); paintTheme(); if (ko) watch(); };
   paintLang(); if (ko) { apply(document.body); watch(); }
 })();
 </script>

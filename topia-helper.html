@@ -4,7 +4,9 @@
 <title>TOPIA Helper</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap">
 <style>
-:root{--bg:#f6f1e7;--card:#fffdf8;--ink:#111;--muted:#3b3b3b;--line:#8f8a80;--accent:#1d4f7c;--accent-ink:#fff;--ok:#1f7a4c;color-scheme:light}
+:root{--bg:#f6f1e7;--card:#fffdf8;--ink:#111;--muted:#3b3b3b;--line:#8f8a80;--accent:#1d4f7c;--accent-ink:#fff;--ok:#1f7a4c}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11161f;--card:#18202c;--ink:#e6ebf3;--muted:#9aa6b8;--line:#2f3a4b;--accent:#6cb4f0;--accent-ink:#0d1520;--ok:#5fd08e}}
+:root[data-theme="dark"]{--bg:#11161f;--card:#18202c;--ink:#e6ebf3;--muted:#9aa6b8;--line:#2f3a4b;--accent:#6cb4f0;--accent-ink:#0d1520;--ok:#5fd08e}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16.5px/1.5 "Noto Sans KR","Segoe UI","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;padding:24px 16px}
 main{max-width:640px;margin:0 auto}
