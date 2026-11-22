@@ -1920,7 +1920,7 @@ function topiaPayload(c, i, date) {
     });
     return { eng: s.eng || '', kor: s.kor || '', g };
   }).filter(r => Object.keys(r.g).length);
-  return '#GS-TOPIA ' + JSON.stringify({ cls: c.name, day: i + 1, date: date || dateFor(c, i) || '', rows });
+  return '#GS-TOPIA ' + JSON.stringify({ cls: c.name, day: i + 1, date: date || dateFor(c, i) || '', rows, src: GS_SRC });
 }
 function topiaFillBookmarklet(given) {
   var K = function (en, ko) { try { return localStorage.getItem('tp-lang') === 'ko' ? ko : en; } catch (e) { return en; } };
@@ -2143,6 +2143,23 @@ function topiaHomeworkBookmarklet() {
     var link = GS + '#online=' + await squeeze(data), text = '#GS-ONLINE ' + JSON.stringify(data);
     var copy = function (b) { var ok = function () { if (b) b.textContent = K('✓ Copied', '✓ 복사됨'); }; (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(ok, function () { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); ok(); } catch (e) {} ta.remove(); }); };
     var doneMsg = function () { note(K('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes' + (skipped ? ' (' + skipped + ' skipped: already passed, checked this week, or no shadowing)' : '') + '. The gradesheet ticked them (in your open gradesheet tab if there is one).' + (score ? ' Stars caught: ' + score + '.' : ''), '✓ ' + out.length + '개 반에서 단어 유닛·쉐도잉 ' + nUnits + '개를 읽었습니다' + (skipped ? ' (' + skipped + '개 건너뜀: 이미 통과, 이번 주 확인함, 또는 쉐도잉 없음)' : '') + '. 성적표에 체크했습니다 (열려 있는 성적표 탭이 있으면 그 탭에).' + (score ? ' 잡은 별: ' + score + '개.' : ''))); };
+    /* First choice: send it straight back to the gradesheet tab that opened this TOPIA tab (works for the downloaded file too). */
+    var tok = link.split('#online=')[1];
+    var back = await new Promise(function (res) {
+      var op = null; try { op = window.opener; } catch (e) {} if (!op || op.closed) return res(false);
+      var h = function (e) { if (e.data && e.data.t === 'gs-online-done') { clearTimeout(t); removeEventListener('message', h); res(true); } };
+      var t = setTimeout(function () { removeEventListener('message', h); res(false); }, 1500);
+      addEventListener('message', h); try { op.postMessage({ t: 'gs-online', tok: tok }, '*'); } catch (e) { clearTimeout(t); removeEventListener('message', h); res(false); }
+    });
+    if (back) { doneMsg(); return; }
+    /* The teacher uses the downloaded gradesheet file: websites can't open it, so copy and say where to paste (never open the website copy). */
+    var src = ''; try { src = localStorage.getItem('gsSrc') || ''; } catch (e) {}
+    if (src === 'file' && !iPad) {
+      copy();
+      var fb = note(K('✓ Read ' + nUnits + ' word units and shadowing lessons in ' + out.length + ' classes, and copied them. Go to your gradesheet tab and tap <b>⇩ Paste online homework</b>. (Next time, open TOPIA from the gradesheet and they go straight in.) <button data-c style="font:inherit;padding:4px 10px">Copy again</button>', '✓ ' + out.length + '개 반에서 단어 유닛·쉐도잉 ' + nUnits + '개를 읽고 복사했습니다. 성적표 탭에서 <b>⇩ 온라인 숙제 붙여넣기</b>를 누르세요. (다음에는 성적표에서 TOPIA를 열면 바로 들어갑니다.) <button data-c style="font:inherit;padding:4px 10px">다시 복사</button>'));
+      fb.querySelector('[data-c]').onclick = function () { copy(this); };
+      return;
+    }
     /* PC: open the gradesheet (it hands the ticks to an open gradesheet tab). If the browser blocks it after the long read, one tap does it. */
     if (!iPad) {
       win = window.open(link, 'gsOnline'); if (win) { doneMsg(); return; }
@@ -2229,6 +2246,21 @@ async function onlineToken(tok) {
   let data; try { data = await unsqueeze(tok); } catch (e) { onlineBanner('That online homework link is damaged. Read it from TOPIA again.'); return; }
   if (data && data.app === 'gs-online') onlineGo(data);
 }
+/* Which copy of the gradesheet this is: the downloaded file (Class Prep Station folder) or the website.
+   TOPIA Helper remembers it, so online homework comes back to the copy the teacher actually uses. */
+const GS_SRC = location.protocol === 'file:' ? 'file' : 'web';
+// Links to TOPIA open in one named tab that still knows this gradesheet (so TOPIA Helper can send results straight back here).
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[href^="https://www.topiaenglishzone.co.kr"]'); if (!a || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  const w = window.open(a.href.split('#')[0] + '#gs-src=' + GS_SRC, 'gsTopia'); if (w) e.preventDefault();
+});
+// TOPIA Helper → Online homework, run in a TOPIA tab this gradesheet opened: it posts the result here.
+addEventListener('message', e => {
+  const d = e.data || {}; if (d.t !== 'gs-online' || !/^[jz][A-Za-z0-9_-]+$/.test(d.tok || '')) return;
+  let host = ''; try { host = new URL(e.origin).hostname; } catch (er) {} if (!/(^|\.)topiaenglishzone\.co\.kr$/.test(host)) return;
+  onlineToken(d.tok); try { e.source.postMessage({ t: 'gs-online-done' }, '*'); } catch (er) {}
+  const t0 = document.title; document.title = '✓ ' + L('Online homework ticked', '온라인 숙제 체크됨'); setTimeout(() => { document.title = t0; }, 15000);
+});
 /* If a gradesheet is already open in another tab on this device, that tab ticks the boxes (so the two tabs never
    save over each other) and this new tab closes itself. With no other tab open, this tab does it. */
 const GS_TAB = Math.random().toString(36).slice(2);
