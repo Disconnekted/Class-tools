@@ -513,6 +513,19 @@ table.gs td.avg,table.gs td.mon{white-space:nowrap;overflow:hidden;text-overflow
 .menudanger{color:var(--bad,#c0392b)!important}
 #delAll .box p{margin:6px 0 14px}
 html:lang(ko) body{word-break:keep-all;overflow-wrap:break-word}
+/* 2026-11-22 "Paper" look (John's choice): cream paper, near-black ink, strong lines, plain headings, bigger text.
+   Light colours only; dark mode keeps its colours but gets the same readability changes. */
+:root{--paper:#f6f1e7;--sheet:#fffdf8;--ink:#111;--muted:#3b3b3b;--line:#8f8a80;--grid:#c9c2b4;--band1:#245a8a;--band1-soft:#dfe8f1;--band2:#7fa5c6;--band2-soft:#eef3f8;--accent:#1d4f7c;--due:#ffe9a8;
+  --f-display:"Noto Sans KR","Segoe UI","Apple SD Gothic Neo",system-ui,sans-serif;--f-body:"Noto Sans KR","Segoe UI","Apple SD Gothic Neo",system-ui,sans-serif}
+body{font-size:16.5px}
+body *{text-transform:none!important;letter-spacing:normal!important}
+button,.btn{font-size:15px}
+button.small{font-size:14px}
+:root:not([data-theme="dark"]) button,:root:not([data-theme="dark"]) .btn{border-width:1.5px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) button,:root:not([data-theme="light"]) .btn{border-width:1px}}
+table.gs td,table.gs th{border-color:var(--line)}
+.line .lab{font-size:14.5px;font-weight:700;color:var(--ink)}
+.cell,.padgrid button{font-size:1.05em}
 </style>
 
 </head><body>
