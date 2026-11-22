@@ -614,7 +614,7 @@ const SUBJECTS = {
   phonics:    { name: 'Phonics', code: 'ph', suggested: true, cats: [ATT(), A('Word Test', { outOf: 10, due: 'w' }), A('Monthly Test', { due: 'm' }), A('Review'), A('Participation', { outOf: 10 })], extras: [] },
   grammar:    { name: 'Grammar', code: 'gr', suggested: true, cats: [ATT(), A('Word Test', { outOf: 100 }), A('Unit Test', { outOf: 10, due: 'u' }), A('Workbook', { kind: 'check' }), A('Monthly Test', { due: 'm' }), A('Participation', { outOf: 10 })],
                 extras: [{ label: 'Grammar notes (unit)', type: 'units', n: 12 }] },
-  toefl:      { name: 'TOEFL Reading', code: 'toefl', suggested: true, cats: [ATT(), A('Vocabulary Test', { outOf: 25 }), A('Idioms Test', { outOf: 10 }), A('Reading Practice'), A('iBT Practice'), A('Participation', { outOf: 10 })], extras: [] },
+  toefl:      { name: 'TOEFL Reading', code: 'toefl', suggested: true, cats: [ATT(), A('Vocabulary Test', { outOf: 25 }), A('Reading Practice'), A('iBT Practice'), A('Participation', { outOf: 10 })], extras: [] },
   langarts:   { name: 'Language Arts', code: 'path', suggested: true, cats: [ATT(), A('Participation', { outOf: 10 }), A('Vocabulary Test', { outOf: 20, due: 'w' }), A('Writing', { kind: 'mark' })], extras: [] },
 };
 
@@ -946,10 +946,21 @@ function startCloud(d) {
 
 /* Documents from the online save arrive read-only, so every class gets its own editable copy.
    (Without this, taps that change a score fail silently.) */
-const editable = cls => { const c = newDue(newOrder(newTotals(JSON.parse(JSON.stringify(cls))))); if (c && c.subject === 'pathways') { c.subject = 'langarts'; c._migrated = true; } return c; };
+const editable = cls => { const c = noIdioms(newDue(newOrder(newTotals(JSON.parse(JSON.stringify(cls)))))); if (c && c.subject === 'pathways') { c.subject = 'langarts'; c._migrated = true; } return c; };
 /* 2026-11: the school's real totals (participation /10, word tests /10, Pathways and Language Arts /20,
-   Writing and Grammar /100, TOEFL vocabulary /25 plus idioms /10). Saved classes get them once; a column
+   Writing and Grammar /100, TOEFL vocabulary /25). Saved classes get them once; a column
    that already has marks keeps its old total so those marks still mean the same. */
+/* 2026-11-22: John took the TOEFL Idioms Test out. Removed once from saved classes; kept only if it already has marks. */
+function noIdioms(c) {
+  if (!c || c.idiomsV) return c;
+  if (c.subject === 'toefl') {
+    const k = (c.cats || []).find(x => slug(x.label) === 'idioms-test');
+    const has = k && (c.students || []).some(s => (((c.scores || {})[s.id] || {})[k.id] || []).some(v => v !== '' && v != null));
+    if (k && !has) { c.cats = c.cats.filter(x => x !== k); (c.students || []).forEach(s => { if (c.scores && c.scores[s.id]) delete c.scores[s.id][k.id]; }); }
+  }
+  c.idiomsV = 1; c._migrated = true;
+  return c;
+}
 const totalsSkipped = [];
 function newTotals(c) {
   if (!c || c.totalsV >= 2) return c;
@@ -962,10 +973,6 @@ function newTotals(c) {
     if (has(k)) { totalsSkipped.push(`${c.name} ${k.label} (still /${k.outOf} because it has marks)`); return; }
     k.outOf = want.outOf;
   });
-  if (c.subject === 'toefl' && !(c.cats || []).some(k => slug(k.label) === 'idioms-test')) {
-    const i = c.cats.findIndex(k => slug(k.label) === 'vocabulary-test');
-    c.cats.splice(i >= 0 ? i + 1 : 1, 0, Object.assign(A('Idioms Test', { outOf: 10 }), { id: 'idioms-test' }));
-  }
   c.totalsV = 2; c._migrated = true;
   return c;
 }
