@@ -2879,9 +2879,16 @@ main.addEventListener('submit', e => {
     watch();
   });
   const watch = () => mo.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['title', 'placeholder', 'aria-label'] });
-  const paintLang = () => { langB.textContent = ko ? 'EN' : '한'; langB.title = ko ? 'English' : '한국어로 보기'; langB.setAttribute('aria-label', langB.title); root.lang = ko ? 'ko' : 'en'; };
+  const paintLang = () => { langB.textContent = ko ? 'EN' : '한'; langB.title = ko ? 'English (L)' : '한국어로 보기 (L)'; langB.setAttribute('aria-label', langB.title); root.lang = ko ? 'ko' : 'en'; };
   langB.onclick = () => { ko = !ko; window.gsKO = ko; set('gradesheet.lang', ko ? 'ko' : 'en'); mo.disconnect(); try { if (typeof renderWho === 'function' && !document.getElementById('who').hidden) renderWho(); render(); } catch (e) {} apply(document.body); paintLang(); paintTheme(); if (ko) watch(); };
   paintLang(); if (ko) { apply(document.body); watch(); }
+  // L swaps English / Korean (also with the Korean keyboard on); ignored while typing or with Ctrl/Cmd/Alt.
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || !(e.code === 'KeyL' || e.key === 'l' || e.key === 'L')) return;
+    const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    if (document.getElementById('gsTour')) return;
+    e.preventDefault(); langB.click();
+  });
 })();
 </script>
 <script>
