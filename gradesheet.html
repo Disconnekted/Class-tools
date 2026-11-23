@@ -3717,30 +3717,30 @@ Promise.resolve(useDb).catch(() => null).then(d => { if (d) startCloud(d); else 
     { sel: '#addBox', before: () => { const d = document.getElementById('addBox'); if (d) d.open = true; }, after: () => { const d = document.getElementById('addBox'); if (d && T && !T.addWasOpen) d.open = false; },
       en: ['Add students', 'On TOPIA’s Attendance page, tap <b>TOPIA Helper → Copy students</b>, then paste here and tap <b>Import</b>. Each class becomes its own sheet. You can also add a class by hand.'],
       ko: ['학생 추가', 'TOPIA 출석부에서 <b>TOPIA Helper → 학생 복사</b>를 누르고, 여기에 붙여 넣은 뒤 <b>가져오기</b>를 누르세요. 반마다 성적표가 하나씩 생깁니다. 반을 직접 추가할 수도 있습니다.'] },
-    { sel: 'header.top .tools', en: ['The top bar', '<ul><li><b>☾ / ☀</b> dark or light</li><li><b>한 / EN</b> Korean or English</li><li><b>↶ Undo</b> takes back your last change</li><li><b>Your name · Switch</b> for shared computers</li><li><b>⋯ More</b>: back up, send to iPad, name tags, this tutorial</li></ul>'],
-      ko: ['위쪽 메뉴', '<ul><li><b>☾ / ☀</b> 다크·라이트 모드</li><li><b>한 / EN</b> 한국어·영어</li><li><b>↶ 되돌리기</b> 마지막 변경 취소</li><li><b>이름 · 전환</b> 함께 쓰는 컴퓨터용</li><li><b>⋯ 더보기</b>: 백업, iPad로 보내기, 이름표, 이 안내</li></ul>'] },
+    { sel: 'header.top .tools', en: ['The top bar', '<ul><li><b>☾ / ☀</b> dark or light</li><li><b>한 / EN</b> Korean or English</li><li><b>↶ Undo</b> takes back your last change</li><li><b>Your name · Switch</b> for shared computers</li><li><b>🎓 Tutorial</b> starts this tour again</li><li><b>⋯ More</b>: back up, send to iPad, name tags</li></ul>'],
+      ko: ['위쪽 메뉴', '<ul><li><b>☾ / ☀</b> 다크·라이트 모드</li><li><b>한 / EN</b> 한국어·영어</li><li><b>↶ 되돌리기</b> 마지막 변경 취소</li><li><b>이름 · 전환</b> 함께 쓰는 컴퓨터용</li><li><b>🎓 사용 안내</b>: 이 안내 다시 보기</li><li><b>⋯ 더보기</b>: 백업, iPad로 보내기, 이름표</li></ul>'] },
     { sel: '.classhead', en: ['Class details', 'Tap the line under the class name (<b>✎ Details</b>) to set the subject, semester, class days, <b>Day 1 date</b> and room. With the Day 1 date set, the right lesson opens each day.'],
       ko: ['반 정보', '반 이름 아래 줄(<b>✎ 세부 정보</b>)을 눌러 과목, 학기, 수업 요일, <b>1회차 날짜</b>, 강의실을 정하세요. 1회차 날짜가 있으면 매일 그날 수업이 열립니다.'] },
     { sel: 'details.cols', en: ['Columns', 'The things you mark: attendance, participation, tests and so on. They follow the school syllabus. Open <b>Columns</b> to rename, add or remove one, or change what a test is out of.'],
       ko: ['항목', '채점하는 것들: 출석, 참여도, 시험 등. 학교 실라버스를 따릅니다. <b>항목</b>을 열어 이름을 바꾸거나, 추가·삭제하거나, 시험 만점을 바꾸세요.'] },
     { sel: '.viewbar', en: ['Two ways to look', '<b>Day by day</b> shows one lesson as big buttons, best on an iPad in class. <b>Whole sheet</b> shows all 24 lessons like the paper gradesheet.'],
       ko: ['두 가지 보기', '<b>일별</b>은 한 수업을 큰 버튼으로 보여 주어 수업 중 iPad에 좋습니다. <b>전체 보기</b>는 종이 성적표처럼 24회차 전체를 보여 줍니다.'] },
-    { sel: '[data-view=sheet]', act: 'click', en: ['Try it', 'Tap <b>Whole sheet</b>.'], ko: ['해 보세요', '<b>전체 보기</b>를 누르세요.'], tryEn: '👉 Tap Whole sheet', tryKo: '👉 전체 보기를 누르세요' },
+    { sel: '[data-view=sheet]', act: 'click', en: ['Try it', 'Let’s see every lesson at once.'], ko: ['해 보세요', '모든 수업을 한눈에 볼까요?'], tryEn: '👉 Tap Whole sheet', tryKo: '👉 전체 보기를 누르세요' },
     { sel: 'table.gs', before: () => { if (view !== 'sheet') { view = 'sheet'; render(); } },
       en: ['The whole sheet', 'One row per column for each student, one box per lesson. Yellow boxes are due that day by the syllabus. Tap a date at the top to change it. On the right: average and the three monthly results. Tap any box to type a score.'],
       ko: ['전체 보기', '학생마다 항목별 한 줄, 수업마다 한 칸입니다. 노란 칸은 실라버스상 그날 할 것입니다. 위쪽 날짜를 눌러 바꿀 수 있습니다. 오른쪽에는 평균과 월별 결과 3개가 있습니다. 칸을 눌러 점수를 입력하세요.'] },
-    { sel: '[data-view=day]', act: 'click', before: () => { if (view !== 'sheet') { view = 'sheet'; render(); } }, en: ['Back to one lesson', 'Tap <b>Day by day</b>.'], ko: ['한 수업 보기로', '<b>일별</b>을 누르세요.'], tryEn: '👉 Tap Day by day', tryKo: '👉 일별을 누르세요' },
+    { sel: '[data-view=day]', act: 'click', before: () => { if (view !== 'sheet') { view = 'sheet'; render(); } }, en: ['Back to one lesson', 'Now back to one lesson at a time.'], ko: ['한 수업 보기로', '이제 다시 한 수업씩 봅니다.'], tryEn: '👉 Tap Day by day', tryKo: '👉 일별을 누르세요' },
     { sel: '.daynav', day: true, en: ['Moving between lessons', 'Use <b>‹ ›</b> (or swipe on the iPad) to move a lesson, or tap a number to jump. A green line under a number means it already has marks. <b>Today ↩</b> brings you back to today.'],
       ko: ['수업 이동', '<b>‹ ›</b>(iPad에서는 밀기)로 한 수업씩 이동하거나 숫자를 눌러 바로 가세요. 숫자 아래 초록 줄은 이미 채점한 날입니다. <b>오늘 ↩</b>을 누르면 오늘로 돌아옵니다.'] },
     { sel: '.dueline', day: true, en: ['Due today', 'Yellow buttons are what is done today. Tap one to switch it on or off for this lesson only.<ul><li><b>+ Other</b> adds your own item (a quiz, a homework check)</li><li><b>Clear extras</b> leaves only attendance and participation</li><li><b>We’re a lesson behind / ahead</b> moves the syllabus for this class</li></ul>'],
       ko: ['오늘 할 것', '노란 버튼이 오늘 하는 것입니다. 누르면 이 수업에서만 켜고 끌 수 있습니다.<ul><li><b>+ 기타</b>: 직접 항목 추가 (퀴즈, 숙제 검사)</li><li><b>기타 모두 끄기</b>: 출석과 참여도만 남김</li><li><b>한 수업 늦음 / 빠름</b>: 이 반의 실라버스를 옮김</li></ul>'] },
     { sel: '.dayacts', day: true, en: ['Quick buttons for the whole class', '<ul><li><b>✓ Everyone present</b> marks everyone here</li><li><b>100% everyone</b> gives full marks for today’s items (boxes you filled stay)</li><li><b>Clear all</b> empties the day (tap twice)</li><li><b>Word Test out of</b> changes today’s test total only</li></ul>'],
       ko: ['반 전체용 빠른 버튼', '<ul><li><b>✓ 전원 출석</b>: 모두 출석 처리</li><li><b>전원 100%</b>: 오늘 항목에 만점 (채운 칸은 그대로)</li><li><b>모두 지우기</b>: 그날을 비움 (두 번 누름)</li><li><b>단어 시험 만점</b>: 오늘 시험 만점만 변경</li></ul>'] },
-    { sel: '[data-act=allpresent]', day: true, act: 'click', en: ['Try it', 'Tap <b>✓ Everyone present</b>.'], ko: ['해 보세요', '<b>✓ 전원 출석</b>을 누르세요.'], tryEn: '👉 Tap ✓ Everyone present', tryKo: '👉 ✓ 전원 출석을 누르세요' },
+    { sel: '[data-act=allpresent]', day: true, act: 'click', en: ['Try it', 'Start each lesson by marking the whole class here in one tap.'], ko: ['해 보세요', '수업을 시작할 때 한 번에 반 전체를 출석 처리하세요.'], tryEn: '👉 Tap ✓ Everyone present', tryKo: '👉 ✓ 전원 출석을 누르세요' },
     { sel: '.cards .scard', day: true, en: ['A student card', 'One card per student: English and Korean name, and their overall %. It shows attendance, participation and today’s items. The rest is under <b>More for …</b>.'],
       ko: ['학생 카드', '학생마다 카드 한 장: 영어·한국어 이름과 전체 %. 출석, 참여도, 오늘 항목이 보이고 나머지는 <b>… 더보기</b>에 있습니다.'] },
-    { sel: () => document.querySelector('.cards .scard .seg .v-L'), day: true, act: 'click', en: ['Try it: someone came late', 'Tap <b>Late</b> for this student. Absent works the same way.'], ko: ['해 보세요: 지각한 학생', '이 학생의 <b>지각</b>을 누르세요. 결석도 같은 방법입니다.'], tryEn: '👉 Tap Late', tryKo: '👉 지각을 누르세요' },
-    { sel: () => document.querySelector('.cards .scard .scorebtn'), day: true, act: 'pad', en: ['Try it: give a score', 'Tap <b>Tap to score</b>.'], ko: ['해 보세요: 점수 주기', '<b>눌러서 점수 입력</b>을 누르세요.'], tryEn: '👉 Tap “Tap to score”', tryKo: '👉 “눌러서 점수 입력”을 누르세요' },
+    { sel: () => document.querySelector('.cards .scard .seg .v-L'), day: true, act: 'click', en: ['Try it: someone came late', 'Change one student’s attendance. Absent works the same way.'], ko: ['해 보세요: 지각한 학생', '한 학생의 출석을 바꿔 보세요. 결석도 같은 방법입니다.'], tryEn: '👉 Tap Late for this student', tryKo: '👉 이 학생의 지각을 누르세요' },
+    { sel: () => document.querySelector('.cards .scard .scorebtn'), day: true, act: 'pad', en: ['Try it: give a score', 'Scores go in with a pad of big buttons.'], ko: ['해 보세요: 점수 주기', '점수는 큰 버튼 패드로 입력합니다.'], tryEn: '👉 Tap the score box', tryKo: '👉 점수 칸을 누르세요' },
     { sel: '#pad .padbox', pad: true, en: ['The score pad', 'Tap a number. It saves and jumps to the <b>next student</b>, so you can go down the class quickly.<ul><li><b>AB</b> absent on a test day</li><li><b>Clear</b> empties the box</li><li><b>Other</b> for 17.5, 17/20 or 85%</li><li><b>‹ Prev / Next ›</b> move without scoring</li></ul>Tap <b>Done</b> when finished.'],
       ko: ['점수 패드', '숫자를 누르면 저장되고 <b>다음 학생</b>으로 넘어가 빠르게 채점할 수 있습니다.<ul><li><b>AB</b> 시험날 결석</li><li><b>지우기</b> 칸 비우기</li><li><b>기타</b> 17.5, 17/20, 85% 입력</li><li><b>‹ 이전 / 다음 ›</b> 채점 없이 이동</li></ul>끝나면 <b>완료</b>를 누르세요.'] },
     { sel: () => document.querySelector('.cards .scard .dnote'), day: true, before: () => { if (typeof closePad === 'function') closePad(); },
@@ -3757,8 +3757,8 @@ Promise.resolve(useDb).catch(() => null).then(d => { if (d) startCloud(d); else 
       ko: ['보내기·인쇄', '<b>빈 성적표</b>를 인쇄하고, 채운 성적표를 PDF·엑셀로 저장하거나 이메일로 보내고, 학부모나 담당 선생님께 줄 <b>📊 반 요약</b> PDF(한국어·영어)를 만드세요.'] },
     { sel: '#chartFab', en: ['Score chart', 'The round <b>%</b> button turns a score into a percentage (for tests out of 35, 30, 25, 20 or 15).'],
       ko: ['점수표', '둥근 <b>%</b> 버튼은 점수를 %로 바꿔 줍니다 (35, 30, 25, 20, 15점 만점 시험).'] },
-    { sel: '#moreBtn', en: ['That’s everything!', 'Remember to <b>⤓ Back up</b> now and then under <b>⋯ More</b>. You can watch this tour again there any time: <b>🎓 Tutorial</b>.'],
-      ko: ['끝났습니다!', '가끔 <b>⋯ 더보기</b>에서 <b>⤓ 백업</b>하세요. 이 안내는 언제든 같은 곳의 <b>🎓 사용 안내</b>에서 다시 볼 수 있습니다.'] },
+    { sel: '#tourBtn', en: ['That’s everything!', 'Remember to <b>⤓ Back up</b> now and then under <b>⋯ More</b>. Tap <b>🎓 Tutorial</b> up here any time to watch this tour again.'],
+      ko: ['끝났습니다!', '가끔 <b>⋯ 더보기</b>에서 <b>⤓ 백업</b>하세요. 이 안내는 언제든 위쪽의 <b>🎓 사용 안내</b>를 눌러 다시 볼 수 있습니다.'] },
   ];
 
   function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
@@ -3870,9 +3870,10 @@ Promise.resolve(useDb).catch(() => null).then(d => { if (d) startCloud(d); else 
     T.root.remove(); T = null; render(); scrollTo(0, 0);
   }
 
-  // ⋯ More → 🎓 Tutorial, and a one-time offer for new teachers.
-  const menu = document.getElementById('moreMenu');
-  if (menu) { const b = el('button', null, '🎓 Tutorial'); b.type = 'button'; b.id = 'tourBtn'; b.title = 'A step-by-step tour of every part of the gradesheet'; menu.insertBefore(b, menu.firstChild); b.addEventListener('click', start); }
+  // 🎓 Tutorial button, and a one-time offer for new teachers.
+  // In the top bar (easy to see), just before ⋯ More.
+  const more = document.getElementById('moreBtn');
+  if (more) { const b = el('button', null, '🎓 Tutorial'); b.type = 'button'; b.id = 'tourBtn'; b.title = 'A step-by-step tour of every part of the gradesheet'; const wrap = more.closest('.more') || more; wrap.parentNode.insertBefore(b, wrap); b.addEventListener('click', start); }
   window.gsTour = start;
   function offer() {
     if (lsG('gradesheet.tourSeen') || document.getElementById('tourOffer')) return;
