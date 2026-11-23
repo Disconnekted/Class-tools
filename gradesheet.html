@@ -654,6 +654,7 @@ const LAYOUTS = {
   ],
   debate: [
     { lv: ['O1'], sheet: 'O1 DEBATE', cats: DEBATE_C, monthly: '', extras: () => [UX('Online', seqU(8))] },
+    { lv: ['L1'], sheet: 'DEBATE', cats: DEBATE_C, monthly: 'MONTHLY AVERAGE', extras: () => [] }, // L1 Debate has no online homework (John, 2026-11-23)
     { sheet: 'DEBATE', cats: DEBATE_C, monthly: 'MONTHLY AVERAGE', extras: () => [UX('Online', seqU(4))] },
   ],
   speaking: [
@@ -966,11 +967,21 @@ function startCloud(d) {
 
 /* Documents from the online save arrive read-only, so every class gets its own editable copy.
    (Without this, taps that change a score fail silently.) */
-const editable = cls => { const c = noIdioms(newDue(newOrder(newTotals(JSON.parse(JSON.stringify(cls)))))); if (c && c.subject === 'pathways') { c.subject = 'langarts'; c._migrated = true; } return c; };
+const editable = cls => { const c = noL1Online(noIdioms(newDue(newOrder(newTotals(JSON.parse(JSON.stringify(cls))))))); if (c && c.subject === 'pathways') { c.subject = 'langarts'; c._migrated = true; } return c; };
 /* 2026-11: the school's real totals (participation /10, word tests /10, Pathways and Language Arts /20,
    Writing and Grammar /100, TOEFL vocabulary /25). Saved classes get them once; a column
    that already has marks keeps its old total so those marks still mean the same. */
 /* 2026-11-22: John took the TOEFL Idioms Test out. Removed once from saved classes; kept only if it already has marks. */
+/* 2026-11-23: L1 Debate has no online homework (John). Saved L1 Debate classes lose the empty Online boxes once. */
+function noL1Online(c) {
+  if (!c || c.l1OnlineV) return c;
+  if (c.subject === 'debate' && (c.level || levelOf(c.name || '')) === 'L1') {
+    const used = x => Object.values(c.extra || {}).some(e => { const v = (e || {})[x.id]; return Array.isArray(v) ? v.some(Boolean) : !!v; });
+    c.extras = (c.extras || []).filter(x => !/^online/i.test(x.label || '') || used(x));
+  }
+  c.l1OnlineV = 1; c._migrated = true;
+  return c;
+}
 function noIdioms(c) {
   if (!c || c.idiomsV) return c;
   if (c.subject === 'toefl') {
