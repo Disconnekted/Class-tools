@@ -715,8 +715,6 @@ const uLab = (x, u) => (x.labels && x.labels[u]) || String(u + 1);
 const EBOOKS = {"E2":[[1,"Read the Signs"],[3,"Todd Goes to School"],[5,"Magic Letters"],[7,"I Love My Home"],[9,"Can I Have a Hippo?"],[11,"Monster Soccer Players!"],[13,"The Three Little Pigs"],[15,"A Rainbow Day!"],[17,"Whose Monkey Is This?"],[19,"All around the World"],[21,"Christmas Cookie Contest"],[23,"Pinocchio"]],"E3":[[1,"Keep Well Day"],[3,"Tales of Mr. Map"],[5,"Looking for Clues"],[7,"Just Around the Corner"],[9,"Who Is in the Pond?"],[11,"A Honey of a Story"],[13,"Playing at Lily's House"],[15,"We Can Be Helpers!"],[17,"Rex Runs Away"],[19,"The Best Pet for Al"],[21,"The Little Red Hen"],[23,"Chin's Lunch"]],"O1":[[1,"The Bake Sale Battle"],[3,"The Weather Box"],[6,"Under Lock and Key"],[8,"The Mysterious Ms. Martin"],[10,"Lost In A Cave"],[12,"Grandma's Project"],[14,"Mr.Kean's Garden"],[15,"The Rainy Day Adventure"],[17,"Too Much Stuff!"],[19,"The Mystery Mask"],[21,"Robot Trouble"],[23,"Groundhog's New Home"]],"O2":[[1,"Today I Am an American"],[3,"Inventing a Better Tomorrow"],[6,"The Land of Little Water"],[8,"Adventure in Alaska"],[10,"The Raja's Elephants"],[12,"Where There's Smoke, There's Fire"],[14,"North of the Rio Grande"],[15,"An Interview with the Brothers Grim"],[17,"Days of the Exodusters"],[19,"The Mean, Green Carnivore"],[21,"Grandpa And I, All Year Long"],[23,"What People Can Do"]],"O3":[[1,"The Wisdom of the Wind"],[3,"The Mountaineers"],[6,"The Case of the Moving Statue"],[8,"The Dog Without a Home"],[10,"Babe's Big Blue Vacation"],[12,"John Wesley Powell and the Mighty"],[14,"From Missouri to California"],[15,"Sonia's Extra Special Dish"],[17,"Rio Rob And The Runaway Calf"],[19,"Luke Lighting Bolt!"],[21,"The Gardeners"],[23,"A Laugh a Minute"]],"V1":[[1,"Hurry Up!"],[3,"Dora's Soapbox Car"],[5,"New Class Pet"],[7,"But I Want It!"],[9,"The Night of the Pumpkins"],[11,"A Ship is Coming!"],[14,"Grasshopper Learns a Lesson A Play"],[15,"Where is Hoppy?"],[17,"The Sparrow's Gift"],[19,"The Mysterious Animal Tracks"],[21,"Wendy's Great Catch"],[23,"The Dinosaur Drawing Delivery"]],"V2":[[1,"Felix's Turn"],[3,"School Rules!"],[6,"Bettina And The Talent Show"],[8,"Song Of The Cicada"],[10,"Cooking With Zork"],[12,"Sherry Holmes And The Case Of The"],[14,"Listening In On The Orchestra"],[16,"How Platypus Came To Be"],[18,"Special Report: The Kicker Cup"],[20,"Special Issue - Brothers And Sisters!"],[22,"The Mother Goose Detective Agency"],[24,"The Cursive Crisis"]],"V3":[[1,"I Wish"],[3,"Making the Right Moves"],[5,"That's My Shot!"],[7,"Who Needs a New Baby?"],[9,"Stacy's Surprise"],[11,"Le Anne Joins the Show"],[13,"Everyone Can Help"],[15,"Three Fables"],[17,"Tiny, Terrific Debbie Black"],[19,"The Race Across Alaska"],[21,"Away from Home"],[23,"Quiz Show"]]};
 const ebookX = c => c && c.subject === 'grammar' ? (c.extras || []).find(x => x.type === 'units' && /e-?book/i.test(x.label)) || null : null;
 const ebookList = c => EBOOKS[String(c.level || levelOf(c.name) || '').slice(0, 2).toUpperCase()] || [];
-const ebookGiven = (c, i) => ebookList(c).findIndex(b => b[0] === i + 1);            // book handed out on lesson i
-const ebookCheck = (c, i) => { let k = -1; ebookList(c).forEach((b, j) => { if (b[0] < i + 1) k = j; }); return k; }; // newest book given before lesson i
 
 const hasMonthly = c => c.monthly !== '';
 const SUBJ_ORDER = ['debate', 'speech', 'integrated', 'speaking', 'writing', 'phonics', 'grammar', 'toefl', 'langarts'];
@@ -2137,7 +2135,7 @@ function topiaHomeworkBookmarklet() {
     planNeed = cls.length * 2; draw();
     await Promise.all(cls.map(async function (c) {
       var subs = (c.subjectList || []).map(function (s) { return String(s.sourceSubjectId); });
-      var units = {}, shadow = {};
+      var units = {}, shadow = {}, ebook = {};
       await Promise.all([(async function () {
       var list = [];
       for (var pg = 1; pg < 10; pg++) { var j = await get('online-contents/onlineword?classId=' + c.classId + '&limit=100&page=' + pg), d = j && j.data; if (!d) break; list = list.concat(d.list || []); if (!d.hasNextPage) break; }
@@ -2167,7 +2165,7 @@ function topiaHomeworkBookmarklet() {
       await Promise.all(look.map(async function (sid) {
         var j = await get('class/homework/list?classId=' + c.classId + '&sourceSubjectId=' + sid), L = j && j.data && j.data.list; tick();
         if (!L || !Array.isArray(L.studentInfolist)) return;
-        var any = L.studentInfolist.some(function (st) { return (st.homeworkList || []).some(function (h) { return h.onlineHomeworkInfo && h.onlineHomeworkInfo.shadowing; }); });
+        var any = L.studentInfolist.some(function (st) { return (st.homeworkList || []).some(function (h) { return h.onlineHomeworkInfo && (h.onlineHomeworkInfo.shadowing || h.onlineHomeworkInfo.ebook); }); });
         if (any) delete cache.s[c.classId + '|' + sid]; else cache.s[c.classId + '|' + sid] = today;
         // Due rule (same as John's Online homework button): a lesson's shadowing counts as missing once the NEXT lesson's
         // date has passed, or it is that day and 2:00 PM or later. The last lesson is never counted.
@@ -2184,10 +2182,24 @@ function topiaHomeworkBookmarklet() {
             if (String(v) === '2') u.p.push(nm); else if (d && (dates.length ? overdue(d) : d < today)) u.f.push(nm.concat(String(v) === '1' ? 'shadowing △' : 'shadowing not done'));
           });
         });
+        // eBooks (Grammar & Writing): done = the eBook page's Completion status is "Complete" (listening score present),
+        // the same rule as John's Online homework button. Which book and which lesson come from the Homework list.
+        var asg = [];
+        L.studentInfolist.forEach(function (st) { (st.homeworkList || []).forEach(function (h) { var o = h.onlineHomeworkInfo && h.onlineHomeworkInfo.ebook; if (o && (o.name || o.ebookNo)) asg.push({ st: st, o: o, d: String(h.classDate || '').slice(0, 10) }); }); });
+        if (asg.length) {
+          var hj = await get('online-contents/ebook-reading-history?classId=' + c.classId), hl = hj && hj.data && (Array.isArray(hj.data) ? hj.data : hj.data.list || hj.data.historyList || []), fin = {};
+          (Array.isArray(hl) ? hl : []).forEach(function (r) { if (r && r.listeningscore != null && String(r.listeningscore) !== '') fin[r.examineeId + '|' + r.ebookno] = 1; });
+          asg.forEach(function (a) {
+            var no = a.o.ebookNo, k = String(a.o.name || no), b = ebook[k] || (ebook[k] = { name: a.o.name || '', no: no, date: a.d, p: [], f: [] }), nm = [String(a.st.nameE || '').trim(), String(a.st.nameK || '').trim()];
+            if (a.d && (!b.date || a.d < b.date)) b.date = a.d;
+            if (fin[a.st.examineeId + '|' + no]) b.p.push(nm); else if (a.d && (dates.length ? overdue(a.d) : a.d < today)) b.f.push(nm.concat('eBook not complete'));
+          });
+        }
       }));
       })()]);
       nUnits += Object.keys(shadow).length;
-      out.push({ shadow: shadow, cls: c.className, subj: (c.subjectList || []).map(function (s) { return s.subjectName || s.name || ''; }).join('/'), units: units });
+      nUnits += Object.keys(ebook).length;
+      out.push({ shadow: shadow, ebook: ebook, cls: c.className, subj: (c.subjectList || []).map(function (s) { return s.subjectName || s.name || ''; }).join('/'), units: units });
     }));
     saveCache();
     var data = { app: 'gs-online', at: new Date().toISOString().slice(0, 10), classes: out };
@@ -2266,7 +2278,7 @@ function tickUnits(c, x, items, kind) {
   return { ticks, notDone };
 }
 function applyOnline(c, d) {
-  const x = hwTarget(c), y = shTarget(c); if (!x && !y) return null;
+  const x = hwTarget(c), y = shTarget(c), z = ebookX(c); if (!x && !y && !z) return null;
   let ticks = 0, notDone = [];
   if (x && d.units) {
     const items = Object.keys(d.units).map(u => ({ try: [d.units[u].name, u], n: +u, p: d.units[u].p, f: d.units[u].f }));
@@ -2277,6 +2289,13 @@ function applyOnline(c, d) {
     const items = Object.values(d.shadow).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0)
       .map((s, i) => ({ try: [s.u, 'U' + s.u + 'D' + s.d], n: i + 1, p: s.p, f: s.f }));
     const r = tickUnits(c, y, items, 'shadowing'); ticks += r.ticks; notDone = notDone.concat(r.notDone);
+  }
+  if (z && d.ebook) {
+    // e-Books: match the title to the syllabus list (box number), else the order they were given out.
+    const tk = t => String(t || '').toLowerCase().replace(/[^a-z0-9]/g, ''), titles = ebookList(c).map(b => tk(b[1]));
+    const items = Object.values(d.ebook).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0)
+      .map((b, i) => { const j = titles.indexOf(tk(b.name)); return { try: j >= 0 ? [String(j + 1)] : [], n: j >= 0 ? j + 1 : i + 1, p: b.p, f: b.f }; });
+    const r = tickUnits(c, z, items, 'e-Book'); ticks += r.ticks; notDone = notDone.concat(r.notDone);
   }
   return { ticks, notDone };
 }
@@ -2606,7 +2625,6 @@ function dayHTML(c, syl) {
     </div>
     <div class="daystrip" aria-label="Jump to a lesson">${[...Array(NDAYS).keys()].map(j => `<button type="button" data-day="${j}" class="m${monthOf(j) + 1}${marked(j) ? ' done' : ''}" aria-current="${j === i}">${j + 1}</button>`).join('')}</div>
     ${!c.start && !c.example ? `<p class="nudge">📅 Set the <b>Day 1 date</b> so this opens on today's lesson: <input type="date" data-setstart aria-label="Day 1 date"></p>` : ''}
-    ${(() => { const ex = ebookX(c), g = ex ? ebookGiven(c, i) : -1; return g >= 0 ? `<p class="nudge ebookhint">📘 ${L('Give out e-Book', 'e-Book 나눠 주기')} ${g + 1}: <b>${esc(ebookList(c)[g][1])}</b></p>` : ''; })()}
     ${dueLine(c, syl, i)}
     <div class="row dayacts"><button type="button" class="primary" data-act="allpresent">✓ Everyone present</button><button type="button" data-act="allfull" title="Everyone here gets full marks for what is done today: attendance, participation and anything due today. Boxes you already filled stay as they are.">100% everyone</button><button type="button" data-act="clearday" title="Empty every box for this day, for every student. Tap twice to confirm.">Clear all</button>${c.cats.filter(isWordCat).map(k => `<label class="dayout" title="Change this if today's test has a different number of questions. Only Day ${i + 1} changes."><span>${esc(k.label)}</span> ${L('out of', '만점')} <input type="number" inputmode="numeric" min="1" max="200" data-dayout="${esc(k.id)}" value="${esc(outOfAt(c, k, i))}" placeholder="${esc(k.outOf || '')}"></label>`).join('')}${marked(i) ? '' : '<span class="hint">then tap anyone late or absent</span>'}</div>${monthlyHTML(c, syl, i)}`;
   if (!c.students.length) return h + '<p class="hint">No students yet. Tap + Add students at the top to paste the class list.</p>';
@@ -2628,9 +2646,6 @@ function dayHTML(c, syl) {
       else h += `<button type="button" class="scorebtn" data-pad="${i}">${v ? esc(v) + (k.outOf && /^\d+(\.\d+)?$/.test(v) ? `<small>/${k.outOf} · ${round(pct(v, k.outOf))}%</small>` : '') : '<small>Tap to score</small>'}</button>`;
       h += '</div>';
     });
-    { const ex = ebookX(c), k = ex ? ebookCheck(c, i) : -1;
-      if (k >= 0) { const done = ((c.extra[s.id] || {})[ex.id] || []).includes(k + 1);
-        h += `<div class="line ebook"><span class="lab">📘 e-Book <em>${esc(ebookList(c)[k][1])}</em></span><span class="seg"><button type="button" class="v-Y" data-ebook="${k + 1}" aria-pressed="${done}">${done ? L('✓ Read', '✓ 읽음') : L('Not yet', '아직')}</button></span></div>`; } }
     h += `<div class="dnote"><span class="lab">Notes</span>${noteBoxHTML(c, s.id)}</div>${open ? `<div class="cardfoot"><button type="button" class="small" data-act="report">📄 Report</button>${leaveTools(c, s)}</div>` : ''}<button type="button" class="linkbtn morebtn" data-more aria-expanded="${open}">${open ? 'Less ▴' : `More for ${esc(s.eng || s.kor)}${extra ? ` (${extra})` : ''} ▾`}</button></article>`;
   });
   h += '</div>';
@@ -2737,10 +2752,7 @@ main.addEventListener('click', e => {
   const dj = e.target.closest('[data-day]');
   if (dj) { dayAt[c.id] = Math.max(0, Math.min(NDAYS - 1, +dj.dataset.day)); closePad(); render(); return; }
   if (e.target.closest('[data-today]')) { delete dayAt[c.id]; closePad(); render(); return; }
-  const eb = e.target.closest('[data-ebook]');
-  if (eb) { const ex = ebookX(c), sid = eb.closest('.scard').dataset.sid, n = +eb.dataset.ebook; if (!ex) return;
-    c.extra[sid] ||= {}; const list = Array.isArray(c.extra[sid][ex.id]) ? c.extra[sid][ex.id] : [], on = !list.includes(n);
-    c.extra[sid][ex.id] = on ? [...list, n].sort((a, b) => a - b) : list.filter(u => u !== n); keep(c); render(); return; }
+
   const sc = e.target.closest('.cell.sc');
   if (sc) { const r = rowCtx(sc); openPad(r.sid, r.cat.id, +sc.dataset.i); return; }
   const card = e.target.closest('.scard');
