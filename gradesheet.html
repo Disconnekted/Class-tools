@@ -214,6 +214,7 @@ table.gs td button.cell.sel{outline:2px solid var(--accent);outline-offset:-2px;
 .padhead small{display:block;color:var(--muted);font-size:13px}
 .padhead button{min-height:44px;padding:0 18px}
 .padgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.padlab{font-size:13px;color:var(--muted);margin:4px 0 3px}.padgrid.tens{grid-template-columns:repeat(11,minmax(0,1fr))}.padgrid.ones{grid-template-columns:repeat(10,minmax(0,1fr))}.padgrid.tens button small{font-size:10.5px}
 .padgrid.dense{grid-template-columns:repeat(auto-fill,minmax(54px,1fr))}
 .padgrid button{min-height:54px;display:grid;place-content:center;gap:0;font:600 21px var(--f-mono);padding:4px;background:var(--paper)}
 .padgrid button small{font:400 11.5px var(--f-body);color:var(--muted)}
@@ -1845,6 +1846,9 @@ function flashMsg(t) {
 let view = 'day';
 const dayAt = {}; // class id -> day index shown in Day by day
 const NOTE_CHIPS = ['Late', 'Disruptive', 'Sent outside', 'Retest', 'No book'];
+const NOTE_KO = { 'Late': '지각', 'Disruptive': '수업 방해', 'Sent outside': '밖으로 내보냄', 'Retest': '재시험', 'No book': '책 없음' };
+// Notes are saved in English; in Korean the quick-note words are shown in Korean (the saved text doesn't change).
+const noteShow = l => window.gsKO ? String(l).replace(/^(.+? )(Late|Disruptive|Sent outside|Retest|No book)$/, (m, d, w) => d + NOTE_KO[w]) : l;
 const todayMD = () => { const d = new Date(); return `${d.getMonth() + 1}/${d.getDate()}`; };
 function todayIdx(c) { const k = dayAt[c.id]; delete dayAt[c.id]; const t = pickDay(c); if (k === undefined) delete dayAt[c.id]; else dayAt[c.id] = k; return t; }
 function pickDay(c) {
@@ -1877,13 +1881,13 @@ function noteBoxHTML(c, sid) {
   const when = noteWhen(c), lines = noteLines(c, sid), open = noteOpen.has(sid), sheet = view !== 'day';
   // Whole sheet: notes fold to one short line ("📝 3 · latest note") until tapped, so rows stay slim.
   if (sheet && !open) return `<div class="notebox" data-nsid="${esc(sid)}">${lines.length
-    ? `<button type="button" class="nsum" data-notetog title="${esc(lines.join('\n'))}"><b>📝 ${lines.length}</b> ${esc(lines[lines.length - 1])}</button>`
+    ? `<button type="button" class="nsum" data-notetog title="${esc(lines.map(noteShow).join('\n'))}"><b>📝 ${lines.length}</b> ${esc(noteShow(lines[lines.length - 1]))}</button>`
     : `<button type="button" class="small notetog" data-notetog>+ Note</button>`}</div>`;
   return `<div class="notebox${sheet ? ' nopen' : ''}" data-nsid="${esc(sid)}">
     ${open ? '' : `<button type="button" class="small notetog" data-notetog>+ Note</button>`}
-    <div class="chips"${open ? '' : ' hidden'} aria-label="Quick notes for ${esc(when)}">${NOTE_CHIPS.map(t => { const on = lines.includes(`${when} ${t}`); return `<button type="button" class="chip-btn" data-chip="${esc(t)}" aria-pressed="${on}">${on ? '✓ ' : '+ '}${esc(t)}</button>`; }).join('')}</div>
-    ${lines.length ? `<ul class="nlist">${lines.map((l, j) => `<li><span>${esc(l)}</span><button type="button" data-delnote="${j}" aria-label="Delete note: ${esc(l)}">×</button></li>`).join('')}</ul>` : ''}
-    ${undoNote && undoNote.sid === sid ? `<p class="nundo">Deleted “${esc(undoNote.line)}” <button type="button" data-undonote>Undo</button></p>` : ''}
+    <div class="chips"${open ? '' : ' hidden'} aria-label="Quick notes for ${esc(when)}">${NOTE_CHIPS.map(t => { const on = lines.includes(`${when} ${t}`); return `<button type="button" class="chip-btn" data-chip="${esc(t)}" aria-pressed="${on}">${on ? '✓ ' : '+ '}${esc(L(t, NOTE_KO[t]))}</button>`; }).join('')}</div>
+    ${lines.length ? `<ul class="nlist">${lines.map((l, j) => `<li><span>${esc(noteShow(l))}</span><button type="button" data-delnote="${j}" aria-label="${L('Delete note: ', '메모 삭제: ')}${esc(noteShow(l))}">×</button></li>`).join('')}</ul>` : ''}
+    ${undoNote && undoNote.sid === sid ? `<p class="nundo">${L('Deleted', '삭제됨:')} “${esc(noteShow(undoNote.line))}” <button type="button" data-undonote>${L('Undo', '되돌리기')}</button></p>` : ''}
     <form class="nadd" data-nadd${open ? '' : ' hidden'}><input data-newnote enterkeyhint="done" placeholder="Type or dictate a note" aria-label="New note"><button type="submit">Add</button></form>
     ${sheet ? '<button type="button" class="linkbtn nclose" data-noteclose>Done ▴</button>' : ''}
   </div>`;
@@ -2657,6 +2661,8 @@ function dayHTML(c, syl) {
 
 /* the tap pad */
 let pad = null; // { sid, cat, i }
+// Scores out of 100 (or with no total, like monthly tests): tap the tens, then the ones (87 = 80 then 7).
+const tensPad = k => !(k.outOf && +k.outOf <= 60);
 function choices(k) {
   if (k.outOf && +k.outOf <= 60) return [...Array(+k.outOf + 1).keys()].reverse();
   return [...Array(21).keys()].map(x => 100 - x * 5);
@@ -2665,12 +2671,15 @@ function openPad(sid, catId, i) {
   const c = cur(), k0 = c.cats.find(x => x.id === catId), s = c.students.find(x => x.id === sid);
   if (!k0 || !s) return;
   const k = catAt(c, k0, i);
-  pad = { sid, cat: catId, i };
+  pad = { sid, cat: catId, i, tens: null };
   const v = val(c, sid, catId, i);
   const el = document.getElementById('pad');
   el.innerHTML = `<div class="padbox" role="dialog" aria-label="Pick a score">
     <div class="padhead"><div><b>${esc(s.eng || s.kor)}</b>${s.eng && s.kor ? ` <span class="padkor">${esc(s.kor)}</span>` : ''} · <span>${esc(k.label)}</span>${k.outOf ? ' /' + esc(k.outOf) : ''}<small>Day ${i + 1}${dateFor(c, i) ? ' · ' + esc(dateFor(c, i)) : ''}</small></div><button type="button" data-pad-act="close">${L('Done', '완료')}</button></div>
-    <div class="padgrid${choices(k).length > 26 ? ' dense' : ''}">${choices(k).map(n => `<button type="button" data-pick="${n}" aria-pressed="${String(v) === String(n)}">${n}${k.outOf ? `<small>${round(n / k.outOf * 100)}%</small>` : ''}</button>`).join('')}</div>
+    ${tensPad(k) ? (() => { const nv = /^\d+$/.test(String(v)) ? +v : null, tn = nv === null ? null : Math.min(90, Math.floor(nv / 10) * 10);
+      return `<div class="padlab">${L('Tens', '십의 자리')}</div><div class="padgrid tens">${[100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0].map(n => n === 100 ? `<button type="button" data-pick="100" aria-pressed="${nv === 100}">100</button>` : `<button type="button" data-tens="${n}" aria-pressed="${nv !== 100 && tn === n}">${n}<small>${n}–${n + 9}</small></button>`).join('')}</div>
+      <div class="padlab">${L('Then ones', '그다음 일의 자리')}</div><div class="padgrid ones">${[...Array(10).keys()].map(n => `<button type="button" data-ones="${n}" aria-pressed="${nv !== null && nv !== 100 && nv % 10 === n}">${n}</button>`).join('')}</div>`; })()
+    : `<div class="padgrid${choices(k).length > 26 ? ' dense' : ''}">${choices(k).map(n => `<button type="button" data-pick="${n}" aria-pressed="${String(v) === String(n)}">${n}${k.outOf ? `<small>${round(n / k.outOf * 100)}%</small>` : ''}</button>`).join('')}</div>`}
     <div class="padfoot">
       <button type="button" data-pick="AB">${L('AB absent', 'AB 결석')}</button>
       <button type="button" data-pick="">${L('Clear', '지우기')}</button>
@@ -2720,6 +2729,13 @@ function pick(v) {
 document.getElementById('pad').addEventListener('click', e => {
   const p = e.target.closest('[data-pick]');
   if (p) { pick(p.dataset.pick); return; }
+  const tb = e.target.closest('[data-tens]');
+  if (tb && pad) { pad.tens = +tb.dataset.tens; document.querySelectorAll('#pad [data-tens],#pad [data-pick="100"]').forEach(x => x.setAttribute('aria-pressed', x === tb)); document.querySelectorAll('#pad [data-ones]').forEach(x => x.setAttribute('aria-pressed', 'false')); return; }
+  const ob = e.target.closest('[data-ones]');
+  if (ob && pad) {
+    let t = pad.tens; if (t === null) { const on = document.querySelector('#pad [data-tens][aria-pressed="true"]'); t = on ? +on.dataset.tens : 0; }
+    pick(String(t + +ob.dataset.ones)); return;
+  }
   const a = e.target.closest('[data-pad-act]'); if (!a) { if (e.target.id === 'pad') closePad(); return; }
   const act = a.dataset.padAct;
   // A score typed in "Other" is kept when you move on or close, without pressing Use.
