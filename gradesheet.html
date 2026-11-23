@@ -866,6 +866,8 @@ function isoToday() { const d = new Date(); return `${d.getFullYear()}-${String(
 /* 한국어 / English: L(en, ko) picks the text for built pieces; plain labels are translated by the language switch (ipad.html). */
 window.gsKO = (() => { try { return localStorage.getItem('gradesheet.lang') === 'ko'; } catch (e) { return false; } })();
 function L(en, ko) { return window.gsKO ? ko : en; }
+const SUBJ_KO = { 'Debate': '토론', 'Grammar': '문법', 'Integrated': '통합', 'Language Arts': '랭귀지 아츠', 'Phonics': '파닉스', 'Speaking': '스피킹', 'Speech': '스피치', 'TOEFL Reading': '토플 리딩', 'Writing': '작문' };
+function subjL(name) { return name ? L(name, SUBJ_KO[name] || name) : ''; }
 /* ---------- saving ----------
    Online (published with its database) each teacher has a document in "teachers", and each of their
    classes is its own document in "classes" (id = teacher id + class id), so a class can grow without
@@ -1147,7 +1149,7 @@ function render() {
   <section class="panel">
     <div class="classhead">
       <div class="title">
-        <h2>${esc(c.name)} ${esc(subj ? subj.name : '')} class</h2>
+        <h2>${esc(c.name)} ${esc(subj ? subjL(subj.name) : '')} ${L('class', '반')}</h2>
       </div>
       <div class="viewbar" role="tablist" aria-label="View"><button type="button" role="tab" data-view="day" aria-selected="${view === 'day'}">Day by day</button><button type="button" role="tab" data-view="sheet" aria-selected="${view === 'sheet'}">Whole sheet</button></div>
       <details class="fold" data-ui="details"${uiOpen('details') || !subj ? ' open' : ''}>
@@ -1229,7 +1231,7 @@ function renderList() {
   const none = !!me && classes.every(c => c.example);
   if (ab && !uiOpen('add') && ab.open !== none && (none || ab.dataset.was)) { ab.dataset.auto = '1'; ab.open = none; if (none) ab.dataset.was = '1'; else delete ab.dataset.was; }
   document.getElementById('clist').innerHTML = classes.map(c => `<button type="button" data-cid="${esc(c.id)}" aria-current="${c.id === current}">
-    <span><b>${esc(c.name)}</b><br><small>${esc(SUBJECTS[c.subject] ? SUBJECTS[c.subject].name : 'No subject')}${c.example ? ' · example' : ''}</small></span><small>${c.students.length}</small></button>`).join('');
+    <span><b>${esc(c.name)}</b><br><small>${esc(SUBJECTS[c.subject] ? subjL(SUBJECTS[c.subject].name) : L('No subject', '과목 없음'))}${c.example ? L(' · example', ' · 예시') : ''}</small></span><small>${c.students.length}</small></button>`).join('');
 }
 document.getElementById('clist').addEventListener('click', e => { const b = e.target.closest('[data-cid]'); if (b) { current = b.dataset.cid; render(); } });
 
@@ -1312,7 +1314,7 @@ function addStudentHTML(c) {
   const gone = c.students.filter(hasLeft).length;
   return `<form class="addstu" data-addstudent>
     <input id="newEng" placeholder="English name" autocomplete="off" aria-label="English name">
-    <input id="newKor" placeholder="Korean name" autocomplete="off" aria-label="Korean name">
+    <input id="newKor" placeholder="${L('Korean name', '한국 이름')}" autocomplete="off" aria-label="${L('Korean name', '한국 이름')}">
     <label class="joins">Joins on <select id="newJoin" aria-label="Joins on">${dayOptions(c.students.length && hasMarks(c) ? pickDay(c) : 0)}</select></label>
     <button type="submit" class="primary">+ Add</button>
     <span class="hint">${L(`${c.students.length - gone} in class${gone ? `, ${gone} left` : ''}. A student who quits keeps their scores: use “Left the class”.`, `수강 중 ${c.students.length - gone}명${gone ? `, 그만둔 학생 ${gone}명` : ''}. 그만둔 학생은 “퇴원”으로 처리하면 점수가 남습니다.`)}</span>
@@ -2792,6 +2794,9 @@ main.addEventListener('submit', e => {
   paintTheme();
 
   const KO = {
+    'Korean name': '한국 이름', 'English name': '영어 이름', 'Move up': '위로', 'Move down': '아래로', 'Done': '완료', 'Hide student options': '학생 옵션 닫기',
+    'Last lesson before leaving:': '떠나기 전 마지막 수업:', 'Leaves from': '떠나는 회차', 'Mark as left': '퇴원 처리', 'Back in class': '다시 수업 참여', 'Left the class…': '퇴원…', 'Delete…': '삭제…',
+    'Only for a student added by mistake': '실수로 추가한 학생에게만', 'One-page report for this student': '이 학생의 한 장 보고서', '📄 Report': '📄 학생 보고서',
     'Class': '학급', 'Gradesheet': '성적표', 'My classes': '내 반', '+ Add students': '+ 학생 추가', 'Import': '가져오기', 'Choose file': '파일 선택',
     '+ Add a class by hand': '+ 반 직접 추가', 'Copy students': '학생 복사', 'Saved on this device': '이 기기에 저장됨', 'Saved on this computer': '이 기기에 저장됨', '⋯ More': '⋯ 더보기',
     'Day by day': '일별', 'Whole sheet': '전체 보기', 'Colour key': '색상 안내', 'Columns': '항목', 'Details': '세부 정보', '✎ Details': '✎ 세부 정보',
@@ -2836,9 +2841,9 @@ main.addEventListener('submit', e => {
     [/^More for (.+?)( \(\d+\))? ▾$/, '$1 더보기$2 ▾'], [/^Less ▴$/, '접기 ▴'], [/^(.+) class$/, '$1 반'], [/^(.+) students$/, '$1 학생'],
     [/^Send (.+)'s gradesheet$/, '$1 성적표 보내기'], [/^Overall (\d+%)$/, '전체 $1'], [/^Participation \/(\d+)$/, '참여도 /$1'], [/^Word Test \/(\d+)$/, '단어 시험 /$1'],
     [/^Vocabulary Test \/(\d+)$/, '단어 시험 /$1'], [/^Sem ([AB])$/, '$1학기'],
-    [/^Date for day (\d+)$/, '$1회차 날짜'], [/^Change this if today's test has a different number of questions\. Only Day (\d+) changes\.$/, '오늘 시험 문항 수가 다르면 바꾸세요. $1회차만 바뀝니다.'], [/^Delete note: (.+)$/, '메모 삭제: $1'], [/^Day (\d+): (.+)$/, '$1회차: $2'], [/^Options for (.+)$/, '$1 옵션'], [/^Copied (\d+) students\. Paste them in the name tag tool$/, '학생 $1명을 복사했습니다. 이름표 도구에 붙여 넣으세요'], [/^Filled (\d+) empty box(?:es)? with full marks for Day (\d+)\. Tap any score to change it\.$/, '$2회차 빈칸 $1개를 만점으로 채웠습니다. 바꿀 점수는 누르세요.'], [/^Tap again to clear Day (\d+)$/, '한 번 더 누르면 $1회차를 지웁니다'], [/^Last backup (\d+) days ago: tap to save a copy$/, '마지막 백업 $1일 전: 눌러서 사본 저장'], [/^Got (\d+) of (\d+) codes\. Keep holding the iPad in front of the screen…$/, '코드 $2개 중 $1개 받음. iPad를 화면 앞에 계속 대고 있으세요…'], [/^Backed up (.+)$/, '백업함: $1'], [/^Code (\d+) of (\d+)$/, '코드 $1 / $2'], [/^(.+) only$/, '$1만'], [/^Monthly Test (I+) today\.$/, '오늘 월말 평가 $1.']
+    [/^Date for day (\d+)$/, '$1회차 날짜'], [/^Options for (.+)$/, '$1 옵션'], [/^Joined Day (\d+)$/, '$1회차 합류'], [/^Left Day (\d+)$/, '$1회차 퇴원'], [/^Delete (.+) and all their scores for good\?$/, '$1 학생과 모든 점수를 영구 삭제할까요?'], [/^Change this if today's test has a different number of questions\. Only Day (\d+) changes\.$/, '오늘 시험 문항 수가 다르면 바꾸세요. $1회차만 바뀝니다.'], [/^Delete note: (.+)$/, '메모 삭제: $1'], [/^Day (\d+): (.+)$/, '$1회차: $2'], [/^Options for (.+)$/, '$1 옵션'], [/^Copied (\d+) students\. Paste them in the name tag tool$/, '학생 $1명을 복사했습니다. 이름표 도구에 붙여 넣으세요'], [/^Filled (\d+) empty box(?:es)? with full marks for Day (\d+)\. Tap any score to change it\.$/, '$2회차 빈칸 $1개를 만점으로 채웠습니다. 바꿀 점수는 누르세요.'], [/^Tap again to clear Day (\d+)$/, '한 번 더 누르면 $1회차를 지웁니다'], [/^Last backup (\d+) days ago: tap to save a copy$/, '마지막 백업 $1일 전: 눌러서 사본 저장'], [/^Got (\d+) of (\d+) codes\. Keep holding the iPad in front of the screen…$/, '코드 $2개 중 $1개 받음. iPad를 화면 앞에 계속 대고 있으세요…'], [/^Backed up (.+)$/, '백업함: $1'], [/^Code (\d+) of (\d+)$/, '코드 $1 / $2'], [/^(.+) only$/, '$1만'], [/^Monthly Test (I+) today\.$/, '오늘 월말 평가 $1.']
   ];
-  const SKIP = '#gsTour,#tourOffer,.tbtn,.nlist,.nsum,td.c-name,.scard header,#clist,script,style,textarea,.nundo,#gsTopiaNote,.foot.raw';
+  const SKIP = '#gsTour,#tourOffer,.tbtn,.nlist,.nsum,.scard header,#clist,script,style,textarea,.nundo,#gsTopiaNote,.foot.raw';
   const tr = s => {
     const t = s.trim(); if (!t) return null;
     let k = KO[t]; if (k === undefined) for (const [re, to] of RULES) { if (re.test(t)) { k = t.replace(re, to); break; } }
@@ -2865,8 +2870,14 @@ main.addEventListener('submit', e => {
       }
     }
   }
-  let queued = false;
-  const mo = new MutationObserver(() => { if (!ko || queued) return; queued = true; requestAnimationFrame(() => { queued = false; mo.disconnect(); apply(document.body); watch(); }); });
+  // Translate only what changed, straight away (before the screen repaints), so buttons never flash in English first.
+  const mo = new MutationObserver(recs => {
+    if (!ko) return; mo.disconnect();
+    const todo = new Set();
+    for (const r of recs) { if (r.type === 'childList') r.addedNodes.forEach(n => { if (n.isConnected) todo.add(n); }); else if (r.target.isConnected) todo.add(r.target); }
+    for (const n of todo) { let inside = false; for (let p = n.parentNode; p; p = p.parentNode) if (todo.has(p)) { inside = true; break; } if (!inside) try { apply(n); } catch (e) {} }
+    watch();
+  });
   const watch = () => mo.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['title', 'placeholder', 'aria-label'] });
   const paintLang = () => { langB.textContent = ko ? 'EN' : '한'; langB.title = ko ? 'English' : '한국어로 보기'; langB.setAttribute('aria-label', langB.title); root.lang = ko ? 'ko' : 'en'; };
   langB.onclick = () => { ko = !ko; window.gsKO = ko; set('gradesheet.lang', ko ? 'ko' : 'en'); mo.disconnect(); try { if (typeof renderWho === 'function' && !document.getElementById('who').hidden) renderWho(); render(); } catch (e) {} apply(document.body); paintLang(); paintTheme(); if (ko) watch(); };
