@@ -2578,7 +2578,7 @@ function dayHTML(c, syl) {
     h += `<div class="dnote"><span class="lab">Notes</span>${noteBoxHTML(c, s.id)}</div>${open ? `<div class="cardfoot"><button type="button" class="small" data-act="report">📄 Report</button>${leaveTools(c, s)}</div>` : ''}<button type="button" class="linkbtn morebtn" data-more aria-expanded="${open}">${open ? 'Less ▴' : `More for ${esc(s.eng || s.kor)}${extra ? ` (${extra})` : ''} ▾`}</button></article>`;
   });
   h += '</div>';
-  h += `<div class="topiarow"><button type="button" class="small" data-act="topia" title="Opens TOPIA\'s Weekly Report with this day\'s scores filled in by TOPIA Helper">⇪ Send Day ${i + 1} to TOPIA</button>${todaysClasses(c).length > 1 ? `<button type="button" class="small" data-act="topiaall" title="Every class you marked today or that meets today, one after another: TOPIA Helper fills each, you check and press Save">⇪ All of today's classes</button>` : ''}<button type="button" class="info" data-info="topiahelp" aria-label="How to send scores to TOPIA">ⓘ</button>${hwTarget(c) || shTarget(c) ? `<button type="button" class="small" data-act="hwpaste">⇩ Paste online homework</button>` : ''}<span class="topiamsg hint" hidden></span>
+  h += `<div class="topiarow"><button type="button" class="small" data-act="topia" title="Opens TOPIA\'s Weekly Report with this day\'s scores filled in by TOPIA Helper">⇪ Send Day ${i + 1} to TOPIA</button>${todaysClasses(c).length > 1 ? `<button type="button" class="small" data-act="topiaall" title="Every class you marked today or that meets today, one after another: TOPIA Helper fills each, you check and press Save">⇪ Weekly report upload</button>` : ''}<button type="button" class="info" data-info="topiahelp" aria-label="How to send scores to TOPIA">ⓘ</button>${hwTarget(c) || shTarget(c) ? `<button type="button" class="small" data-act="hwpaste">⇩ Paste online homework</button>` : ''}<span class="topiamsg hint" hidden></span>
     <div class="hint infotext" id="topiahelp" hidden>${window.gsKO ? `<b>⇪ N회차 TOPIA로 보내기</b>를 누르세요 (<a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">TOPIA Weekly Report ↗</a>가 열립니다). 칸이 아직 안 채워졌으면 TOPIA에서 <b>📒 TOPIA Helper</b> 북마크를 누르고, 확인한 뒤 Save를 누르세요. 점수는 TOPIA 만점에 맞춰 환산됩니다 (8/9 → 89/100).${hwTarget(c) || shTarget(c) ? `<br><br><b>온라인 숙제:</b> TOPIA 아무 페이지에서 TOPIA Helper → <b>온라인 숙제 → 성적표</b>를 누르세요. 통과한 단어 유닛과 쉐도잉이 자동으로 체크됩니다 (iPad에서는 여기서 <b>온라인 숙제 붙여넣기</b>). 단어 통과 = Word Study와 Matching Game 완료, 그리고 테스트 1–3 각각 80% 이상 또는 테스트 5개 모두 완료.` : ''}<br><br>북마크가 아직 없나요? 기기마다 한 번 <a href="https://disconnekted.github.io/Class-tools/topia-helper.html" target="_blank" rel="noopener">TOPIA Helper 설정</a>을 하세요.` : `Tap <b>Send Day N to TOPIA</b> (it opens <a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">TOPIA's Weekly Report ↗</a>). On TOPIA, tap your <b>📒 TOPIA Helper</b> bookmark if the boxes aren't filled yet, check them and press Save. Scores go in as a share of TOPIA's totals (8/9 → 89/100).${hwTarget(c) || shTarget(c) ? `<br><br><b>Online homework:</b> on any TOPIA page tap TOPIA Helper → <b>Online homework</b>. The gradesheet ticks passed word units and shadowing by itself (on iPad, tap <b>Paste online homework</b> here). Words pass = Word Study and Matching Game done, plus tests 1–3 each 80% or more, or all 5 tests done.` : ''}<br><br>No bookmark yet? <a href="https://disconnekted.github.io/Class-tools/topia-helper.html" target="_blank" rel="noopener">Set up TOPIA Helper</a> once on each device.`}</div></div>`;
   if (away.length) h += `<p class="hint">Not in this class on Day ${i + 1}: ${away.map(s => `${esc(s.eng || s.kor)} (${esc(statusText(s))})`).join(', ')}. Use Whole sheet to bring a student back.</p>`;
   return h;
@@ -2598,16 +2598,16 @@ function openPad(sid, catId, i) {
   const v = val(c, sid, catId, i);
   const el = document.getElementById('pad');
   el.innerHTML = `<div class="padbox" role="dialog" aria-label="Pick a score">
-    <div class="padhead"><div><b>${esc(s.eng || s.kor)}</b>${s.eng && s.kor ? ` <span class="padkor">${esc(s.kor)}</span>` : ''} · ${esc(k.label)}${k.outOf ? ' /' + esc(k.outOf) : ''}<small>Day ${i + 1}${dateFor(c, i) ? ' · ' + esc(dateFor(c, i)) : ''}</small></div><button type="button" data-pad-act="close">Done</button></div>
+    <div class="padhead"><div><b>${esc(s.eng || s.kor)}</b>${s.eng && s.kor ? ` <span class="padkor">${esc(s.kor)}</span>` : ''} · <span>${esc(k.label)}</span>${k.outOf ? ' /' + esc(k.outOf) : ''}<small>Day ${i + 1}${dateFor(c, i) ? ' · ' + esc(dateFor(c, i)) : ''}</small></div><button type="button" data-pad-act="close">${L('Done', '완료')}</button></div>
     <div class="padgrid${choices(k).length > 26 ? ' dense' : ''}">${choices(k).map(n => `<button type="button" data-pick="${n}" aria-pressed="${String(v) === String(n)}">${n}${k.outOf ? `<small>${round(n / k.outOf * 100)}%</small>` : ''}</button>`).join('')}</div>
     <div class="padfoot">
-      <button type="button" data-pick="AB">AB absent</button>
-      <button type="button" data-pick="">Clear</button>
-      <input id="padType" inputmode="decimal" placeholder="Other: 17.5, 17/20, 85%" value="${esc(choices(k).map(String).includes(String(v)) ? '' : v)}" aria-label="Other score">
-      <button type="button" data-pad-act="type">Use</button>
-      <span class="padnav"><button type="button" data-pad-act="prev" aria-label="Previous student">‹ Prev</button><button type="button" data-pad-act="next" aria-label="Next student">Next ›</button></span>
+      <button type="button" data-pick="AB">${L('AB absent', 'AB 결석')}</button>
+      <button type="button" data-pick="">${L('Clear', '지우기')}</button>
+      <input id="padType" inputmode="decimal" placeholder="${L('Other: 17.5, 17/20, 85%', '기타: 17.5, 17/20, 85%')}" value="${esc(choices(k).map(String).includes(String(v)) ? '' : v)}" aria-label="Other score">
+      <button type="button" data-pad-act="type">${L('Use', '입력')}</button>
+      <span class="padnav"><button type="button" data-pad-act="prev" aria-label="Previous student">${L('‹ Prev', '‹ 이전')}</button><button type="button" data-pad-act="next" aria-label="Next student">${L('Next ›', '다음 ›')}</button></span>
     </div>
-    <label class="padauto"><input type="checkbox" id="padAuto" ${padAuto ? 'checked' : ''}> Go to the next student after each tap</label>
+    <label class="padauto"><input type="checkbox" id="padAuto" ${padAuto ? 'checked' : ''}> ${L('Go to the next student after each tap', '누를 때마다 다음 학생으로')}</label>
   </div>`;
   el.hidden = false;
   document.body.classList.add('padopen');
@@ -2804,7 +2804,7 @@ main.addEventListener('submit', e => {
     'then tap anyone late or absent': '그다음 지각·결석 학생을 누르세요', '✓ Here': '✓ 출석', 'Late': '지각', 'Absent': '결석', '✓ In': '✓ 제출', '✗ Not in': '✗ 미제출',
     'Tap to score': '눌러서 점수 입력', '+ Note': '+ 메모', 'Add': '추가', 'Done ▴': '닫기 ▴', 'Close': '닫기', 'Delete': '삭제', 'Keep': '유지', 'Remove': '제거',
     '+ Add a student': '+ 학생 추가', 'Class notes': '반 메모', 'Send or print': '보내기 · 인쇄', 'Blank sheets · PDF · Email · Slack': '빈 양식 · PDF · 이메일 · 슬랙',
-    'Delete this class…': '이 반 삭제…', '% Score chart': '% 점수표', 'Score chart': '점수표', 'Send as': '보낼 형식', "⇪ All of today's classes": '⇪ 오늘 수업 반 모두', "No scores yet in today's classes.": '오늘 수업 반에 아직 점수가 없습니다.', '🗑 Delete all classes…': '🗑 모든 반 삭제…', 'Delete all': '모두 삭제', 'Cancel': '취소', '⤓ Back up first': '⤓ 먼저 백업', "Every student, score and note in them is removed from this device. This can't be undone.": '모든 학생, 점수, 메모가 이 기기에서 삭제됩니다. 되돌릴 수 없습니다.', 'There are no classes to delete.': '삭제할 반이 없습니다.', "☑ Open on today's class": '☑ 오늘 수업 반으로 열기', "☐ Open on today's class": '☐ 오늘 수업 반으로 열기', "Don't do this": '사용 안 함', "Always open the class you used last": '항상 마지막에 쓴 반으로 열기', "OK. It will open the class you used last. Turn it back on under ⋯ More.": '마지막에 쓴 반으로 열립니다. ⋯ 더보기에서 다시 켤 수 있어요.', 'Type your name to start.': '이름을 입력해 시작하세요.', 'Disruptive': '수업 방해', 'Sent outside': '밖으로 내보냄', 'Retest': '재시험', 'No book': '책 없음', '+ Disruptive': '+ 수업 방해', '+ Sent outside': '+ 밖으로 내보냄', '+ Retest': '+ 재시험', '+ No book': '+ 책 없음', 'Switch': '전환', "On TOPIA's Attendance page click": 'TOPIA 출석 페이지에서', ', then paste here.': '을(를) 누른 뒤 여기에 붙여넣으세요.', 'No students yet. Tap + Add students at the top to paste the class list.': '아직 학생이 없습니다. 위의 + 학생 추가를 눌러 명단을 붙여넣으세요.', 'No students yet. Tap + Add students at the top, or + Add a student below.': '아직 학생이 없습니다. 위의 + 학생 추가 또는 아래의 + 학생 추가를 누르세요.', 'Tap + Add students at the top to paste your class list, or add a class by hand.': '위의 + 학생 추가를 눌러 명단을 붙여넣거나 반을 직접 추가하세요.', 'No class yet': '아직 반이 없습니다', 'Tap to change this date': '눌러서 날짜 변경', 'Tap a date to change it if a lesson moved': '수업이 옮겨지면 날짜를 눌러 바꾸세요', '⇩ Paste online homework': '⇩ 온라인 숙제 붙여넣기',
+    'Delete this class…': '이 반 삭제…', '% Score chart': '% 점수표', 'Score chart': '점수표', 'Send as': '보낼 형식', "⇪ Weekly report upload": '⇪ 주간 보고서 올리기', "No scores yet in today's classes.": '오늘 수업 반에 아직 점수가 없습니다.', '🗑 Delete all classes…': '🗑 모든 반 삭제…', 'Delete all': '모두 삭제', 'Cancel': '취소', '⤓ Back up first': '⤓ 먼저 백업', "Every student, score and note in them is removed from this device. This can't be undone.": '모든 학생, 점수, 메모가 이 기기에서 삭제됩니다. 되돌릴 수 없습니다.', 'There are no classes to delete.': '삭제할 반이 없습니다.', "☑ Open on today's class": '☑ 오늘 수업 반으로 열기', "☐ Open on today's class": '☐ 오늘 수업 반으로 열기', "Don't do this": '사용 안 함', "Always open the class you used last": '항상 마지막에 쓴 반으로 열기', "OK. It will open the class you used last. Turn it back on under ⋯ More.": '마지막에 쓴 반으로 열립니다. ⋯ 더보기에서 다시 켤 수 있어요.', 'Type your name to start.': '이름을 입력해 시작하세요.', 'Disruptive': '수업 방해', 'Sent outside': '밖으로 내보냄', 'Retest': '재시험', 'No book': '책 없음', '+ Disruptive': '+ 수업 방해', '+ Sent outside': '+ 밖으로 내보냄', '+ Retest': '+ 재시험', '+ No book': '+ 책 없음', 'Switch': '전환', "On TOPIA's Attendance page click": 'TOPIA 출석 페이지에서', ', then paste here.': '을(를) 누른 뒤 여기에 붙여넣으세요.', 'No students yet. Tap + Add students at the top to paste the class list.': '아직 학생이 없습니다. 위의 + 학생 추가를 눌러 명단을 붙여넣으세요.', 'No students yet. Tap + Add students at the top, or + Add a student below.': '아직 학생이 없습니다. 위의 + 학생 추가 또는 아래의 + 학생 추가를 누르세요.', 'Tap + Add students at the top to paste your class list, or add a class by hand.': '위의 + 학생 추가를 눌러 명단을 붙여넣거나 반을 직접 추가하세요.', 'No class yet': '아직 반이 없습니다', 'Tap to change this date': '눌러서 날짜 변경', 'Tap a date to change it if a lesson moved': '수업이 옮겨지면 날짜를 눌러 바꾸세요', '⇩ Paste online homework': '⇩ 온라인 숙제 붙여넣기',
     'Fill from gradesheet': '성적표에서 채우기', 'Online homework from TOPIA': 'TOPIA 온라인 숙제', 'TOPIA Helper': 'TOPIA 도우미',
     '⤓ Back up': '⤓ 백업', '⤒ Restore': '⤒ 복원', '📱 Send to iPad': '📱 iPad로 보내기', '📥 Receive from PC': '📥 PC에서 받기', 'Name tags': '이름표', 'Name tags ↗': '이름표 ↗',
     'Copy classes for name tags': '이름표용 반 목록 복사', '📄 Student reports': '📄 학생 리포트', '📊 Class summary': '📊 반 요약', 'One page for the whole class (averages, overall, progress, online homework), then a page per student': '반 전체 한 장 (평균, 전체 점수, 변화, 온라인 숙제) + 학생별 한 장', '🖨 Print': '🖨 인쇄', '✉ Email': '✉ 이메일', '⤓ PDF with scores': '⤓ 점수 포함 PDF',
@@ -3746,8 +3746,8 @@ Promise.resolve(useDb).catch(() => null).then(d => { if (d) startCloud(d); else 
       en: ['The whole sheet', 'One row per column for each student, one box per lesson. Yellow boxes are due that day by the syllabus. Tap a date at the top to change it. On the right: average and the three monthly results. Tap any box to type a score.'],
       ko: ['전체 보기', '학생마다 항목별 한 줄, 수업마다 한 칸입니다. 노란 칸은 실라버스상 그날 할 것입니다. 위쪽 날짜를 눌러 바꿀 수 있습니다. 오른쪽에는 평균과 월별 결과 3개가 있습니다. 칸을 눌러 점수를 입력하세요.'] },
     { sel: '[data-view=day]', act: 'click', before: () => { if (view !== 'sheet') { view = 'sheet'; render(); } }, en: ['Back to one lesson', 'Now back to one lesson at a time.'], ko: ['한 수업 보기로', '이제 다시 한 수업씩 봅니다.'], tryEn: '👉 Tap Day by day', tryKo: '👉 일별을 누르세요' },
-    { sel: '.daynav', day: true, en: ['Moving between lessons', 'Use <b>‹ ›</b> (or swipe on the iPad) to move a lesson, or tap a number to jump. A green line under a number means it already has marks. <b>Today ↩</b> brings you back to today.'],
-      ko: ['수업 이동', '<b>‹ ›</b>(iPad에서는 밀기)로 한 수업씩 이동하거나 숫자를 눌러 바로 가세요. 숫자 아래 초록 줄은 이미 채점한 날입니다. <b>오늘 ↩</b>을 누르면 오늘로 돌아옵니다.'] },
+    { sel: () => [document.querySelector('.daynav'), document.querySelector('.daystrip')], day: true, before: () => { const c = cur(); if (c) { dayAt[c.id] = 2; render(); } }, after: () => { const c = cur(); if (c) { delete dayAt[c.id]; render(); } }, en: ['Moving between lessons', 'Use <b>‹ ›</b> (or swipe on the iPad) to move a lesson, or tap a number to jump. A green line under a number means it already has marks. We’ve moved to Day 3 here, so <b>Today ↩</b> appears next to the day: tap it to jump back to today’s lesson.'],
+      ko: ['수업 이동', '양옆의 <b>‹ ›</b> 버튼을 누르면 이전·다음 수업으로 갑니다. iPad에서는 화면을 옆으로 밀어도 됩니다. 아래 숫자를 누르면 그 회차로 바로 갑니다. 숫자 밑에 초록 줄이 있으면 이미 점수를 넣은 날입니다. 지금은 3회차로 옮겨 두어서 회차 옆에 <b>오늘 ↩</b> 버튼이 보입니다. 누르면 오늘 수업으로 바로 돌아갑니다.'] },
     { sel: '.dueline', day: true, en: ['Due today', 'Yellow buttons are what is done today. Tap one to switch it on or off for this lesson only.<ul><li><b>+ Other</b> adds your own item (a quiz, a homework check)</li><li><b>Clear extras</b> leaves only attendance and participation</li><li><b>We’re a lesson behind / ahead</b> moves the syllabus for this class</li></ul>'],
       ko: ['오늘 할 것', '노란 버튼이 오늘 하는 것입니다. 누르면 이 수업에서만 켜고 끌 수 있습니다.<ul><li><b>+ 기타</b>: 직접 항목 추가 (퀴즈, 숙제 검사)</li><li><b>기타 모두 끄기</b>: 출석과 참여도만 남김</li><li><b>한 수업 늦음 / 빠름</b>: 이 반의 실라버스를 옮김</li></ul>'] },
     { sel: '.dayacts', day: true, en: ['Quick buttons for the whole class', '<ul><li><b>✓ Everyone present</b> marks everyone here</li><li><b>100% everyone</b> gives full marks for today’s items (boxes you filled stay)</li><li><b>Clear all</b> empties the day (tap twice)</li><li><b>Word Test out of</b> changes today’s test total only</li></ul>'],
@@ -3764,8 +3764,8 @@ Promise.resolve(useDb).catch(() => null).then(d => { if (d) startCloud(d); else 
       ko: ['메모', '<b>+ 메모</b>를 눌러 학생에 대해 쓰거나, 빠른 메모 <b>지각, 수업 방해, 밖으로 내보냄, 재시험, 책 없음</b>을 쓰세요. 메모는 반 요약에 들어갑니다.'] },
     { sel: () => document.querySelector('.cards .scard .morebtn'), day: true, en: ['More for a student', 'The other columns for this student, plus: moved class or left, back in class, or delete a student added by mistake.'],
       ko: ['학생 더보기', '이 학생의 나머지 항목과 함께: 반 이동·퇴원, 다시 수강, 잘못 추가한 학생 삭제.'] },
-    { sel: '.topiarow', day: true, en: ['TOPIA', '<ul><li><b>⇪ Send Day N to TOPIA</b> opens the Weekly Report and TOPIA Helper fills in the scores. You check and press Save.</li><li><b>⇪ All of today’s classes</b> does every class you taught today, one after another.</li><li><b>⇩ Paste online homework</b> ticks the online word study and shadowing.</li></ul>'],
-      ko: ['TOPIA', '<ul><li><b>⇪ N회차 TOPIA로 보내기</b>: Weekly Report를 열고 TOPIA Helper가 점수를 채웁니다. 확인 후 Save를 누르세요.</li><li><b>⇪ 오늘 수업 반 모두</b>: 오늘 수업한 반을 차례로 보냅니다.</li><li><b>⇩ 온라인 숙제 붙여넣기</b>: 온라인 단어 학습과 쉐도잉을 체크합니다.</li></ul>'] },
+    { sel: '.topiarow', day: true, en: ['TOPIA', '<ul><li><b>⇪ Send Day N to TOPIA</b> opens the Weekly Report and TOPIA Helper fills in the scores. You check and press Save.</li><li><b>⇪ Weekly report upload</b> sends every class you taught today to the Weekly Report, one after another.</li><li><b>⇩ Paste online homework</b> ticks the online word study and shadowing.</li></ul>'],
+      ko: ['TOPIA', '<ul><li><b>⇪ N회차 TOPIA로 보내기</b>: Weekly Report를 열고 TOPIA Helper가 점수를 채웁니다. 확인 후 Save를 누르세요.</li><li><b>⇪ 주간 보고서 올리기</b>: 오늘 수업한 반을 차례로 Weekly Report에 올립니다.</li><li><b>⇩ 온라인 숙제 붙여넣기</b>: 온라인 단어 학습과 쉐도잉을 체크합니다.</li></ul>'] },
     { sel: '.foldrow', day: true, en: ['New student or class notes', '<b>+ Add a student</b> for someone who joins mid-semester. <b>Class notes</b> for anything about the whole class.'],
       ko: ['새 학생과 반 메모', '<b>+ 학생 추가</b>: 학기 중에 들어온 학생. <b>반 메모</b>: 반 전체에 관한 내용.'] },
     { sel: '.sendpanel', day: true, before: () => { const d = document.querySelector('.sendpanel'); if (d) { T.sendWasOpen = d.open; d.open = true; } }, after: () => { const d = document.querySelector('.sendpanel'); if (d && T && !T.sendWasOpen) d.open = false; },
@@ -3781,6 +3781,7 @@ Promise.resolve(useDb).catch(() => null).then(d => { if (d) startCloud(d); else 
 
   function start() {
     if (T) return;
+    const off = document.getElementById('tourOffer'); if (off) off.remove();
     document.getElementById('moreMenu') && (document.getElementById('moreMenu').hidden = true);
     const root = el('div'); root.id = 'gsTour'; root.setAttribute('translate', 'no'); document.body.appendChild(root);
     const lang = el('div', 'tlang', `<div class="tcard" role="dialog" aria-modal="true"><h3>🎓 Tutorial · 사용 안내</h3><p>Choose a language<br>언어를 고르세요</p><button type="button" class="big primary" data-l="ko">한국어</button><button type="button" class="big primary" data-l="en">English</button><p style="margin-top:10px"><button type="button" class="small ghost" data-l="x">Not now · 나중에</button></p></div>`);
@@ -3806,7 +3807,14 @@ Promise.resolve(useDb).catch(() => null).then(d => { if (d) startCloud(d); else 
   }
 
   function step() { return STEPS[T.i]; }
-  function target() { const s = step(); return s.sel ? q(s.sel) : null; }
+  function target() {
+    const s = step(); if (!s.sel) return null; const t = q(s.sel);
+    if (!Array.isArray(t)) return t;
+    const els = t.filter(Boolean); if (!els.length) return null;
+    // Several parts lit together: behave like one element covering all of them.
+    return { multi: els, contains: n => els.some(e => e.contains(n)), scrollIntoView: o => els[0].scrollIntoView(o),
+      getBoundingClientRect: () => { const rs = els.map(e => e.getBoundingClientRect()); const l = Math.min(...rs.map(r => r.left)), tp = Math.min(...rs.map(r => r.top)), r = Math.max(...rs.map(r => r.right)), b = Math.max(...rs.map(r => r.bottom)); return { left: l, top: tp, right: r, bottom: b, width: r - l, height: b - tp }; } };
+  }
 
   function go(i) {
     if (!T) return;
@@ -3855,6 +3863,11 @@ Promise.resolve(useDb).catch(() => null).then(d => { if (d) startCloud(d); else 
     br.style.cssText = `left:${x + w}px;top:${y}px;right:0;height:${h}px`;
     if (innerWidth <= 700) return; // bottom sheet on phones (CSS)
     const cw = T.card.offsetWidth, ch = T.card.offsetHeight;
+    if (s.pad) { // the pad fills the bottom: card goes top right, so the student cards in the middle stay visible
+      T.card.style.left = Math.max(16, innerWidth - cw - 16) + 'px'; T.card.style.top = '12px';
+      const sc = document.querySelector('.cards .scard'); if (sc && !T.padScrolled) { T.padScrolled = true; const r0 = sc.getBoundingClientRect(); scrollBy(0, r0.top - 12); }
+      return;
+    }
     let top = y + h + 12, left = Math.min(Math.max(16, x), innerWidth - cw - 16);
     if (top + ch > innerHeight - 12) top = y - ch - 12;
     if (top < 12) { top = Math.min(innerHeight - ch - 12, Math.max(12, y + 12)); left = x + w + 12 + cw < innerWidth ? x + w + 12 : Math.max(16, x - cw - 12); if (left < 16) left = innerWidth - cw - 16; }
