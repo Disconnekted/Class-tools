@@ -2080,11 +2080,20 @@ function topiaHomeworkBookmarklet() {
   var todo = 0, done = 0, score = 0, bar, lab;
   function progressBox() {
     var box = note('<b>' + K('Reading online homework…', '온라인 숙제 읽는 중…') + '</b> <span data-l></span><div style="height:8px;background:#eadf9c;border-radius:4px;margin:8px 0;overflow:hidden"><div data-b style="height:100%;width:0;background:#1f6fb0;transition:width .3s"></div></div><div data-g style="position:relative;height:120px;background:#fffbe0;border-radius:8px;overflow:hidden"><button data-s style="position:absolute;left:45%;top:35%;font-size:26px;background:none;border:0;cursor:pointer;padding:4px">⭐</button><span data-sc style="position:absolute;right:8px;bottom:6px;font-size:13px;color:#7a6a10">' + K('Catch the star! 0', '별을 잡아라! 0') + '</span></div>');
-    bar = box.querySelector('[data-b]'); lab = box.querySelector('[data-l]');
+    bar = box.querySelector('[data-b]'); lab = box.querySelector('[data-l]'); lab.textContent = K('connecting to TOPIA…', 'TOPIA 연결 중…');
     var st = box.querySelector('[data-s]'), sc = box.querySelector('[data-sc]');
     st.onclick = function () { score++; sc.textContent = (score >= 20 ? '🏆 ' : '') + K('Catch the star! ', '별을 잡아라! ') + score; st.style.left = Math.floor(Math.random() * 85) + '%'; st.style.top = Math.floor(Math.random() * 65) + '%'; st.textContent = ['⭐', '🌟', '✨', '🍎', '📒'][score % 5]; };
   }
-  function tick(add) { if (add) todo += add; else done++; if (!bar) return; var pc = todo ? Math.min(100, Math.round(100 * done / todo)) : 0; bar.style.width = pc + '%'; lab.textContent = pc + '% (' + done + ' / ' + todo + ')'; }
+  // Two stages so the bar never runs ahead: first each class says how many pages it needs (bar 0–10%), then those pages load (10–100%).
+  var planned = 0, planNeed = 0;
+  function plan(n) { todo += n; planned++; draw(); }
+  function tick() { done++; draw(); }
+  function draw() {
+    if (!bar) return;
+    if (planned < planNeed) { bar.style.width = Math.round(10 * planned / planNeed) + '%'; lab.textContent = K('finding homework in your classes (' + Math.ceil(planned / 2) + ' of ' + planNeed / 2 + ')…', '반별 숙제 찾는 중 (' + Math.ceil(planned / 2) + ' / ' + planNeed / 2 + ')…'); return; }
+    var pc = todo ? Math.min(99, 10 + Math.floor(90 * done / todo)) : 99; bar.style.width = pc + '%';
+    lab.textContent = pc + '% · ' + K(Math.max(0, todo - done) + ' left', Math.max(0, todo - done) + '개 남음');
+  }
   // Remembered on this computer (TOPIA's own storage): word units everyone has passed, and classes with no shadowing.
   // Those are skipped next time, so later scans only ask TOPIA about what is still open.
   var CK = 'gsOnline.v1', cache; try { cache = JSON.parse(localStorage.getItem(CK) || '{}'); } catch (e) { cache = {}; }
@@ -2096,6 +2105,7 @@ function topiaHomeworkBookmarklet() {
     var info = await get('class/info'), cls = info && info.data && info.data.list;
     if (!cls) { if (win) win.close(); note(K('Could not load your classes. Refresh TOPIA (log in again if asked) and try once more.', '반 목록을 불러오지 못했습니다. TOPIA를 새로고침한 뒤(로그인 요청 시 다시 로그인) 한 번 더 시도하세요.')); return; }
     var out = [], nUnits = 0;
+    planNeed = cls.length * 2; draw();
     await Promise.all(cls.map(async function (c) {
       var subs = (c.subjectList || []).map(function (s) { return String(s.sourceSubjectId); });
       var units = {}, shadow = {};
@@ -2111,7 +2121,7 @@ function topiaHomeworkBookmarklet() {
         if (m && m.n === u.countObj.participantCount && (!(m.f && m.f.length) || (m.t > wk && newest.indexOf(+u.unitNum) < 0))) { units[u.unitNum] = { name: m.name, p: m.p, f: m.f || [] }; nUnits++; skipped++; return false; }
         return true;
       });
-      tick(fresh.length);
+      plan(fresh.length);
       await Promise.all(fresh.map(async function (u) {
         var j = await get('online-contents/onlineword/' + c.classId + '/' + u.sourceSubjectObj.id + '/' + u.unitNum), L = j && j.data && j.data.list; tick(); if (!L) return;
         var p = [], f = [];
@@ -2124,7 +2134,7 @@ function topiaHomeworkBookmarklet() {
       var now = new Date(), pad = function (n) { return (n < 10 ? '0' : '') + n; }, today = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
       // A class with no shadowing last time is checked again after a week (this is TOPIA's slowest page).
       var week = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10), look = subs.filter(function (sid) { var w = cache.s[c.classId + '|' + sid]; if (w && w > week) { skipped++; return false; } return true; });
-      tick(look.length);
+      plan(look.length);
       await Promise.all(look.map(async function (sid) {
         var j = await get('class/homework/list?classId=' + c.classId + '&sourceSubjectId=' + sid), L = j && j.data && j.data.list; tick();
         if (!L || !Array.isArray(L.studentInfolist)) return;
