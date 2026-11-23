@@ -628,7 +628,7 @@ const SUBJECTS = {
                 extras: [{ label: 'Project', type: 'text' }] },
   phonics:    { name: 'Phonics', code: 'ph', suggested: true, cats: [ATT(), A('Word Test', { outOf: 10, due: 'w' }), A('Monthly Test', { due: 'm' }), A('Review'), A('Participation', { outOf: 10 })], extras: [] },
   grammar:    { name: 'Grammar', code: 'gr', suggested: true, cats: [ATT(), A('Word Test', { outOf: 100, due: 'u' }), A('Workbook', { kind: 'check' }), A('Monthly Test', { due: 'm' }), A('Participation', { outOf: 10 })],
-                extras: [{ label: 'Grammar notes (unit)', type: 'units', n: 12 }] },
+                extras: [{ label: 'Grammar notes (unit)', type: 'units', n: 12 }, { label: 'e-Book', type: 'units', n: 12 }] },
   toefl:      { name: 'TOEFL Reading', code: 'toefl', suggested: true, cats: [ATT(), A('Vocabulary Test', { outOf: 25 }), A('Reading Practice'), A('iBT Practice'), A('Participation', { outOf: 10 })], extras: [] },
   langarts:   { name: 'Language Arts', code: 'path', suggested: true, cats: [ATT(), A('Participation', { outOf: 10 }), A('Vocabulary Test', { outOf: 20, due: 'w' }), A('Writing', { kind: 'mark' })], extras: [] },
 };
@@ -711,6 +711,13 @@ function templateFor(key, level, sem) {
 }
 const templateOf = (c, key) => templateFor(key || c.subject, c.level || levelOf(c.name), c.sem || 'B');
 const uLab = (x, u) => (x.labels && x.labels[u]) || String(u + 1);
+/* e-Books (Grammar & Writing only): from each level's syllabus "온라인 e-Book" column, [day given out, title]. */
+const EBOOKS = {"E2":[[1,"Read the Signs"],[3,"Todd Goes to School"],[5,"Magic Letters"],[7,"I Love My Home"],[9,"Can I Have a Hippo?"],[11,"Monster Soccer Players!"],[13,"The Three Little Pigs"],[15,"A Rainbow Day!"],[17,"Whose Monkey Is This?"],[19,"All around the World"],[21,"Christmas Cookie Contest"],[23,"Pinocchio"]],"E3":[[1,"Keep Well Day"],[3,"Tales of Mr. Map"],[5,"Looking for Clues"],[7,"Just Around the Corner"],[9,"Who Is in the Pond?"],[11,"A Honey of a Story"],[13,"Playing at Lily's House"],[15,"We Can Be Helpers!"],[17,"Rex Runs Away"],[19,"The Best Pet for Al"],[21,"The Little Red Hen"],[23,"Chin's Lunch"]],"O1":[[1,"The Bake Sale Battle"],[3,"The Weather Box"],[6,"Under Lock and Key"],[8,"The Mysterious Ms. Martin"],[10,"Lost In A Cave"],[12,"Grandma's Project"],[14,"Mr.Kean's Garden"],[15,"The Rainy Day Adventure"],[17,"Too Much Stuff!"],[19,"The Mystery Mask"],[21,"Robot Trouble"],[23,"Groundhog's New Home"]],"O2":[[1,"Today I Am an American"],[3,"Inventing a Better Tomorrow"],[6,"The Land of Little Water"],[8,"Adventure in Alaska"],[10,"The Raja's Elephants"],[12,"Where There's Smoke, There's Fire"],[14,"North of the Rio Grande"],[15,"An Interview with the Brothers Grim"],[17,"Days of the Exodusters"],[19,"The Mean, Green Carnivore"],[21,"Grandpa And I, All Year Long"],[23,"What People Can Do"]],"O3":[[1,"The Wisdom of the Wind"],[3,"The Mountaineers"],[6,"The Case of the Moving Statue"],[8,"The Dog Without a Home"],[10,"Babe's Big Blue Vacation"],[12,"John Wesley Powell and the Mighty"],[14,"From Missouri to California"],[15,"Sonia's Extra Special Dish"],[17,"Rio Rob And The Runaway Calf"],[19,"Luke Lighting Bolt!"],[21,"The Gardeners"],[23,"A Laugh a Minute"]],"V1":[[1,"Hurry Up!"],[3,"Dora's Soapbox Car"],[5,"New Class Pet"],[7,"But I Want It!"],[9,"The Night of the Pumpkins"],[11,"A Ship is Coming!"],[14,"Grasshopper Learns a Lesson A Play"],[15,"Where is Hoppy?"],[17,"The Sparrow's Gift"],[19,"The Mysterious Animal Tracks"],[21,"Wendy's Great Catch"],[23,"The Dinosaur Drawing Delivery"]],"V2":[[1,"Felix's Turn"],[3,"School Rules!"],[6,"Bettina And The Talent Show"],[8,"Song Of The Cicada"],[10,"Cooking With Zork"],[12,"Sherry Holmes And The Case Of The"],[14,"Listening In On The Orchestra"],[16,"How Platypus Came To Be"],[18,"Special Report: The Kicker Cup"],[20,"Special Issue - Brothers And Sisters!"],[22,"The Mother Goose Detective Agency"],[24,"The Cursive Crisis"]],"V3":[[1,"I Wish"],[3,"Making the Right Moves"],[5,"That's My Shot!"],[7,"Who Needs a New Baby?"],[9,"Stacy's Surprise"],[11,"Le Anne Joins the Show"],[13,"Everyone Can Help"],[15,"Three Fables"],[17,"Tiny, Terrific Debbie Black"],[19,"The Race Across Alaska"],[21,"Away from Home"],[23,"Quiz Show"]]};
+const ebookX = c => c && c.subject === 'grammar' ? (c.extras || []).find(x => x.type === 'units' && /e-?book/i.test(x.label)) || null : null;
+const ebookList = c => EBOOKS[String(c.level || levelOf(c.name) || '').slice(0, 2).toUpperCase()] || [];
+const ebookGiven = (c, i) => ebookList(c).findIndex(b => b[0] === i + 1);            // book handed out on lesson i
+const ebookCheck = (c, i) => { let k = -1; ebookList(c).forEach((b, j) => { if (b[0] < i + 1) k = j; }); return k; }; // newest book given before lesson i
+
 const hasMonthly = c => c.monthly !== '';
 const SUBJ_ORDER = ['debate', 'speech', 'integrated', 'speaking', 'writing', 'phonics', 'grammar', 'toefl', 'langarts'];
 const DUE_NAMES = { '': 'Any day', s: 'Every lesson but Day 1 and monthly tests', w: 'Word test days', m: 'Monthly test days', e: 'Essay days', p: 'Presentation / debate days' };
@@ -969,7 +976,7 @@ function startCloud(d) {
 
 /* Documents from the online save arrive read-only, so every class gets its own editable copy.
    (Without this, taps that change a score fail silently.) */
-const editable = cls => { const c = grammarUnit(noL1Online(noIdioms(newDue(newOrder(newTotals(JSON.parse(JSON.stringify(cls)))))))); if (c && c.subject === 'pathways') { c.subject = 'langarts'; c._migrated = true; } return c; };
+const editable = cls => { const c = addEbook(grammarUnit(noL1Online(noIdioms(newDue(newOrder(newTotals(JSON.parse(JSON.stringify(cls))))))))); if (c && c.subject === 'pathways') { c.subject = 'langarts'; c._migrated = true; } return c; };
 /* 2026-11: the school's real totals (participation /10, word tests /10, Pathways and Language Arts /20,
    Writing and Grammar /100, TOEFL vocabulary /25). Saved classes get them once; a column
    that already has marks keeps its old total so those marks still mean the same. */
@@ -986,6 +993,12 @@ function noL1Online(c) {
 }
 // Grammar: the syllabus "Unit Test" IS the word test (John 2026-11-24). Word Test takes the unit-test days;
 // an empty separate Unit Test column is removed (one with scores is kept).
+function addEbook(c) {
+  if (!c || c.ebookV) return c;
+  if (c.subject === 'grammar' && !ebookX(c)) { c.extras = (c.extras || []).concat([{ id: 'e-book', label: 'e-Book', type: 'units', n: 12 }]); c.extra = c.extra || {}; }
+  c.ebookV = 1; c._migrated = true;
+  return c;
+}
 function grammarUnit(c) {
   if (!c || c.gramUV) return c;
   if (c.subject === 'grammar') {
@@ -1301,7 +1314,7 @@ function sheetHTML(c, syl) {
           const ev = (c.extra[s.id] || {})[x.id];
           if (x.type === 'units') {
             const done = Array.isArray(ev) ? ev : [];
-            h += `<td class="xtra" rowspan="${c.cats.length}" data-x="${esc(x.id)}"><div class="units">${[...Array(x.n).keys()].map(u => `<button type="button" aria-pressed="${done.includes(u + 1)}" data-unit="${u + 1}" title="${esc(x.label)} ${esc(uLab(x, u))}">${esc(uLab(x, u))}</button>`).join('')}</div></td>`;
+            h += `<td class="xtra" rowspan="${c.cats.length}" data-x="${esc(x.id)}"><div class="units">${[...Array(x.n).keys()].map(u => `<button type="button" aria-pressed="${done.includes(u + 1)}" data-unit="${u + 1}" title="${esc(x.label)} ${esc(uLab(x, u))}${x === ebookX(c) && ebookList(c)[u] ? ' · ' + esc(ebookList(c)[u][1]) : ''}">${esc(uLab(x, u))}</button>`).join('')}</div></td>`;
           } else h += `<td class="xtra" rowspan="${c.cats.length}" data-x="${esc(x.id)}"><input data-xtext value="${esc(ev || '')}" aria-label="${esc(x.label)}"></td>`;
         });
         h += `<td class="note" rowspan="${c.cats.length}">${noteBoxHTML(c, s.id)}</td>`;
@@ -2593,6 +2606,7 @@ function dayHTML(c, syl) {
     </div>
     <div class="daystrip" aria-label="Jump to a lesson">${[...Array(NDAYS).keys()].map(j => `<button type="button" data-day="${j}" class="m${monthOf(j) + 1}${marked(j) ? ' done' : ''}" aria-current="${j === i}">${j + 1}</button>`).join('')}</div>
     ${!c.start && !c.example ? `<p class="nudge">📅 Set the <b>Day 1 date</b> so this opens on today's lesson: <input type="date" data-setstart aria-label="Day 1 date"></p>` : ''}
+    ${(() => { const ex = ebookX(c), g = ex ? ebookGiven(c, i) : -1; return g >= 0 ? `<p class="nudge ebookhint">📘 ${L('Give out e-Book', 'e-Book 나눠 주기')} ${g + 1}: <b>${esc(ebookList(c)[g][1])}</b></p>` : ''; })()}
     ${dueLine(c, syl, i)}
     <div class="row dayacts"><button type="button" class="primary" data-act="allpresent">✓ Everyone present</button><button type="button" data-act="allfull" title="Everyone here gets full marks for what is done today: attendance, participation and anything due today. Boxes you already filled stay as they are.">100% everyone</button><button type="button" data-act="clearday" title="Empty every box for this day, for every student. Tap twice to confirm.">Clear all</button>${c.cats.filter(isWordCat).map(k => `<label class="dayout" title="Change this if today's test has a different number of questions. Only Day ${i + 1} changes."><span>${esc(k.label)}</span> ${L('out of', '만점')} <input type="number" inputmode="numeric" min="1" max="200" data-dayout="${esc(k.id)}" value="${esc(outOfAt(c, k, i))}" placeholder="${esc(k.outOf || '')}"></label>`).join('')}${marked(i) ? '' : '<span class="hint">then tap anyone late or absent</span>'}</div>${monthlyHTML(c, syl, i)}`;
   if (!c.students.length) return h + '<p class="hint">No students yet. Tap + Add students at the top to paste the class list.</p>';
@@ -2614,6 +2628,9 @@ function dayHTML(c, syl) {
       else h += `<button type="button" class="scorebtn" data-pad="${i}">${v ? esc(v) + (k.outOf && /^\d+(\.\d+)?$/.test(v) ? `<small>/${k.outOf} · ${round(pct(v, k.outOf))}%</small>` : '') : '<small>Tap to score</small>'}</button>`;
       h += '</div>';
     });
+    { const ex = ebookX(c), k = ex ? ebookCheck(c, i) : -1;
+      if (k >= 0) { const done = ((c.extra[s.id] || {})[ex.id] || []).includes(k + 1);
+        h += `<div class="line ebook"><span class="lab">📘 e-Book <em>${esc(ebookList(c)[k][1])}</em></span><span class="seg"><button type="button" class="v-Y" data-ebook="${k + 1}" aria-pressed="${done}">${done ? L('✓ Read', '✓ 읽음') : L('Not yet', '아직')}</button></span></div>`; } }
     h += `<div class="dnote"><span class="lab">Notes</span>${noteBoxHTML(c, s.id)}</div>${open ? `<div class="cardfoot"><button type="button" class="small" data-act="report">📄 Report</button>${leaveTools(c, s)}</div>` : ''}<button type="button" class="linkbtn morebtn" data-more aria-expanded="${open}">${open ? 'Less ▴' : `More for ${esc(s.eng || s.kor)}${extra ? ` (${extra})` : ''} ▾`}</button></article>`;
   });
   h += '</div>';
@@ -2720,6 +2737,10 @@ main.addEventListener('click', e => {
   const dj = e.target.closest('[data-day]');
   if (dj) { dayAt[c.id] = Math.max(0, Math.min(NDAYS - 1, +dj.dataset.day)); closePad(); render(); return; }
   if (e.target.closest('[data-today]')) { delete dayAt[c.id]; closePad(); render(); return; }
+  const eb = e.target.closest('[data-ebook]');
+  if (eb) { const ex = ebookX(c), sid = eb.closest('.scard').dataset.sid, n = +eb.dataset.ebook; if (!ex) return;
+    c.extra[sid] ||= {}; const list = Array.isArray(c.extra[sid][ex.id]) ? c.extra[sid][ex.id] : [], on = !list.includes(n);
+    c.extra[sid][ex.id] = on ? [...list, n].sort((a, b) => a - b) : list.filter(u => u !== n); keep(c); render(); return; }
   const sc = e.target.closest('.cell.sc');
   if (sc) { const r = rowCtx(sc); openPad(r.sid, r.cat.id, +sc.dataset.i); return; }
   const card = e.target.closest('.scard');
