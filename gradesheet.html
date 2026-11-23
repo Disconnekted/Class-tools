@@ -1876,6 +1876,7 @@ function monthlyOn(c, syl, i) {
 }
 const MT_NAMES = { test: '🖨 Print Monthly Test', key: 'Answer key', prep: 'Prep sheet', prepkey: 'Prep sheet key' };
 function monthlyHTML(c, syl, i) {
+  return ''; // John 2026-11-24: monthly tests and answer keys are no longer printable from the gradesheet.
   const m = monthlyOn(c, syl, i); if (!m || !m.kinds.length) return '';
   const roman = ['', 'I', 'II', 'III', 'IV'][m.n] || m.n;
   if (/^https:/.test(location.protocol) || window.claude) return `<p class="nudge mtday">📝 <b>Monthly Test ${roman} today.</b> Print it from the downloaded Class Tools folder on your computer (tests are not kept online).</p>`;
