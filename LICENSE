@@ -1,19 +1,19 @@
-Copyright © John Smith 2026. All rights reserved.
+Copyright © Joseph McLaren 2026. All rights reserved.
 
 This repository and the class tools in it (including the Class Gradesheet,
-TOPIA Helper and Class Prep Station) are the property of John Smith.
+TOPIA Helper, Class Prep Station and Name Tag Generator) are the property
+of Joseph McLaren.
 
 No licence is granted. You may not copy, modify, redistribute, publish,
 sublicense or sell any part of this work, in whole or in part, without
 prior written permission from the copyright holder. Being able to view or
 open these files on the web does not give anyone permission to reuse them.
 
-Teachers who have been given access by John Smith may use the tools for
+Teachers who have been given access by Joseph McLaren may use the tools for
 their own personal and classroom use only.
 
-Exceptions (not covered by this notice; each keeps its own author and terms):
-  - name-tags.html: the Name Tag Generator, made by Joseph McLaren.
+Exception (not covered by this notice):
   - libs/: third-party libraries (jsPDF, SheetJS, PDF.js, qrcode-generator,
     jsQR), each under its own licence as stated in the files.
 
-For permission requests, contact John Smith.
+For permission requests, contact Joseph McLaren.
