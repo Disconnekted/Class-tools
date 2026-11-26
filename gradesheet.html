@@ -516,6 +516,9 @@ table.gs tr.r1 th.day input:focus{background:var(--sheet);color:var(--ink);outli
 #chartFab{padding:0;width:46px;height:46px;display:grid;place-items:center;text-align:center;font:800 19px var(--f-display);opacity:.92}
 #chartFab:hover{opacity:1}
 .seglab{font:600 12.5px var(--f-body);color:var(--muted);align-self:center;margin-right:-2px}
+.helperfirst{margin:0 16px 14px;padding:14px 16px;border:2px solid var(--accent);border-radius:14px;background:var(--sheet);display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.helperfirst .hf-t{flex:1 1 300px}.helperfirst h2{margin:0 0 4px;font-size:18px}.helperfirst p{margin:0;font-size:14px;color:var(--muted)}
+.helperfirst .hf-b{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.helperfirst a.btn{font-size:16px;padding:10px 18px}
 .autopick{margin:0 0 10px;padding:8px 12px;border-radius:10px;background:var(--grid);color:var(--ink);font-size:13.5px}
 .autopick .linkbtn{margin-left:8px}
 a:not(.btn):not(.bm){color:var(--accent);text-underline-offset:2px}
@@ -549,12 +552,14 @@ table.gs td,table.gs th{border-color:var(--line)}
       <div class="more"><button type="button" id="moreBtn" aria-haspopup="true" aria-expanded="false">⋯ More</button>
       <div class="menu" id="moreMenu" hidden role="menu">
       <a class="btn" href="https://claude.ai/artifact/VJKK8aH25mCsAz8ov76Tky" target="_blank" rel="noopener" title="Open the Name Tag Generator">Name tags ↗</a>
+      <a class="btn" href="https://disconnekted.github.io/Class-tools/topia-helper.html" target="_blank" rel="noopener" data-ko="📒 TOPIA Helper 설정 ↗">📒 Set up TOPIA Helper ↗</a>
       <button type="button" id="delAllBtn" class="menudanger" title="Remove every class from this device">🗑 Delete all classes…</button><button type="button" id="todayToggle" title="Open the class that meets today when the gradesheet starts">☑ Open on today's class</button><button type="button" id="copyTags" title="Copy every class and student so you can paste them into the Name Tag Generator">Copy classes for name tags</button>
       <span id="backupBar" hidden><button type="button" id="backupBtn" title="Save every class to a file you keep">⤓ Back up</button><button type="button" id="restoreBtn" title="Load classes from a backup file">⤒ Restore</button><button type="button" id="ipadBtn" title="Move your classes to an iPad with a QR code or link">📱 Send to iPad</button><button type="button" id="recvBtn" title="Scan the code from the computer to get its classes" hidden>📥 Receive from PC</button><input type="file" id="restoreFile" accept=".json,application/json" hidden></span>
       </div></div>
     </div>
   </header>
 
+  <section class="helperfirst" id="helperFirst" hidden></section>
   <div class="layout">
     <aside class="rail">
       <h2>My classes</h2>
@@ -1209,7 +1214,19 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => { const m = document.getElementById('delAll'); if (e.key === 'Escape' && m && !m.hidden) m.hidden = true; });
 function paintTodayToggle() { const b = document.getElementById('todayToggle'); if (b) b.textContent = (lsGet(TODAY_KEY) === 'off' ? '☐' : '☑') + " Open on today's class"; }
+/* Phones and tablets: TOPIA Helper is the first thing to set up (it copies students and sends scores), so a banner
+   asks for it until the teacher taps "I've done it". Computers drag the bookmark from the same page (link in ⋯ More). */
+const HF_KEY = 'gradesheet.helperDone';
+function paintHelperFirst() {
+  const el = document.getElementById('helperFirst'); if (!el) return;
+  const mobile = /iPad|iPhone|iPod|Android/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const show = mobile && me && lsGet(HF_KEY) !== '1' && !/[?&](from|embed)=/.test(location.search);
+  el.hidden = !show; if (!show) return;
+  el.innerHTML = `<div class="hf-t"><h2>${(/iPhone|Android/.test(navigator.userAgent) ? L('📒 First step on this device: set up TOPIA Helper', '📒 이 기기에서 첫 단계: TOPIA Helper 설정') : L('📒 First step on this iPad: set up TOPIA Helper', '📒 이 iPad에서 첫 단계: TOPIA Helper 설정'))}</h2><p>${L('One bookmark that copies your students from TOPIA and sends scores back. About 1 minute, once per device.', 'TOPIA에서 학생을 복사하고 점수를 보내는 북마크입니다. 기기마다 한 번, 1분 정도 걸립니다.')}</p></div><div class="hf-b"><a class="btn primary" href="https://disconnekted.github.io/Class-tools/topia-helper.html" target="_blank" rel="noopener">${L('Set up TOPIA Helper ↗', 'TOPIA Helper 설정 ↗')}</a><button type="button" data-hfdone>${L("✓ I've done it", '✓ 완료했어요')}</button></div>`;
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-hfdone]')) { lsSet(HF_KEY, '1'); paintHelperFirst(); flashMsg(L('OK. You can find it again under ⋯ More.', '알겠습니다. ⋯ 더보기에서 다시 찾을 수 있습니다.')); } });
 function render() {
+  paintHelperFirst();
   renderList();
   const c = cur();
   if (c && me && !c.example) lsSet(LAST_KEY + me, c.id);
