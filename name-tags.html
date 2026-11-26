@@ -9,6 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="author" content="Joseph McLaren">
 <title>Name Tag Generator</title>
+
 <style>
   :root {
     --maroon: #7A1701;
@@ -230,6 +231,13 @@
   .style-cute .wm { opacity: .22; }
   .style-topia .wm { opacity: .16; }
   .no-wm .wm { display: none; }
+  .animal-row { display: flex; align-items: center; gap: 6px; margin: 8px 0 0; }
+  .animal-row .check { margin: 0; white-space: nowrap; }
+  .animal-row input[type=text] { flex: 1; min-width: 0; padding: 4px 8px; }
+  #animal-pic { width: 34px; height: 34px; flex: none; }
+  .animal-row.off #animal, .animal-row.off #animal-pic { opacity: .45; }
+  .who-pick { display: flex; align-items: center; gap: 10px; }
+  .who-pick svg { width: 30px; height: 30px; flex: none; }
 
   .style-pick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 4px; }
   .style-pick label { margin: 0; border: 2px solid var(--line); border-radius: 8px; padding: 8px 6px; text-align: center; cursor: pointer; font-size: 13px; background: #fff; }
@@ -353,7 +361,7 @@
 <style id="paper-css"></style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<svg id="defs" width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="squirrel" viewBox="0 0 100 100">
 <g stroke="#5A3420" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
   <path fill="#D9783C" d="M50 80 C72 87 93 72 93 48 C94 26 82 9 64 10 C51 11 45 22 51 29 C56 35 64 31 62 25 C69 29 73 38 71 48 C69 61 61 70 49 72 Z"/>
@@ -420,7 +428,14 @@
       </div>
       <label for="paper" data-i18n="paperLbl">Paper</label>
       <select id="paper"></select>
-      <label class="check"><input type="checkbox" id="watermark" checked> <span data-i18n="wm">Squirrel watermark</span></label>
+      <div class="animal-row" id="animal-row">
+        <label class="check"><input type="checkbox" id="watermark" checked> <span data-i18n="wm">Watermark</span></label>
+        <input type="text" id="animal" list="animal-list" autocomplete="off" spellcheck="false" placeholder="Type an animal" data-i18n-placeholder="animalPh"
+          title="Type any animal in English or Korean, e.g. fox or 여우. It's saved for you only, so each teacher can have their own." data-i18n-title="animalTitle">
+        <svg id="animal-pic" viewBox="0 0 100 100" role="img"><use href="#squirrel"/></svg>
+        <button type="button" class="small" id="animal-dice" title="Pick an animal for me (one no other teacher has)" data-i18n-title="diceTitle" aria-label="Pick an animal for me">🎲</button>
+        <datalist id="animal-list"></datalist>
+      </div>
       <label class="check" id="crop-row" title="Crop marks, plus the class name in the margin" data-i18n-title="cropTitle"><input type="checkbox" id="cropmarks" checked> <span data-i18n="crop">Cutting guides</span></label>
     </div>
 
@@ -479,7 +494,8 @@ const KO = {
   newpage: '반마다 새 페이지에서 시작',
   styleH: '이름표 스타일', classic: '클래식', modern: '모던', cute: '귀여운',
   paperLbl: '용지',
-  wm: '다람쥐 워터마크', crop: '재단선', cropTitle: '재단 표시와 여백의 반 이름',
+  wm: '워터마크', animalPh: '동물 이름 입력', animalTitle: '아무 동물이나 영어나 한국어로 입력하세요. 예: fox, 여우. 나에게만 저장되므로 선생님마다 다른 동물을 쓸 수 있습니다.',
+  diceTitle: '동물을 골라 주세요 (다른 선생님이 쓰지 않는 것)', crop: '재단선', cropTitle: '재단 표시와 여백의 반 이름',
   d2: '2. 학생 추가',
   pasteLbl: '붙여 넣기 (이 페이지 어디서나 Ctrl+V)',
   pastePh: '학생 복사 후 Ctrl+V만 누르세요',
@@ -537,7 +553,7 @@ let localProfiles = [];                    // teachers saved in this browser
 let cloud = null, cloudReady = false;      // the online database, once it has answered
 let cloudDocs = {};                        // id -> { name, state, updated, by } from the database
 const TAB_ID = Math.random().toString(36).slice(2, 10);
-const freshState = () => ({ teacher: '', school: 'TOPIA', newpage: true, nameMode: 'both', style: 'classic', paper: 'a4', watermark: true,
+const freshState = () => ({ teacher: '', school: 'TOPIA', newpage: true, nameMode: 'both', style: 'classic', paper: 'a4', watermark: true, animal: '',
   cropmarks: true, reprint: false, theme: state.theme, lang: state.lang, classes: [] });
 const currentProfile = () => profiles.find(p => p.id === currentId);
 const newProfileId = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -802,6 +818,7 @@ function syncUI() {
   document.getElementById('school').value = state.school;
   document.getElementById('newpage').checked = state.newpage;
   document.getElementById('watermark').checked = state.watermark !== false;
+  document.getElementById('animal').value = state.animal || '';
   document.getElementById('cropmarks').checked = state.cropmarks;
   document.getElementById('namemode').value = state.nameMode || 'both';
   setLayout(); paperOptions();
@@ -913,7 +930,7 @@ function renderWho(message) {
     return;
   }
   const list = profiles.length
-    ? `<div class="who-list">${profiles.map(p => `<div class="who-item"><button class="who-pick" data-act="pick" data-id="${p.id}">${esc(p.name)}</button>` +
+    ? `<div class="who-list">${profiles.map(p => `<div class="who-item"><button class="who-pick" data-act="pick" data-id="${p.id}">${profileAnimalSVG(p)}<span>${esc(p.name)}</span></button>` +
         `<button class="small danger" data-act="del" data-id="${p.id}" title="${L('Remove this teacher', '이 선생님 삭제')}">✕</button></div>`).join('')}</div>`
     : '';
   const moving = localOnly();
@@ -1731,6 +1748,16 @@ document.getElementById('classes').addEventListener('click', async e => {
 });
 document.getElementById('newpage').addEventListener('change', e => { state.newpage = e.target.checked; render(); });
 document.getElementById('watermark').addEventListener('change', e => { state.watermark = e.target.checked; render(); });
+document.getElementById('animal').addEventListener('input', e => { state.animal = e.target.value; scheduleRender(); });
+document.getElementById('animal').addEventListener('focus', animalOptions);
+document.getElementById('animal-dice').addEventListener('click', () => {
+  const taken = animalsOfOthers(), cur = myAnimal().key, keys = Object.keys(ANIMALS).filter(k => k !== cur);
+  const free = keys.filter(k => !taken[k]), pool = free.length ? free : keys;
+  const k = pool[Math.floor(Math.random() * pool.length)];
+  state.animal = isKo() ? ANIMALS[k][1][0] : ANIMALS[k][0][0];
+  document.getElementById('animal').value = state.animal;
+  render();
+});
 document.getElementById('cropmarks').addEventListener('change', e => { state.cropmarks = e.target.checked; render(); });
 document.getElementById('namemode').addEventListener('change', e => { state.nameMode = e.target.value; render(); });
 document.getElementById('paper').addEventListener('change', e => { state.paper = e.target.value; setLayout(); paperOptions(); render(); fitPreview(); });
@@ -1801,9 +1828,406 @@ function nameHTML(raw) {
   return { text, html };
 }
 
-const SQUIRREL = '<svg class="wm" viewBox="0 0 100 100" aria-hidden="true"><use href="#squirrel"/></svg>';
+/* Watermark animal: each teacher types one (English or Korean) and it is saved with their classes as state.animal.
+   The drawings are originals. Not in the list: the nearest spelling, otherwise the same stand-in every time for that word. */
+const ANIMALS = (() => {
+  const K = '#2A1A10';
+  const n = ' stroke="none"';
+  const P = (d, f = 'none', x = '') => `<path fill="${f}"${x} d="${d}"/>`;
+  const C = (cx, cy, r, f, x = '') => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${f}"${x}/>`;
+  const E = (cx, cy, rx, ry, f, x = '') => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${f}"${x}/>`;
+  const eye = (x, y, r = 2.6) => C(x, y, r, K, n) + C(+(x + r * .35).toFixed(1), +(y - r * .38).toFixed(1), +(r * .36).toFixed(2), '#fff', n);
+  const eyes = (a, b, y, r) => eye(a, y, r) + eye(b, y, r);
+  const blush = (a, b, y, c = '#F29A8E') => E(a, y, 4, 2.4, c, n + ' opacity=".75"') + E(b, y, 4, 2.4, c, n + ' opacity=".75"');
+  const smile = (x, y, w = 4) => P(`M${x} ${y} Q${x} ${y + 4} ${x - w} ${y + 4} M${x} ${y} Q${x} ${y + 4} ${x + w} ${y + 4}`);
+  const mir = d => d.replace(/(-?\d+\.?\d*) (-?\d+\.?\d*)/g, (m, a, b) => `${+(100 - a).toFixed(2)} ${b}`); // mirror left-right
+  const both = (d, f, x) => P(d, f, x) + P(mir(d), f, x);
+  const ring = (r, k, cr, f, cx = 50, cy = 52) => Array.from({ length: k }, (_, i) => {
+    const t = i / k * Math.PI * 2; return C(+(cx + r * Math.sin(t)).toFixed(1), +(cy - r * Math.cos(t)).toFixed(1), cr, f);
+  }).join('');
+  const tube = (d, w, f, s) => P(d, 'none', ` stroke="${s}" stroke-width="${w + 3.2}"`) + P(d, 'none', ` stroke="${f}" stroke-width="${w}"`);
+  const whisk = (y) => P(`M30 ${y} L14 ${y - 3} M30 ${y + 4} L14 ${y + 6}`) + P(mir(`M30 ${y} L14 ${y - 3} M30 ${y + 4} L14 ${y + 6}`));
 
-function tagHTML(c, name) {
+  const horse = (body, mane, extra = '') =>
+    P('M30 94 C30 74 32 56 40 42 C46 30 54 22 62 20 L62 10 L70 19 C82 24 92 42 93 56 C94 64 88 68 82 64 C76 60 70 58 64 60 C62 72 64 84 68 94 Z', body) +
+    P('M62 20 C52 22 44 30 38 42 C32 54 28 70 28 94 L20 94 C20 72 24 54 32 40 C40 26 50 16 62 16 Z', mane) +
+    P('M70 19 L74 10 L76 22') + eye(70, 36, 2.8) + E(87, 58, 1.6, 2.4, K, n) + P('M80 63 C84 64 88 64 90 62') + extra;
+
+  return {
+    squirrel: [['squirrel', 'chipmunk'], ['다람쥐', '청설모'], ''],
+    cat: [['cat', 'kitty', 'kitten'], ['고양이', '냥이', '야옹이'], '#6B4A2A',
+      both('M22 44 L22 12 L46 30 Z', '#F2A65A') + both('M26 36 L26 20 L38 30 Z', '#F7C3B4', n) +
+      E(50, 57, 34, 28, '#F2A65A') + P('M50 30 L50 38 M42 31 L44 37 M58 31 L56 37', 'none', ' stroke-width="2.4" stroke="#C0702E"') +
+      E(50, 68, 13, 8, '#FFF1DE', n) + eyes(37, 63, 53, 3) + P('M46.5 62 L53.5 62 L50 65.5 Z', '#E8707A') + smile(50, 65.5) + whisk(62) + blush(28, 72, 63)],
+    dog: [['dog', 'puppy', 'doggy'], ['강아지', '개', '멍멍이'], '#5A3A22',
+      E(50, 52, 29, 31, '#E9C9A0') + E(62, 46, 8, 9, '#A8703F', n) +
+      both('M27 28 C12 28 6 48 10 64 C12 74 24 72 26 60 Z', '#A8703F') +
+      E(50, 67, 15, 11, '#FFF3E2') + E(50, 60, 6, 4, K) + P('M50 64 L50 68 M50 68 Q45 73 40 69 M50 68 Q55 73 60 69') +
+      P('M46 71 Q50 80 54 71 Z', '#EE7A86') + eyes(39, 61, 47, 3) + blush(30, 70, 60)],
+    fox: [['fox'], ['여우'], '#6A2E12',
+      both('M18 44 L22 8 L44 32 Z', '#EE7A30') + both('M23 38 L25 16 L37 32 Z', '#5A2E1A', n) +
+      P('M12 44 C18 30 34 28 50 28 C66 28 82 30 88 44 C82 60 64 76 50 86 C36 76 18 60 12 44 Z', '#EE7A30') +
+      both('M12 44 C22 46 34 52 42 62 C46 70 50 86 50 86 C36 76 18 60 12 44 Z', '#FFF4E6') +
+      C(50, 84, 3.6, K) + eyes(36, 64, 48, 3) + blush(30, 70, 60)],
+    wolf: [['wolf', 'husky'], ['늑대', '허스키'], '#2F3640',
+      both('M16 46 L20 6 L42 30 Z', '#8E97A6') + both('M21 40 L23 15 L35 30 Z', '#E8E4E0', n) +
+      P('M10 46 C16 30 34 26 50 26 C66 26 84 30 90 46 L84 56 L88 60 C76 72 62 84 50 90 C38 84 24 72 12 60 L16 56 Z', '#8E97A6') +
+      P('M28 56 C36 52 44 54 50 58 C56 54 64 52 72 56 C68 70 58 82 50 90 C42 82 32 70 28 56 Z', '#F2EEE8') +
+      P('M38 34 L50 44 L62 34', 'none', ' stroke="#646C7A"') + C(50, 86, 3.6, K) + eyes(37, 63, 46, 3)],
+    bear: [['bear', 'teddy', 'grizzly'], ['곰', '곰돌이', '불곰'], '#4A2C18',
+      C(24, 30, 11, '#9A6A42') + C(76, 30, 11, '#9A6A42') + C(24, 30, 6, '#D9A877', n) + C(76, 30, 6, '#D9A877', n) +
+      C(50, 56, 31, '#9A6A42') + E(50, 67, 14, 11, '#E2C29C') + E(50, 61, 6, 4, K) + smile(50, 65) + eyes(38, 62, 50, 3) + blush(29, 71, 62)],
+    polarbear: [['polar bear', 'polarbear', 'ice bear'], ['북극곰', '백곰'], '#6A7A8A',
+      C(26, 32, 9, '#FAFAF7') + C(74, 32, 9, '#FAFAF7') + C(26, 32, 4.5, '#D8DEE6', n) + C(74, 32, 4.5, '#D8DEE6', n) +
+      E(50, 57, 30, 28, '#FAFAF7') + E(50, 68, 13, 10, '#EEF1F4') + E(50, 63, 6, 4, K) + smile(50, 67) + eyes(39, 61, 52, 3) + blush(30, 70, 63)],
+    panda: [['panda'], ['판다', '팬더'], '#222',
+      C(25, 30, 11, '#2B2B30') + C(75, 30, 11, '#2B2B30') +
+      C(50, 56, 31, '#FFFFFF') + E(37, 53, 8, 10, '#2B2B30', n + ' transform="rotate(30 37 53)"') + E(63, 53, 8, 10, '#2B2B30', n + ' transform="rotate(-30 63 53)"') +
+      C(38, 51, 3, '#fff', n) + C(62, 51, 3, '#fff', n) + C(38.5, 51.5, 1.6, K, n) + C(61.5, 51.5, 1.6, K, n) +
+      E(50, 64, 5.5, 3.6, K) + smile(50, 67.5) + blush(30, 70, 66)],
+    koala: [['koala'], ['코알라'], '#4A4A55',
+      C(20, 38, 16, '#A7A9B4') + C(80, 38, 16, '#A7A9B4') + C(20, 38, 9, '#F2E6EE', n) + C(80, 38, 9, '#F2E6EE', n) +
+      E(50, 57, 28, 27, '#A7A9B4') + E(50, 61, 7.5, 10, '#4A4A55') + eyes(37, 63, 51, 2.8) + P('M45 73 Q50 76 55 73') + blush(30, 70, 64)],
+    tiger: [['tiger'], ['호랑이', '호랭이', '범'], '#3A2010',
+      C(24, 30, 10, '#F39A2B') + C(76, 30, 10, '#F39A2B') + C(24, 30, 5, '#FFF4E4', n) + C(76, 30, 5, '#FFF4E4', n) +
+      E(50, 56, 34, 29, '#F39A2B') + P('M50 27 L50 37 M42 28 L44 35 M58 28 L56 35', 'none', ' stroke-width="3"') +
+      P('M16 50 L28 52 M17 60 L28 59 M84 50 L72 52 M83 60 L72 59', 'none', ' stroke-width="3"') +
+      E(43, 66, 9, 7, '#FFF4E4', n) + E(57, 66, 9, 7, '#FFF4E4', n) + E(50, 78, 10, 5, '#FFF4E4', n) +
+      P('M46.5 60 L53.5 60 L50 63.5 Z', '#E8707A') + smile(50, 63.5) + eyes(37, 63, 50, 3)],
+    lion: [['lion'], ['사자'], '#5A3010',
+      ring(31, 13, 12, '#C8792E') + C(32, 32, 6, '#F4C064') + C(68, 32, 6, '#F4C064') + C(50, 54, 27, '#F4C064') +
+      E(43, 64, 8, 6, '#FFF2DA', n) + E(57, 64, 8, 6, '#FFF2DA', n) + P('M46 58 L54 58 L50 62 Z', '#8A4A2A') + smile(50, 62) +
+      eyes(39, 61, 49, 3) + blush(30, 70, 60)],
+    rabbit: [['rabbit', 'bunny', 'hare'], ['토끼', '토깽이'], '#6A5A50',
+      E(38, 24, 8.5, 21, '#F3ECE6', ' transform="rotate(-10 38 24)"') + E(62, 24, 8.5, 21, '#F3ECE6', ' transform="rotate(10 62 24)"') +
+      E(38, 24, 4, 15, '#F6BFC6', n + ' transform="rotate(-10 38 24)"') + E(62, 24, 4, 15, '#F6BFC6', n + ' transform="rotate(10 62 24)"') +
+      E(50, 62, 28, 25, '#F3ECE6') + eyes(39, 61, 59, 3) + P('M47 66 L53 66 L50 69 Z', '#E8707A') + smile(50, 69) +
+      P('M47 73 L47 77 L53 77 L53 73', '#fff') + blush(30, 70, 68)],
+    mouse: [['mouse', 'rat'], ['쥐', '생쥐'], '#4A4A55',
+      C(22, 34, 17, '#B9BAC6') + C(78, 34, 17, '#B9BAC6') + C(22, 34, 10, '#F6BFC6', n) + C(78, 34, 10, '#F6BFC6', n) +
+      P('M26 50 C26 38 38 32 50 32 C62 32 74 38 74 50 C74 64 60 76 50 80 C40 76 26 64 26 50 Z', '#B9BAC6') +
+      C(50, 77, 3.4, '#E8707A') + eyes(41, 59, 54, 3) + whisk(70) + blush(32, 68, 64)],
+    hamster: [['hamster', 'guinea pig'], ['햄스터', '기니피그'], '#6A4020',
+      C(27, 32, 8, '#F2B66B') + C(73, 32, 8, '#F2B66B') + C(27, 32, 4, '#F6BFC6', n) + C(73, 32, 4, '#F6BFC6', n) +
+      E(50, 58, 35, 29, '#F2B66B') + P('M16 62 C22 78 36 87 50 87 C64 87 78 78 84 62 C74 70 62 66 50 66 C38 66 26 70 16 62 Z', '#FFF3E2', n) +
+      eyes(37, 63, 52, 3) + E(50, 61, 3, 2, '#E8707A', n) + smile(50, 62, 3) + E(26, 66, 7, 4.5, '#F29A8E', n + ' opacity=".6"') + E(74, 66, 7, 4.5, '#F29A8E', n + ' opacity=".6"')],
+    raccoon: [['raccoon'], ['너구리', '라쿤'], '#2E2E35',
+      both('M22 40 L24 14 L44 30 Z', '#9A9AA6') + both('M26 34 L27 20 L37 29 Z', '#3A3A42', n) +
+      P('M12 56 C14 38 32 30 50 30 C68 30 86 38 88 56 L82 60 L84 66 C74 78 62 84 50 84 C38 84 26 78 16 66 L18 60 Z', '#9A9AA6') +
+      P('M16 52 C24 42 40 44 50 52 C60 44 76 42 84 52 C76 62 60 62 50 56 C40 62 24 62 16 52 Z', '#34343C', n) +
+      E(50, 68, 12, 9, '#F4F2EE') + E(50, 63, 5, 3.4, K) + smile(50, 66.5, 3) +
+      C(35, 52, 3.2, '#fff', n) + C(65, 52, 3.2, '#fff', n) + C(35.5, 52.5, 1.8, K, n) + C(64.5, 52.5, 1.8, K, n)],
+    otter: [['otter', 'sea otter'], ['수달', '해달'], '#4A2C18',
+      C(23, 40, 6.5, '#8A5E3E') + C(77, 40, 6.5, '#8A5E3E') + E(50, 57, 31, 27, '#8A5E3E') +
+      P('M22 58 C24 44 38 40 50 40 C62 40 76 44 78 58 C76 72 64 80 50 80 C36 80 24 72 22 58 Z', '#D9B48C', n) +
+      E(44, 64, 8, 6, '#F4E6D2', n) + E(56, 64, 8, 6, '#F4E6D2', n) + E(50, 59, 5.5, 3.8, K) + smile(50, 62.5, 3) +
+      whisk(63) + eyes(38, 62, 51, 3)],
+    seal: [['seal', 'sea lion'], ['물개', '바다표범', '물범'], '#4A5A6A',
+      P('M26 92 C14 80 18 54 30 40 C38 28 62 28 70 40 C82 54 86 80 74 92 Z', '#AAB6C4') +
+      P('M30 90 C26 82 20 76 12 76 C14 84 22 90 30 92 Z M70 90 C74 82 80 76 88 76 C86 84 78 90 70 92 Z', '#8E9CAC') +
+      E(44, 56, 7, 5, '#E4EAF0', n) + E(56, 56, 7, 5, '#E4EAF0', n) + E(50, 51, 4.5, 3, K) + smile(50, 54, 3) +
+      P('M38 56 L26 54 M38 59 L27 61 M62 56 L74 54 M62 59 L73 61') + eyes(40, 60, 42, 3.2)],
+    pig: [['pig', 'piggy', 'piglet'], ['돼지', '꿀꿀이', '아기돼지'], '#9A4A5A',
+      both('M24 36 L20 12 L42 28 Z', '#F7B5C0') + E(50, 56, 33, 29, '#F7B5C0') +
+      E(50, 64, 13, 9.5, '#F28FA0') + E(45.5, 64, 2.2, 3.4, '#8A3A4A', n) + E(54.5, 64, 2.2, 3.4, '#8A3A4A', n) +
+      eyes(36, 64, 49, 3) + P('M44 78 Q50 81 56 78') + blush(26, 74, 62)],
+    cow: [['cow', 'bull', 'ox', 'calf'], ['소', '젖소', '송아지', '황소'], '#3A3A3A',
+      both('M32 28 C26 20 26 12 30 8 C32 16 38 20 42 24 Z', '#F2E2B8') +
+      E(16, 42, 12, 6, '#FFFFFF', ' transform="rotate(20 16 42)"') + E(84, 42, 12, 6, '#FFFFFF', ' transform="rotate(-20 84 42)"') +
+      P('M28 56 C24 34 36 24 50 24 C64 24 76 34 72 56 Z', '#FFFFFF') +
+      P('M32 28 C40 26 46 32 44 40 C42 48 32 50 28 46 C26 40 28 32 32 28 Z M62 26 C70 28 74 34 72 40 C66 38 62 32 62 26 Z', '#3A3A40', n) +
+      E(50, 66, 25, 17, '#F7C4C8') + E(42, 66, 3, 4.5, '#9A4A5A', n) + E(58, 66, 3, 4.5, '#9A4A5A', n) + P('M44 76 Q50 79 56 76') +
+      eye(39, 43, 3) + eye(61, 43, 3)],
+    sheep: [['sheep', 'lamb', 'goat'], ['양', '어린양', '염소'], '#5A4A40',
+      ring(30, 14, 11, '#F8F4EC') + C(50, 52, 26, '#F8F4EC', n) +
+      E(19, 50, 10, 5, '#3E3430', ' transform="rotate(20 19 50)"') + E(81, 50, 10, 5, '#3E3430', ' transform="rotate(-20 81 50)"') +
+      E(50, 58, 17, 22, '#3E3430') + ring(9, 6, 5, '#F8F4EC', 50, 32) +
+      C(43, 56, 3, '#fff', n) + C(57, 56, 3, '#fff', n) + C(43.5, 56.5, 1.6, K, n) + C(56.5, 56.5, 1.6, K, n) + P('M46 70 Q50 73 54 70', 'none', ' stroke="#E8E4E0"')],
+    monkey: [['monkey', 'chimp', 'ape', 'gorilla'], ['원숭이', '침팬지', '고릴라', '숭이'], '#4A2C18',
+      C(16, 52, 10, '#8A5A3A') + C(84, 52, 10, '#8A5A3A') + C(16, 52, 5.5, '#F2CFA6', n) + C(84, 52, 5.5, '#F2CFA6', n) +
+      C(50, 52, 31, '#8A5A3A') + C(40, 48, 12.5, '#F2CFA6', n) + C(60, 48, 12.5, '#F2CFA6', n) + E(50, 66, 21, 15, '#F2CFA6', n) +
+      P('M38 36 C44 34 48 38 50 42 C52 38 56 34 62 36', 'none', ' stroke="#8A5A3A"') +
+      eyes(41, 59, 48, 3) + E(47, 61, 1.4, 2, K, n) + E(53, 61, 1.4, 2, K, n) + P('M41 68 Q50 75 59 68')],
+    deer: [['deer', 'reindeer', 'fawn', 'moose'], ['사슴', '순록', '꽃사슴', '아기사슴'], '#5A3418',
+      P('M38 30 C34 20 30 14 22 10 M33 21 C28 20 24 22 20 26 M62 30 C66 20 70 14 78 10 M67 21 C72 20 76 22 80 26', 'none', ' stroke="#8A5A3A" stroke-width="4.5"') +
+      E(20, 42, 12, 6, '#C98A52', ' transform="rotate(25 20 42)"') + E(80, 42, 12, 6, '#C98A52', ' transform="rotate(-25 80 42)"') +
+      P('M30 44 C30 32 40 28 50 28 C60 28 70 32 70 44 C70 60 60 84 50 86 C40 84 30 60 30 44 Z', '#C98A52') +
+      P('M42 64 C42 58 58 58 58 64 C58 76 54 86 50 86 C46 86 42 76 42 64 Z', '#F4E2C8', n) + E(50, 80, 5, 3.8, K) +
+      C(40, 38, 1.8, '#FFF4E4', n) + C(58, 36, 1.6, '#FFF4E4', n) + eyes(40, 60, 50, 3) + blush(33, 67, 60)],
+    elephant: [['elephant'], ['코끼리'], '#4A5060',
+      E(20, 46, 18, 24, '#A9B0BE') + E(80, 46, 18, 24, '#A9B0BE') + E(20, 46, 11, 16, '#F2C8D0', n) + E(80, 46, 11, 16, '#F2C8D0', n) +
+      C(50, 44, 25, '#B8BECB') + P('M40 58 C40 72 38 82 46 90 C52 94 58 90 56 84 C50 82 50 70 60 58 Z', '#B8BECB') +
+      P('M38 62 C34 66 32 70 30 72 L34 74 C36 70 38 66 40 64 Z M62 62 C66 66 68 70 70 72 L66 74 C64 70 62 66 60 64 Z', '#FFFFFF') +
+      P('M44 72 L52 72 M43 78 L51 79', 'none', ' stroke="#7E8696"') + eyes(40, 60, 42, 3) + blush(32, 68, 52)],
+    giraffe: [['giraffe'], ['기린'], '#6A4010',
+      P('M30 96 L38 44 L58 44 L52 96 Z', '#F2C14E') +
+      P('M34 30 C34 16 48 12 60 16 C74 20 86 30 86 40 C86 48 78 50 70 48 C60 46 48 50 40 46 C36 42 34 36 34 30 Z', '#F2C14E') +
+      P('M44 16 L42 6 M54 14 L56 4', 'none', ' stroke-width="3"') + C(42, 5, 3, '#A8642A') + C(56, 3.6, 3, '#A8642A') +
+      E(30, 24, 7, 3.6, '#F2C14E', ' transform="rotate(-30 30 24)"') +
+      P('M38 60 L46 56 L48 64 L40 66 Z M44 76 L52 72 L52 82 L44 82 Z M36 86 L42 84 L42 92 L34 92 Z M48 50 L54 50 L52 56 L48 54 Z M46 24 L54 22 L54 30 L46 30 Z', '#B8742E', n) +
+      E(80, 40, 1.6, 2.2, K, n) + P('M70 46 C74 47 78 46 80 44') + eye(56, 30, 3)],
+    zebra: [['zebra'], ['얼룩말'], '#222',
+      '<clipPath id="wm-zb"><path d="M30 94 C30 74 32 56 40 42 C46 30 54 22 62 20 L62 10 L70 19 C82 24 92 42 93 56 C94 64 88 68 82 64 C76 60 70 58 64 60 C62 72 64 84 68 94 Z"/></clipPath>' +
+      horse('#FFFFFF', '#2B2B30',
+        `<g clip-path="url(#wm-zb)" stroke="none">${P('M30 52 L66 66 L66 72 L30 60 Z M28 70 L66 80 L66 86 L28 78 Z M34 38 L64 50 L60 54 L32 44 Z M48 26 L70 40 L66 44 L44 30 Z M74 22 L82 42 L78 44 L70 26 Z', '#2B2B30')}</g>` +
+        P('M30 94 C30 74 32 56 40 42 C46 30 54 22 62 20 L62 10 L70 19 C82 24 92 42 93 56 C94 64 88 68 82 64 C76 60 70 58 64 60 C62 72 64 84 68 94') + eye(70, 36, 2.8))],
+    horse: [['horse', 'pony'], ['말', '조랑말', '망아지'], '#4A2A14', horse('#B5763F', '#4A2E1E')],
+    unicorn: [['unicorn'], ['유니콘'], '#6A4A8A',
+      horse('#FFFFFF', 'none',
+        P('M62 20 C52 22 44 30 38 42 C34 50 31 60 29 72 L21 70 C23 56 27 44 34 34 C41 24 52 16 62 16 Z', '#F48FB1') +
+        P('M29 72 C28 80 28 88 28 94 L20 94 C20 86 20 78 21 70 Z', '#B39DDB') +
+        P('M38 42 C34 50 31 60 29 72 L25 71 C27 58 30 48 35 38 Z', '#81D4FA', n) +
+        P('M64 18 L72 0 L72 20 Z', '#FFD54F') + P('M66 14 L71 12 M65 8 L71.5 6', 'none', ' stroke="#C9A227"') + blush(76, 76, 46))],
+    penguin: [['penguin'], ['펭귄'], '#1E222A',
+      E(40, 92, 8, 3.5, '#F5A623') + E(60, 92, 8, 3.5, '#F5A623') +
+      P('M24 52 C14 60 12 72 16 78 C22 74 26 66 28 60 Z', '#2E3440') + P(mir('M24 52 C14 60 12 72 16 78 C22 74 26 66 28 60 Z'), '#2E3440') +
+      E(50, 55, 27, 36, '#2E3440') + P('M50 36 C40 28 30 34 32 46 C34 54 32 70 36 80 C42 88 58 88 64 80 C68 70 66 54 68 46 C70 34 60 28 50 36 Z', '#FFFFFF', n) +
+      P('M44.5 46 L55.5 46 L50 53 Z', '#F5A623') + eyes(42, 58, 40, 2.8) + blush(36, 64, 50)],
+    owl: [['owl'], ['부엉이', '올빼미'], '#4A2C14',
+      both('M24 30 L20 10 L40 22 Z', '#9B6B43') + E(50, 56, 31, 35, '#9B6B43') +
+      both('M22 50 C12 60 14 78 26 84 C28 72 28 60 22 50 Z', '#7A5232') +
+      E(50, 70, 18, 18, '#EED8B4', n) + P('M44 64 L46 66 L48 64 M52 64 L54 66 L56 64 M40 72 L42 74 L44 72 M48 72 L50 74 L52 72 M56 72 L58 74 L60 72', 'none', ' stroke="#9B6B43"') +
+      C(37, 40, 12, '#F7D88A') + C(63, 40, 12, '#F7D88A') + C(37, 40, 7, '#fff', n) + C(63, 40, 7, '#fff', n) + eyes(37, 63, 40, 4) +
+      P('M46 46 L54 46 L50 54 Z', '#F5A623') + P('M42 91 L42 86 M46 91 L46 86 M54 91 L54 86 M58 91 L58 86', 'none', ' stroke="#E0902A" stroke-width="2.5"')],
+    chick: [['chick', 'chicken', 'hen', 'rooster', 'bird'], ['병아리', '닭', '암탉', '수탉', '새', '꼬꼬'], '#7A5A10',
+      P('M40 88 L40 94 L34 96 M40 94 L44 97 M58 88 L58 94 L52 96 M58 94 L62 97', 'none', ' stroke="#E0902A" stroke-width="2.5"') +
+      C(50, 56, 33, '#FFD84A') + P('M46 24 C44 16 48 12 52 14 C50 18 52 20 56 18 C56 22 54 24 52 25', '#FFD84A') +
+      P('M20 60 C10 58 8 70 14 76 C20 76 24 70 24 66', '#F5C534') + P(mir('M20 60 C10 58 8 70 14 76 C20 76 24 70 24 66'), '#F5C534') +
+      P('M44 54 L56 54 L50 62 Z', '#F5A623') + eyes(39, 61, 46, 3.2) + blush(31, 69, 58)],
+    duck: [['duck', 'duckling', 'goose'], ['오리', '아기오리', '거위'], '#7A5A10',
+      P('M14 64 C14 52 26 48 38 52 L50 52 C46 46 44 40 44 34 C44 20 56 14 66 16 C78 18 82 30 78 40 C76 46 72 50 70 54 C82 50 90 46 92 40 C96 52 92 72 74 80 C58 88 30 88 20 80 C16 76 14 70 14 64 Z', '#FFE066') +
+      P('M80 30 C88 28 96 30 96 34 C94 38 86 40 79 38 Z', '#F59A2A') + P('M40 62 C46 70 60 72 68 64', 'none', ' stroke="#D9A82A"') + eye(66, 28, 3.2) + E(68, 38, 4, 2.4, '#F29A8E', n + ' opacity=".7"')],
+    parrot: [['parrot', 'macaw', 'budgie', 'parakeet'], ['앵무새', '잉꼬'], '#2A4A20',
+      P('M42 70 C38 82 36 90 38 98 L46 98 C46 90 48 82 52 72 Z', '#3A7BD5') + P('M48 70 C48 82 50 90 54 98 L60 96 C58 88 56 80 56 70 Z', '#F2C230') +
+      P('M30 50 C30 30 40 14 56 14 C70 14 76 26 76 36 C76 48 70 58 66 66 C60 76 44 80 36 72 C32 66 30 58 30 50 Z', '#E8453C') +
+      P('M38 50 C42 62 50 70 62 70 C58 76 46 80 38 72 C34 66 34 58 38 50 Z', '#3FAF5A') +
+      P('M70 28 C80 26 88 32 86 42 C84 48 78 48 76 44 C78 40 76 36 72 36 Z', '#F2E6D0') + E(62, 28, 7, 6, '#FFFFFF', n) + eye(62, 28, 2.8)],
+    flamingo: [['flamingo'], ['플라밍고', '홍학'], '#9A3A5A',
+      P('M50 64 L50 96 M50 80 L42 74 M58 96 L50 96', 'none', ' stroke="#E87A9A" stroke-width="2.5"') +
+      tube('M52 52 C46 44 38 40 38 30 C38 18 50 14 56 20 C60 24 58 30 54 30', 6, '#F7A1B8', '#9A3A5A') +
+      P('M30 56 C30 44 46 40 62 44 C76 48 86 54 90 62 C80 64 70 68 58 68 C42 68 30 64 30 56 Z', '#F7A1B8') +
+      P('M50 50 C58 50 66 54 70 60 C60 62 52 60 50 50 Z', '#F27BA0', n) +
+      P('M56 18 C62 18 68 22 68 28 L62 30 C62 26 60 24 56 24 Z', '#2E2E35') + eye(46, 22, 2.4)],
+    frog: [['frog', 'toad'], ['개구리', '두꺼비'], '#2E5A20',
+      C(32, 34, 13, '#7CC45A') + C(68, 34, 13, '#7CC45A') + E(50, 60, 38, 26, '#7CC45A') + C(32, 34, 8.5, '#fff', n) + C(68, 34, 8.5, '#fff', n) +
+      eyes(32, 68, 34, 4.4) + E(50, 72, 22, 10, '#C8EBA8', n) + P('M28 62 Q50 78 72 62') + E(23, 64, 5, 3, '#F29A8E', n + ' opacity=".8"') + E(77, 64, 5, 3, '#F29A8E', n + ' opacity=".8"')],
+    turtle: [['turtle', 'tortoise'], ['거북이', '거북', '자라'], '#2E4A1E',
+      E(26, 74, 7, 9, '#A6CF6E') + E(68, 76, 7, 9, '#A6CF6E') + P('M8 64 L14 64 L18 68 Z', '#A6CF6E') +
+      P('M70 58 C76 48 86 46 92 50 C96 54 94 62 88 64 C82 66 76 64 72 64 Z', '#A6CF6E') +
+      P('M16 66 C16 40 32 26 46 26 C62 26 76 40 78 66 Z', '#5E9E4A') +
+      P('M38 40 L54 40 L60 52 L54 64 L38 64 L32 52 Z M38 40 L32 30 M54 40 L60 30 M60 52 L74 52 M32 52 L18 52 M38 64 L34 66 M54 64 L58 66', 'none', ' stroke="#3A6A2A"') +
+      P('M14 66 L80 66', 'none', ' stroke-width="3" stroke="#3A6A2A"') + eye(86, 55, 2.4) + P('M88 60 Q91 61 93 58')],
+    fish: [['fish', 'goldfish', 'clownfish', 'nemo'], ['물고기', '금붕어', '흰동가리', '니모', '생선'], '#7A3A10',
+      P('M70 50 L92 32 C90 44 90 56 92 68 Z', '#F59A3C') + P('M36 32 C44 20 58 22 62 32 Z M40 68 C46 78 56 78 58 70 Z', '#F59A3C') +
+      E(44, 50, 32, 20, '#F59A3C') +
+      P('M30 32 C24 42 24 58 30 68 L38 68 C34 58 34 42 38 32 Z M52 30 C48 42 48 58 52 70 L60 69 C56 56 56 44 60 31 Z', '#FFFFFF') +
+      eye(22, 46, 3.2) + P('M13 54 Q16 56 19 54')],
+    whale: [['whale'], ['고래'], '#1E3A6A',
+      P('M30 26 C28 18 24 14 18 12 M30 26 C30 18 30 14 30 8 M30 26 C32 18 36 14 42 12', 'none', ' stroke="#4A9BE0" stroke-width="2.5"') +
+      P('M8 58 C8 38 28 28 50 30 C68 32 80 44 84 54 L94 40 C98 52 96 64 88 66 L94 78 C84 76 80 70 78 66 C70 76 54 82 36 80 C18 78 8 70 8 58 Z', '#4A86C8') +
+      P('M10 62 C16 74 30 80 44 80 C58 80 70 74 76 66 C60 70 40 70 10 62 Z', '#CFE4F6', n) +
+      P('M16 60 Q24 66 30 60') + eye(26, 50, 3) + E(36, 58, 4, 2.4, '#F29A8E', n + ' opacity=".7"')],
+    dolphin: [['dolphin'], ['돌고래'], '#2A4A6A',
+      P('M48 30 C50 22 56 18 62 18 C60 22 60 26 62 30 Z', '#7FA8CC') +
+      P('M8 52 C12 50 18 50 22 50 C30 36 50 28 68 32 C80 34 88 44 90 54 C92 62 88 70 82 74 L90 86 C82 86 76 82 74 78 C68 80 62 80 58 78 L50 84 C50 80 52 76 52 72 C42 66 32 60 22 58 C16 58 10 56 8 52 Z', '#7FA8CC') +
+      P('M22 58 C34 60 46 66 54 72 C62 72 70 70 76 64 C60 62 44 62 22 56 Z', '#DCEAF6', n) +
+      P('M22 50 C26 50 28 52 28 54', 'none') + eye(34, 46, 3) + P('M10 53 Q16 55 22 54')],
+    shark: [['shark'], ['상어'], '#2A3A4A',
+      P('M44 34 C48 22 56 14 62 12 C60 22 60 30 62 36 Z', '#8A9BAE') + P('M74 54 L92 34 C90 46 90 58 94 72 Z', '#8A9BAE') +
+      P('M6 56 C14 42 34 34 54 36 C66 38 76 46 80 54 C76 62 66 70 50 72 C34 74 14 70 6 56 Z', '#8A9BAE') +
+      P('M8 58 C20 66 34 70 50 70 C62 70 72 64 78 56 C60 60 30 62 8 58 Z', '#F2F4F6', n) +
+      P('M48 64 L52 74 L56 64 Z', '#8A9BAE') + P('M40 50 L38 58 M45 50 L43 58 M50 50 L48 58', 'none', ' stroke="#5A6A7E"') +
+      P('M12 60 L16 62 L19 59 L22 62 L25 59 L28 62', 'none', ' stroke="#5A6A7E"') + eye(22, 50, 2.8)],
+    octopus: [['octopus', 'squid'], ['문어', '오징어', '낙지', '쭈꾸미'], '#7A2A4A',
+      P('M26 54 C18 66 12 72 6 74 C12 82 24 74 32 60 Z', '#E56B8A') + P(mir('M26 54 C18 66 12 72 6 74 C12 82 24 74 32 60 Z'), '#E56B8A') +
+      P('M32 58 C30 72 24 82 18 88 C28 92 36 80 40 62 Z', '#E56B8A') + P(mir('M32 58 C30 72 24 82 18 88 C28 92 36 80 40 62 Z'), '#E56B8A') +
+      P('M42 60 C42 76 40 86 36 94 C46 96 50 82 50 62 Z', '#E56B8A') + P(mir('M42 60 C42 76 40 86 36 94 C46 96 50 82 50 62 Z'), '#E56B8A') +
+      P('M24 54 C20 28 34 10 50 10 C66 10 80 28 76 54 C70 64 30 64 24 54 Z', '#E56B8A') +
+      C(38, 24, 3, '#F49AB0', n) + C(60, 20, 2.2, '#F49AB0', n) + eyes(40, 60, 42, 3.4) + smile(50, 50, 3) + blush(32, 68, 50, '#C2406A')],
+    crab: [['crab', 'lobster'], ['게', '꽃게', '가재', '랍스터'], '#7A1A10',
+      P('M26 62 L12 70 M28 68 L16 80 M74 62 L88 70 M72 68 L84 80', 'none', ' stroke="#E8503A" stroke-width="3.5"') +
+      P('M30 50 L20 36 M70 50 L80 36', 'none', ' stroke="#E8503A" stroke-width="4"') +
+      P('M8 26 C8 16 18 12 24 18 L20 24 L28 24 C30 32 24 38 16 36 C10 34 8 30 8 26 Z', '#E8503A') + P(mir('M8 26 C8 16 18 12 24 18 L20 24 L28 24 C30 32 24 38 16 36 C10 34 8 30 8 26 Z'), '#E8503A') +
+      E(50, 62, 30, 20, '#E8503A') + P('M42 44 L40 34 M58 44 L60 34', 'none', ' stroke-width="2.5"') + C(40, 32, 4, '#fff') + C(60, 32, 4, '#fff') + eye(40, 32, 2.2) + eye(60, 32, 2.2) +
+      smile(50, 64, 4) + blush(34, 66, 62, '#F7B0A0')],
+    snail: [['snail', 'slug'], ['달팽이', '민달팽이'], '#5A3A1A',
+      P('M8 82 C8 76 14 74 22 74 L80 74 C90 74 94 80 94 84 C94 88 88 88 80 88 L16 88 C10 88 8 86 8 82 Z', '#B6D98A') +
+      P('M82 74 C82 62 80 52 78 42 M88 74 C88 62 88 52 90 42', 'none', ' stroke-width="2.4"') + C(78, 40, 3, '#B6D98A') + C(90, 40, 3, '#B6D98A') +
+      eye(78, 40, 1.6) + eye(90, 40, 1.6) +
+      C(46, 50, 27, '#E3A15A') + P('M46 50 C46 46 52 46 52 50 C52 56 42 58 40 50 C38 42 50 36 56 42 C64 50 58 64 46 66 C32 68 24 54 28 42', 'none', ' stroke="#8A5A2A" stroke-width="2"') +
+      E(84, 80, 3.5, 2, '#F29A8E', n + ' opacity=".8"')],
+    butterfly: [['butterfly', 'moth'], ['나비', '나방'], '#3A2A4A',
+      P('M48 44 C36 18 14 12 10 24 C6 36 18 50 46 52 Z', '#9B7BE0') + P(mir('M48 44 C36 18 14 12 10 24 C6 36 18 50 46 52 Z'), '#9B7BE0') +
+      P('M46 54 C28 56 18 66 22 78 C26 88 40 82 48 62 Z', '#F48FB1') + P(mir('M46 54 C28 56 18 66 22 78 C26 88 40 82 48 62 Z'), '#F48FB1') +
+      C(24, 30, 5, '#F7E08A', n) + C(76, 30, 5, '#F7E08A', n) + C(32, 70, 3.6, '#fff', n) + C(68, 70, 3.6, '#fff', n) +
+      E(50, 54, 4.5, 22, '#4A3A5A') + P('M48 34 C44 24 40 18 34 14 M52 34 C56 24 60 18 66 14', 'none', ' stroke-width="2"') + C(34, 14, 2.4, '#4A3A5A') + C(66, 14, 2.4, '#4A3A5A')],
+    bee: [['bee', 'bumblebee', 'wasp'], ['벌', '꿀벌', '호박벌', '땅벌'], '#2A2010',
+      E(40, 30, 13, 17, '#DDEFFC', ' opacity=".95" transform="rotate(-25 40 30)"') + E(62, 30, 13, 17, '#DDEFFC', ' opacity=".95" transform="rotate(25 62 30)"') +
+      '<clipPath id="wm-bee"><ellipse cx="52" cy="60" rx="34" ry="24"/></clipPath>' + E(52, 60, 34, 24, '#FFD23A') +
+      `<g clip-path="url(#wm-bee)" stroke="none" fill="#2E2A26">${P('M50 30 L62 30 L62 90 L50 90 Z M70 30 L80 30 L80 90 L70 90 Z')}</g>` + E(52, 60, 34, 24, 'none') +
+      P('M86 60 L95 60 L86 64 Z', '#2E2A26') + P('M22 42 C18 30 20 22 24 18 M30 40 C30 30 34 24 38 22', 'none', ' stroke-width="2"') +
+      C(24, 18, 2.4, '#2E2A26') + C(38, 22, 2.4, '#2E2A26') + eyes(28, 40, 56, 2.8) + smile(34, 64, 3) + blush(22, 44, 64)],
+    ladybug: [['ladybug', 'ladybird', 'beetle', 'bug'], ['무당벌레', '벌레', '딱정벌레'], '#2A1010',
+      P('M34 20 C30 12 26 8 20 8 M66 20 C70 12 74 8 80 8', 'none', ' stroke-width="2.2"') + C(20, 8, 2.4, '#2E2A2A') + C(80, 8, 2.4, '#2E2A2A') +
+      E(50, 30, 18, 14, '#2E2A2A') + C(50, 60, 34, '#E8392F') + P('M50 30 L50 94', 'none', ' stroke-width="2"') +
+      C(34, 48, 6, '#2E2A2A', n) + C(66, 48, 6, '#2E2A2A', n) + C(30, 70, 5.5, '#2E2A2A', n) + C(70, 70, 5.5, '#2E2A2A', n) + C(42, 84, 4.5, '#2E2A2A', n) + C(58, 84, 4.5, '#2E2A2A', n) +
+      C(42, 27, 3.2, '#fff', n) + C(58, 27, 3.2, '#fff', n) + C(42.5, 27.5, 1.6, K, n) + C(57.5, 27.5, 1.6, K, n)],
+    bat: [['bat'], ['박쥐'], '#2A1A3A',
+      P('M42 46 C34 30 18 26 4 34 C10 38 12 44 10 50 C16 48 22 50 24 56 C28 52 34 54 36 60 C38 56 42 54 44 54 Z', '#6A5A8A') +
+      P(mir('M42 46 C34 30 18 26 4 34 C10 38 12 44 10 50 C16 48 22 50 24 56 C28 52 34 54 36 60 C38 56 42 54 44 54 Z'), '#6A5A8A') +
+      both('M40 36 L38 22 L46 32 Z', '#6A5A8A') + E(50, 50, 13, 18, '#7E6EA0') + C(50, 40, 11, '#7E6EA0', n) +
+      C(45, 41, 3, '#FFE066', n) + C(55, 41, 3, '#FFE066', n) + C(45.4, 41.4, 1.5, K, n) + C(54.6, 41.4, 1.5, K, n) +
+      P('M46 48 Q50 51 54 48', 'none') + P('M47 49 L47.8 51.4 L48.8 49.5 Z M53 49 L52.2 51.4 L51.2 49.5 Z', '#fff', n)],
+    hedgehog: [['hedgehog', 'porcupine'], ['고슴도치', '호저'], '#4A2C18',
+      P('M30 78 L24 70 L30 66 L24 56 L34 54 L30 42 L42 44 L42 30 L52 38 L58 26 L64 38 L74 32 L74 44 L86 44 L82 56 L94 60 L86 68 L92 78 Z', '#8A6244') +
+      P('M8 70 C8 60 18 54 30 56 C42 58 50 66 50 78 L14 78 C10 76 8 74 8 70 Z', '#F2D7B6') +
+      C(8, 69, 2.8, K) + eye(24, 64, 2.8) + E(30, 71, 4, 2.4, '#F29A8E', n + ' opacity=".8"') + C(26, 82, 3.5, '#C99A72') + C(74, 82, 3.5, '#C99A72')],
+    snake: [['snake', 'python', 'cobra'], ['뱀', '구렁이', '비단뱀', '코브라'], '#2A4A10',
+      tube('M14 88 C40 92 66 88 70 74 C74 60 30 64 28 50 C26 36 56 40 64 30', 10, '#8CCB5E', '#2A4A10') +
+      P('M20 88 L24 86 M36 89 L40 87 M54 87 L58 85 M68 78 L72 78 M50 66 L52 62 M34 62 L36 58 M30 48 L34 46 M48 40 L50 36', 'none', ' stroke="#5E9E3A" stroke-width="2"') +
+      E(68, 26, 12, 9, '#8CCB5E', ' transform="rotate(-20 68 26)"') + P('M79 24 L88 22 L92 18 M88 22 L92 26', 'none', ' stroke="#E8392F" stroke-width="1.6"') +
+      eye(66, 22, 2.6) + E(64, 30, 3.5, 2, '#F29A8E', n + ' opacity=".8"')],
+    crocodile: [['crocodile', 'alligator', 'croc'], ['악어'], '#1E4010',
+      P('M24 72 L22 84 L32 84 L34 74 Z M56 74 L56 84 L66 84 L64 72 Z', '#5E9E4E') +
+      P('M4 62 C4 52 14 48 26 48 L48 46 C52 36 62 34 68 42 C78 42 84 44 96 40 C94 48 90 52 84 54 C92 56 94 60 92 66 C80 70 64 72 48 72 C30 74 12 72 4 62 Z', '#5E9E4E') +
+      P('M6 64 C20 70 40 70 54 68 C70 66 84 64 92 62 L92 66 C80 70 64 72 48 72 C30 74 12 72 6 64 Z', '#C6E2A0', n) +
+      P('M84 54 L80 58 L78 54 L74 58 L72 54 L68 58 L66 54', '#FFFFFF') + P('M66 54 L94 54', 'none') +
+      P('M14 48 L18 42 L22 48 M26 48 L30 42 L34 48 M36 47 L40 41 L44 47', '#5E9E4E') + C(60, 40, 6, '#5E9E4E') + eye(61, 40, 2.6) + C(92, 44, 1.2, K, n)],
+    hippo: [['hippo', 'hippopotamus'], ['하마'], '#3A3050',
+      C(28, 30, 7, '#9C8FB5') + C(72, 30, 7, '#9C8FB5') + C(28, 30, 3.5, '#F2C8D0', n) + C(72, 30, 3.5, '#F2C8D0', n) +
+      E(50, 46, 28, 20, '#9C8FB5') + E(50, 68, 36, 22, '#AFA3C8') + E(40, 62, 3.4, 2.4, '#5A4A72', n) + E(60, 62, 3.4, 2.4, '#5A4A72', n) +
+      P('M30 74 Q50 84 70 74') + P('M38 77 L38 82 L43 82 L43 79 M62 77 L62 82 L57 82 L57 79', '#fff') +
+      C(36, 36, 8.5, '#9C8FB5') + C(64, 36, 8.5, '#9C8FB5') + eyes(36, 64, 36, 3.2) + blush(22, 78, 64)],
+    trex: [['dinosaur', 't-rex', 'trex', 'tyrannosaurus', 'dino', 'raptor'], ['공룡', '티라노', '티라노사우루스', '티렉스', '랩터'], '#1E4A1A',
+      P('M4 70 C18 66 30 58 38 48 C40 30 50 16 66 16 C82 16 94 22 94 34 C94 42 88 44 80 44 L70 44 C68 48 66 52 66 56 C70 64 70 74 64 82 L68 94 L56 94 L56 84 C50 84 46 84 42 82 L44 94 L32 94 L34 78 C24 76 12 74 4 70 Z', '#6DBE6A') +
+      P('M66 58 L76 60 L76 66 M76 60 L80 62', 'none', ' stroke-width="2.4"') +
+      P('M42 52 C48 66 54 76 62 80 C66 74 66 62 62 54 Z', '#BDE5A8', n) +
+      P('M76 44 L78 48 L80 44 L82 48 L84 44 L86 48 L88 44', '#FFFFFF') +
+      P('M52 18 L54 12 L58 17 L62 11 L65 16 L70 12 L71 17', '#4A9A48') +
+      P('M34 54 L30 50 M26 60 L22 56 M16 66 L12 62', 'none', ' stroke="#4A9A48" stroke-width="3"') + eye(72, 28, 3) + C(90, 28, 1.2, K, n)],
+    longneck: [['brachiosaurus', 'brontosaurus', 'long neck', 'longneck', 'diplodocus', 'sauropod'], ['브라키오사우루스', '브론토사우루스', '목긴공룡', '초식공룡', '디플로도쿠스'], '#1E3A5A',
+      P('M26 78 L26 94 L36 94 L36 80 Z M54 80 L54 94 L64 94 L64 78 Z', '#8DB8E2') +
+      P('M2 76 C16 76 22 60 34 56 C46 52 58 54 66 50 C70 36 70 22 76 14 C80 8 92 8 94 14 C96 20 90 22 84 22 C80 30 80 46 78 58 C76 72 64 82 46 82 C30 82 18 80 2 76 Z', '#8DB8E2') +
+      P('M30 72 C40 78 56 78 68 72', 'none', ' stroke="#5E8AB8"') + C(40, 64, 3, '#B8D4F0', n) + C(52, 62, 2.4, '#B8D4F0', n) + C(60, 68, 2.6, '#B8D4F0', n) +
+      eye(84, 14, 2.4) + P('M88 20 Q91 20 93 18')],
+    triceratops: [['triceratops'], ['트리케라톱스', '뿔공룡'], '#4A2A10',
+      P('M22 70 L20 92 L30 92 L32 74 Z M48 74 L48 92 L58 92 L58 72 Z', '#F2A65A') +
+      P('M2 62 C12 60 18 50 30 46 C42 42 54 44 60 50 C64 58 62 70 52 76 C36 80 16 74 2 62 Z', '#F2A65A') +
+      ring(19, 11, 5, '#F7C46A', 62, 40) + C(62, 40, 19, '#F7C46A', n) + C(62, 40, 11, '#FBD98E', n) +
+      P('M58 48 C60 38 70 34 78 38 C86 42 96 52 94 62 C90 66 84 64 80 66 C72 68 60 60 58 48 Z', '#F2A65A') +
+      P('M68 40 L74 14 L76 40 Z M77 42 L88 20 L83 44 Z M88 48 L95 40 L93 52 Z', '#FFF8E8') +
+      eye(78, 50, 2.6) + P('M86 60 Q90 61 93 59') + C(30, 56, 3, '#F7C46A', n) + C(42, 52, 2.4, '#F7C46A', n)],
+    stegosaurus: [['stegosaurus'], ['스테고사우루스', '스테고'], '#1E4A3A',
+      P('M26 48 L30 30 L40 44 Z M38 42 L46 20 L54 40 Z M52 40 L62 22 L66 42 Z M64 44 L74 30 L76 48 Z', '#F2A65A') +
+      P('M30 72 L28 92 L38 92 L40 74 Z M58 74 L58 92 L68 92 L68 72 Z', '#5EB8A0') +
+      P('M2 60 L10 52 L8 62 L14 56 L14 64 C24 52 36 44 50 44 C66 44 78 52 84 58 C88 54 96 56 96 62 C96 68 88 70 82 68 C74 76 62 80 48 78 C32 78 18 72 2 60 Z', '#5EB8A0') +
+      P('M24 66 C34 74 50 78 70 72', 'none', ' stroke="#3A8A72"') + eye(88, 60, 2.2) + C(40, 58, 3, '#8ED6C2', n) + C(56, 56, 2.6, '#8ED6C2', n)],
+    pterodactyl: [['pterodactyl', 'pteranodon', 'pterosaur'], ['익룡', '프테라노돈', '프테로닥틸'], '#4A2A50',
+      P('M44 48 C34 36 18 30 2 32 C10 40 18 48 22 58 C30 54 38 54 46 58 Z', '#C99AD8') + P(mir('M44 48 C34 36 18 30 2 32 C10 40 18 48 22 58 C30 54 38 54 46 58 Z'), '#C99AD8') +
+      E(50, 58, 8, 16, '#B884C8') + P('M44 72 L42 80 M56 72 L58 80', 'none', ' stroke-width="2.4"') +
+      P('M42 36 C42 28 48 24 54 26 L80 32 L54 36 C52 40 46 42 42 36 Z', '#B884C8') + P('M44 28 L30 18 L46 24 Z', '#9A6AB0') + eye(49, 30, 2.4)],
+    dragon: [['dragon'], ['용', '드래곤', '드래건'], '#1E4A20',
+      P('M30 46 C20 30 8 26 2 30 C8 36 8 42 6 48 C12 46 16 48 18 54 C22 52 26 54 28 58 Z', '#4DA35A') + P(mir('M30 46 C20 30 8 26 2 30 C8 36 8 42 6 48 C12 46 16 48 18 54 C22 52 26 54 28 58 Z'), '#4DA35A') +
+      P('M66 80 C78 84 88 80 90 70 L96 72 L92 62 L86 68 C84 76 76 78 68 74 Z', '#6CC06A') +
+      E(50, 72, 22, 22, '#6CC06A') + E(50, 76, 13, 15, '#F7E08A', n) + P('M40 70 L60 70 M38 78 L62 78 M40 86 L60 86', 'none', ' stroke="#D9B84A" stroke-width="1.4"') +
+      both('M36 26 L28 8 L42 20 Z', '#F7E08A') + E(50, 34, 22, 18, '#6CC06A') + E(50, 42, 13, 8, '#9AD68A') +
+      E(45, 41, 1.4, 2, K, n) + E(55, 41, 1.4, 2, K, n) + P('M42 18 L46 22 L50 16 L54 22 L58 18', '#4DA35A') +
+      eyes(40, 60, 30, 3.4) + P('M44 47 Q50 51 56 47')],
+    phoenix: [['phoenix', 'firebird'], ['불사조', '봉황', '피닉스'], '#7A2A10',
+      P('M46 62 C36 76 22 82 8 80 C18 86 30 88 42 80 C38 88 36 94 30 98 C42 96 50 86 52 74 C56 86 62 94 74 96 C66 90 62 82 62 72 Z', '#F5A623') +
+      P('M48 64 C42 74 32 78 22 78 C32 82 40 80 46 74 Z M54 66 C56 76 62 84 70 88 C64 80 62 74 62 68 Z', '#FFE066', n) +
+      P('M40 44 C28 34 12 32 2 38 C10 42 14 48 16 54 C24 50 32 52 40 58 Z', '#E8453C') + P(mir('M40 44 C28 34 12 32 2 38 C10 42 14 48 16 54 C24 50 32 52 40 58 Z'), '#E8453C') +
+      E(50, 52, 13, 16, '#F2702A') + C(50, 32, 10, '#F2702A') + P('M46 22 C44 14 46 8 50 6 C50 12 54 14 56 10 C58 16 56 20 54 23', '#FFB02A') +
+      P('M46 36 L54 36 L50 42 Z', '#FFE066') + eyes(45.5, 54.5, 30, 2.4)],
+    kumiho: [['kumiho', 'nine-tailed fox', 'ninetailed fox', 'nine tail fox', 'gumiho'], ['구미호'], '#6A2E12',
+      [-56, -42, -28, -14, 0, 14, 28, 42, 56].map(a => E(50, 42, 8.5, 27, '#FFE2B8', ` transform="rotate(${a} 50 86)"`) + E(50, 18, 5, 6, '#FFFFFF', n + ` transform="rotate(${a} 50 86)"`)).join('') +
+      both('M28 58 L30 34 L46 50 Z', '#F7F0E8') + both('M32 53 L33 40 L42 50 Z', '#F49AB0', n) +
+      P('M22 60 C26 50 38 48 50 48 C62 48 74 50 78 60 C74 72 62 84 50 90 C38 84 26 72 22 60 Z', '#F7F0E8') +
+      P('M42 54 C44 52 48 54 50 58 C52 54 56 52 58 54', 'none', ' stroke="#E8453C" stroke-width="2"') +
+      C(50, 88, 3, K) + eyes(40, 60, 64, 2.6) + blush(33, 67, 74)],
+  };
+})();
+const animalNorm = t => String(t || '').toLowerCase().normalize('NFC').replace(/[\s\-_'’.·]/g, '');
+function editDistance(a, b) {
+  let row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0]; row[0] = i;
+    for (let j = 1; j <= b.length; j++) { const t = row[j]; row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = t; }
+  }
+  return row[b.length];
+}
+const animalCache = {};
+// Returns { key, exact }: exact is false when the typed animal isn't drawn and a stand-in is used.
+function findAnimal(text) {
+  const t = animalNorm(text);
+  if (!t) return { key: 'squirrel', exact: true };
+  if (animalCache[t]) return animalCache[t];
+  const names = [];
+  for (const [key, [en, ko]] of Object.entries(ANIMALS)) en.concat(ko).forEach(nm => names.push([animalNorm(nm), key]));
+  const single = t.replace(/(ies)$/, 'y').replace(/(sh|ch|x)es$/, '$1').replace(/([^s])s$/, '$1');
+  let hit = names.find(([nm]) => nm === t || nm === single);
+  // "baby tiger", "아기고양이", "tyranno": the longest name inside what was typed, or what was typed at the start of a name
+  if (!hit) hit = names.filter(([nm]) => nm.length >= 2 && t.includes(nm)).sort((a, b) => b[0].length - a[0].length)[0];
+  if (!hit && t.length >= 3) hit = names.find(([nm]) => nm.startsWith(t));
+  if (!hit && /^[a-z]+$/.test(t) && t.length >= 4) {
+    let best = null, bestD = t.length <= 5 ? 2 : 3;
+    names.forEach(([nm, key]) => { const d = editDistance(single, nm); if (d < bestD) { best = [nm, key]; bestD = d; } });
+    hit = best;
+  }
+  let res;
+  if (hit) res = { key: hit[1], exact: true };
+  else {
+    let h = 0; for (const ch of t) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+    const keys = Object.keys(ANIMALS); res = { key: keys[h % keys.length], exact: false };
+  }
+  return (animalCache[t] = res);
+}
+const myAnimal = () => findAnimal(state.animal);
+// Put an animal's drawing into the page once, so every tag can point to it.
+function animalSymbol(key) {
+  if (key === 'squirrel') return 'squirrel';
+  const id = 'wm-' + key;
+  if (!document.getElementById(id)) {
+    const [, , stroke, art] = ANIMALS[key];
+    document.getElementById('defs').insertAdjacentHTML('beforeend', `<symbol id="${id}" viewBox="0 0 100 100"><g stroke="${stroke}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">${art}</g></symbol>`);
+  }
+  return id;
+}
+const animalSVG = (key, cls) => `<svg${cls ? ` class="${cls}"` : ''} viewBox="0 0 100 100" aria-hidden="true"><use href="#${animalSymbol(key)}"/></svg>`;
+// On the sign-in screen: the teacher's animal, only if they chose one (no squirrel for everyone).
+function profileAnimalSVG(p) {
+  const typed = clean((((cloud ? (cloudDocs[p.id] || {}).state : readLocal(p.id)) || {}).animal) || '');
+  return typed ? animalSVG(findAnimal(typed).key) : '';
+}
+const animalName = key => isKo() ? ANIMALS[key][1][0] : ANIMALS[key][0][0];
+// Which animals the other teachers on this computer / online have: key -> [names]
+function animalsOfOthers() {
+  const out = {};
+  profiles.forEach(p => {
+    if (p.id === currentId) return;
+    const d = cloud ? (cloudDocs[p.id] || {}).state : readLocal(p.id);
+    const k = findAnimal(d && d.animal).key;
+    (out[k] = out[k] || []).push(p.name);
+  });
+  return out;
+}
+function animalOptions() {
+  document.getElementById('animal-list').innerHTML = Object.values(ANIMALS)
+    .map(([en, ko]) => `<option value="${esc(isKo() ? ko[0] : en[0])}">${esc(isKo() ? en[0] : ko[0])}</option>`).join('');
+}
+// The small picture next to the box, with a tooltip saying what was picked.
+function updateAnimalPic() {
+  const { key, exact } = myAnimal(), pic = document.getElementById('animal-pic');
+  pic.innerHTML = `<use href="#${animalSymbol(key)}"/>`;
+  const others = animalsOfOthers()[key];
+  const tip = (exact ? animalName(key) : L(`"${clean(state.animal)}" isn't drawn yet, so you have: ${animalName(key)}`, `"${clean(state.animal)}"은(는) 아직 그림이 없어서 대신: ${animalName(key)}`)) +
+    (others ? L(` (${others.join(', ')} also has this one)`, ` (${others.join(', ')} 선생님도 사용 중)`) : '');
+  pic.setAttribute('aria-label', tip);
+  pic.innerHTML += `<title>${esc(tip)}</title>`;
+  document.getElementById('animal-row').classList.toggle('off', state.watermark === false);
+}
+
+function tagHTML(c, name, wm = animalSVG(myAnimal().key, 'wm')) {
   const cls = [c.name, c.subject].filter(Boolean).join(' ');
   const teacher = clean(c.teacher) || clean(state.teacher);
   const n = nameHTML(name);
@@ -1815,7 +2239,7 @@ function tagHTML(c, name) {
   const cc = classColor(c);
   const attrs = `data-cid="${c.id}" class="tag${cc ? ' cc' : ''}${c.id === activeId ? ' active' : ''}"` +
     (cc ? ` style="--cc-bg:${cc.bg};--cc-fg:${cc.fg};--cc-strong:${cc.strong}"` : '');
-  const extras = SQUIRREL + ((c.newNames || []).includes(name) ? '<span class="newmark noprint">NEW</span>' : ''); // NEW shows on screen only
+  const extras = wm + ((c.newNames || []).includes(name) ? '<span class="newmark noprint">NEW</span>' : ''); // NEW shows on screen only
   return state.style === 'cute'
     ? `<div ${attrs}><div class="inner-card">${inner}</div>${extras}</div>`
     : `<div ${attrs}>${inner}${extras}</div>`;
@@ -1833,6 +2257,7 @@ function render() {
   let cur = { tags: [], names: new Set() };
   const flush = () => { if (cur.tags.length) chunks.push(cur); cur = { tags: [], names: new Set() }; };
   let total = 0, classes = 0;
+  updateAnimalPic();
   for (const c of state.classes) {
     // Reprints use only the ticked students, one tag each, packed together across classes.
     const list = state.reprint ? pickedNames(c) : (c.include ? c.names : []);
@@ -2245,8 +2670,10 @@ document.addEventListener('keydown', e => {
 setLayout();
 load(); // signs the same teacher back in after a reload, otherwise asks who's using the tool
 
-/* Opened from the Class Prep Station (name-tags.html?from=prep): after printing, go back to it.
-   Opened on its own, the tool behaves as before. */
+/* Opened from the Class Prep Station (?from=prep, a teacher-prep page in the "Class tools" project):
+   the class list handed over comes in by itself, a "Back to Class Prep" button shows, and after printing it goes back.
+   Works both in the Grade Prep Station's own copy and on this website (Prep opens the site in a new tab and the
+   list comes in the link as #prep=...; going back closes this tab). Opened on its own, nothing here runs. */
 (function () {
   if (new URLSearchParams(location.search).get('from') !== 'prep') return;
   // signing out first keeps this teacher's classes saved but hidden from the next teacher
@@ -2257,7 +2684,14 @@ load(); // signs the same teacher back in after a reload, otherwise asks who's u
       if (r && r.origin === location.origin && !/name-tags/i.test(r.pathname)) { r.search = '?back=tags'; r.hash = ''; return r.href; } } catch (e) {}
     return (location.protocol === 'file:' || /github\.io$/.test(location.hostname)) ? 'class-prep.html?back=tags' : 'index.html?back=tags'; })();
   try { if (new URLSearchParams(location.search).get('ret') || !sessionStorage.getItem('prepBackUrl')) sessionStorage.setItem('prepBackUrl', prepUrl); } catch (e) {}
-  const back = () => { try { if (currentId) signOut(); } catch (e) {} let u = prepUrl; try { u = sessionStorage.getItem('prepBackUrl') || prepUrl; } catch (e) {} location.href = u; };
+  // opened in a new tab by Class Prep (e.g. on this website): tell it the tags are done and close this tab;
+  // otherwise go back to the Prep page next to this file
+  const opened = (() => { try { return !!window.opener && !window.opener.closed; } catch (e) { return false; } })();
+  const sameSite = location.protocol === 'file:' || /Class-tools/i.test(location.pathname);
+  const back = () => { try { if (currentId) signOut(); } catch (e) {}
+    if (opened) { try { window.opener.postMessage({ type: 'prep:tagsDone' }, '*'); } catch (e) {} window.close(); setTimeout(() => { if (history.length > 1) history.back(); }, 300); return; }
+    if (!sameSite) { if (history.length > 1) history.back(); return; }
+    let u = prepUrl; try { u = sessionStorage.getItem('prepBackUrl') || prepUrl; } catch (e) {} location.href = u; };
   const bar = document.createElement('a');
   bar.href = prepUrl; bar.className = 'prepback'; bar.addEventListener('click', e => { e.preventDefault(); back(); }); bar.textContent = '← Back to Class Prep';
   const st = document.createElement('style');
