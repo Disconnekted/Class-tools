@@ -2958,6 +2958,21 @@ main.addEventListener('submit', e => {
     e.preventDefault(); langB.click();
   });
 })();
+// iPad/iPhone Home Screen app: the TOPIA Helper setup page has to open in real Safari (not the in-app viewer), or it can't be bookmarked.
+(() => {
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const app = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  if (!ios || !app) return;
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('a[href*="topia-helper.html"]'); if (!a) return;
+    e.preventDefault(); const url = a.href, ko = document.documentElement.lang === 'ko';
+    location.href = 'x-safari-' + url;
+    setTimeout(() => { if (document.visibilityState !== 'visible') return;
+      try { navigator.clipboard.writeText(url); } catch (err) {}
+      alert(ko ? 'Safari를 열지 못했습니다. 링크를 복사했으니 Safari 주소창에 붙여 넣으세요.\n' + url : "Couldn't open Safari. The link is copied: paste it into Safari's address bar.\n" + url);
+    }, 1500);
+  }, true);
+})();
 </script>
 <script>
 /* ---------- paper copy (PDF), drawn to match the printed Integrated Class sheet ---------- */
