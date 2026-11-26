@@ -165,6 +165,10 @@ table.gs td button.tog{width:100%;height:25px;border:0;border-radius:0;backgroun
 .modal .box{background:var(--sheet);border-radius:12px;padding:20px;width:min(440px,100%);display:grid;gap:12px;max-height:90vh;overflow:auto}
 .modal h2{font:700 24px var(--f-display);text-transform:uppercase;letter-spacing:.03em;margin:0}
 .who-list{display:grid;gap:6px}
+.whorow{display:flex;gap:6px;align-items:stretch}.whorow>[data-tid]{flex:1}
+.whorow .whox{flex:none;padding:6px 14px;color:var(--bad);font-weight:700}
+.whoask{border:1.5px solid var(--bad);border-radius:10px;padding:10px 12px;display:grid;gap:8px}.whoask p{margin:0}.whoask .outrow{display:flex;gap:8px;flex-wrap:wrap}
+.whoedit{margin:8px 0 0;text-align:right;font-size:14px}
 .who-list button{justify-content:flex-start;font:600 17px var(--f-display);letter-spacing:.02em;padding:10px 14px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .row input{flex:1 1 160px}
@@ -581,6 +585,7 @@ table.gs td,table.gs th{border-color:var(--line)}
     <div class="who-list" id="whoList"></div>
     <form class="row" id="whoForm"><input id="whoName" placeholder="Your name, e.g. Joseph" autocomplete="off"><button class="primary" type="submit">Start</button></form>
     <p class="msg bad" id="whoMsg" hidden></p>
+    <p class="whoedit" id="whoEditP" hidden><button type="button" class="linkbtn" id="whoEdit">Delete a name…</button></p>
     <button type="button" id="whoRecv" hidden>📥 Set up on a computer? Receive your classes</button>
   </div>
 </div>
@@ -908,7 +913,8 @@ function touch(c) {
 function saveLocal() {
   const all = lsGet(LOCAL_KEY) || { teachers: [], classes: {} };
   all.teachers = teachers;
-  all.classes[me] = classes.filter(c => !c.example);
+  if (me) all.classes[me] = classes.filter(c => !c.example);
+  delete all.classes.null; // an old slip saved a copy under no name
   lsSet(LOCAL_KEY, all); dirty.clear(); setSync('Saved on this device');
 }
 async function flush() {
@@ -1056,8 +1062,9 @@ function newDue(c) {
   c.dueV = 1; c._migrated = true;
   return c;
 }
+let shownT = null; // whose classes are on screen (still showing behind the name box after Switch)
 function openTeacher(id) {
-  me = id; lsSet(ME_KEY, id);
+  me = id; shownT = id; lsSet(ME_KEY, id);
   if (db) classes = Object.entries(remoteClasses).filter(([, d]) => d.teacher === id).map(([, d]) => editable(d.cls));
   else classes = ((lsGet(LOCAL_KEY) || { classes: {} }).classes[id] || []);
   if (!db) classes = classes.map(editable);
@@ -1077,13 +1084,46 @@ function openTeacher(id) {
   render();
 }
 function showWho() { document.getElementById('who').hidden = false; renderWho(); }
+/* Delete a name: "Delete a name…" shows × beside each name; × asks first, then removes the name and all its classes. */
+let whoEditing = false, whoAsk = null;
+const classCount = id => db ? Object.values(remoteClasses).filter(d => d.teacher === id).length : (((lsGet(LOCAL_KEY) || { classes: {} }).classes[id]) || []).length;
 function renderWho() {
+  if (!teachers.length) whoEditing = false;
   document.getElementById('whoList').innerHTML = teachers.length
-    ? teachers.map(t => `<button type="button" data-tid="${esc(t.id)}">${esc(t.name)}</button>`).join('')
+    ? teachers.map(t => {
+      if (whoAsk === t.id) { const n = classCount(t.id); return `<div class="whoask" role="alert"><p>${L(`Delete <b>${esc(t.name)}</b>${n ? ` and ${n === 1 ? 'their 1 class' : `all ${n} of their classes`}` : ''}? Every score and note goes too. This can't be undone.`, `<b>${esc(t.name)}</b>${n ? `과(와) 반 ${n}개` : ''}를 삭제할까요? 모든 점수와 메모도 지워집니다. 되돌릴 수 없습니다.`)}</p><div class="outrow"><button type="button" class="danger" data-whoyes="${esc(t.id)}">${L('Delete', '삭제')}</button><button type="button" data-whono>${L('Cancel', '취소')}</button></div></div>`; }
+      return whoEditing ? `<div class="whorow"><button type="button" data-tid="${esc(t.id)}">${esc(t.name)}</button><button type="button" class="whox" data-whodel="${esc(t.id)}" aria-label="${L('Delete ' + esc(t.name), esc(t.name) + ' 삭제')}">×</button></div>` : `<button type="button" data-tid="${esc(t.id)}">${esc(t.name)}</button>`;
+    }).join('')
     : '';
+  document.getElementById('whoEditP').hidden = !teachers.length;
+  document.getElementById('whoEdit').textContent = whoEditing ? L('Done', '완료') : L('Delete a name…', '이름 삭제…');
   document.getElementById('whoHint').textContent = teachers.length ? 'Pick your name to open your classes. New here? Type your name below.' : 'Type your name to start.';
 }
-document.getElementById('whoList').addEventListener('click', e => { const b = e.target.closest('[data-tid]'); if (b) openTeacher(b.dataset.tid); });
+document.getElementById('whoList').addEventListener('click', async e => {
+  const del = e.target.closest('[data-whodel]'), yes = e.target.closest('[data-whoyes]');
+  if (del) { whoAsk = del.dataset.whodel; renderWho(); const n = document.querySelector('[data-whono]'); if (n) n.focus(); return; }
+  if (e.target.closest('[data-whono]')) { whoAsk = null; renderWho(); return; }
+  if (yes) { await deleteTeacher(yes.dataset.whoyes); return; }
+  const b = e.target.closest('[data-tid]'); if (b) { whoEditing = false; whoAsk = null; openTeacher(b.dataset.tid); }
+});
+document.getElementById('whoEdit').addEventListener('click', () => { whoEditing = !whoEditing; whoAsk = null; renderWho(); });
+async function deleteTeacher(id) {
+  const t = teachers.find(x => x.id === id); if (!t) return;
+  const m = document.getElementById('whoMsg'); m.hidden = true;
+  if (db) {
+    try {
+      for (const k of Object.keys(remoteClasses)) if (remoteClasses[k].teacher === id) await db.doc('classes/' + k).delete();
+      await db.doc('teachers/' + id).delete();
+    } catch (err) { m.hidden = false; m.textContent = L('Could not delete it online. Check the internet and try again.', '온라인에서 삭제하지 못했습니다. 인터넷을 확인하고 다시 시도하세요.'); return; }
+  }
+  teachers = teachers.filter(x => x.id !== id);
+  const all = lsGet(LOCAL_KEY) || { teachers: [], classes: {} }; all.teachers = teachers; delete all.classes[id]; lsSet(LOCAL_KEY, all);
+  try { localStorage.removeItem(LAST_KEY + id); if (lsGet(ME_KEY) === id) localStorage.removeItem(ME_KEY); } catch (err) {}
+  if (me === id) me = null;
+  if (shownT === id) { shownT = null; document.getElementById('whoBtn').hidden = true; classes = [exampleClass()]; current = classes[0].id; autoPick = null; render(); }
+  whoAsk = null; renderWho();
+  flashMsg(L(`Deleted ${t.name}.`, `${t.name}을(를) 삭제했습니다.`));
+}
 document.getElementById('whoForm').addEventListener('submit', async e => {
   e.preventDefault();
   const name = clean(document.getElementById('whoName').value);
