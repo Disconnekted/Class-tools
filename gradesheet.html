@@ -252,6 +252,7 @@ body.padopen .wrap{padding-bottom:62vh}
 .nlist li span{flex:1;min-width:0;overflow-wrap:anywhere;text-align:left}
 .nlist li button{min-width:40px;min-height:36px;justify-content:center;border:0;background:transparent;color:var(--bad);font-size:20px;padding:0}
 .nundo{margin:0;font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nother{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
 .nundo button{padding:4px 10px;font-size:13px}
 .nadd{display:flex;gap:6px}
 .nadd input{flex:1;min-width:0;min-height:38px;font-size:14px}
@@ -1971,10 +1972,13 @@ function noteBoxHTML(c, sid) {
   if (sheet && !open) return `<div class="notebox" data-nsid="${esc(sid)}">${lines.length
     ? `<button type="button" class="nsum" data-notetog title="${esc(lines.map(noteShow).join('\n'))}"><b>📝 ${lines.length}</b> ${esc(noteShow(lines[lines.length - 1]))}</button>`
     : `<button type="button" class="small notetog" data-notetog>+ Note</button>`}</div>`;
+  // Day by day: only the notes written for this lesson's date; the rest stay in Whole sheet.
+  const shown = lines.map((l, j) => [l, j]).filter(([l]) => sheet || l === when || l.startsWith(when + ' ')), other = lines.length - shown.length;
   return `<div class="notebox${sheet ? ' nopen' : ''}" data-nsid="${esc(sid)}">
     ${open ? '' : `<button type="button" class="small notetog" data-notetog>+ Note</button>`}
     <div class="chips"${open ? '' : ' hidden'} aria-label="Quick notes for ${esc(when)}">${NOTE_CHIPS.map(t => { const on = lines.includes(`${when} ${t}`); return `<button type="button" class="chip-btn" data-chip="${esc(t)}" aria-pressed="${on}">${on ? '✓ ' : '+ '}${esc(L(t, NOTE_KO[t]))}</button>`; }).join('')}</div>
-    ${lines.length ? `<ul class="nlist">${lines.map((l, j) => `<li><span>${esc(noteShow(l))}</span><button type="button" data-delnote="${j}" aria-label="${L('Delete note: ', '메모 삭제: ')}${esc(noteShow(l))}">×</button></li>`).join('')}</ul>` : ''}
+    ${shown.length ? `<ul class="nlist">${shown.map(([l, j]) => `<li><span>${esc(noteShow(l))}</span><button type="button" data-delnote="${j}" aria-label="${L('Delete note: ', '메모 삭제: ')}${esc(noteShow(l))}">×</button></li>`).join('')}</ul>` : ''}
+    ${other ? `<p class="nother">${L(`${other} note${other === 1 ? '' : 's'} on other days (Whole sheet)`, `다른 날 메모 ${other}개 (전체 시트)`)}</p>` : ''}
     ${undoNote && undoNote.sid === sid ? `<p class="nundo">${L('Deleted', '삭제됨:')} “${esc(noteShow(undoNote.line))}” <button type="button" data-undonote>${L('Undo', '되돌리기')}</button></p>` : ''}
     <form class="nadd" data-nadd${open ? '' : ' hidden'}><input data-newnote enterkeyhint="done" placeholder="Type or dictate a note" aria-label="New note"><button type="submit">Add</button></form>
     ${sheet ? '<button type="button" class="linkbtn nclose" data-noteclose>Done ▴</button>' : ''}
