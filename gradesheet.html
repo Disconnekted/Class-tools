@@ -838,7 +838,7 @@ const dateFor = (c, i) => (c.dates && c.dates[i]) || autoDates(c)[i] || '';
 
 /* ---------- classes ---------- */
 function newClass(name, subject, sem) {
-  const c = { id: uid(), name: name || 'New class', subject: '', days: 'Mon / Wed', hr: '', room: '', sem: sem || 'B', start: '', dates: [], cats: [], extras: [], students: [], scores: {}, extra: {}, notes: {}, classNotes: '' };
+  const c = { id: uid(), name: name || 'New class', subject: '', days: 'Mon / Wed', hr: '', room: '', sem: sem || 'A', start: '', dates: [], cats: [], extras: [], students: [], scores: {}, extra: {}, notes: {}, classNotes: '' };
   setSubject(c, subjectKey(subject) || subjectKey(name));
   return c;
 }
