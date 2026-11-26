@@ -219,6 +219,7 @@ table.gs td button.cell.sel{outline:2px solid var(--accent);outline-offset:-2px;
 .padhead small{display:block;color:var(--muted);font-size:13px}
 .padhead button{min-height:44px;padding:0 18px}
 .padgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.daydate{position:relative;display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px dashed var(--line);border-radius:8px;cursor:pointer;font:inherit}.daydate:hover{border-style:solid}.daydate input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;border:0;padding:0}
 .padlab{font-size:13px;color:var(--muted);margin:4px 0 3px}.padgrid.tens{grid-template-columns:repeat(11,minmax(0,1fr))}.padgrid.ones{grid-template-columns:repeat(10,minmax(0,1fr))}.padgrid.tens button small{font-size:10.5px}
 .padgrid.dense{grid-template-columns:repeat(auto-fill,minmax(54px,1fr))}
 .padgrid button{min-height:54px;display:grid;place-content:center;gap:0;font:600 21px var(--f-mono);padding:4px;background:var(--paper)}
@@ -1855,6 +1856,30 @@ const NOTE_CHIPS = ['Late', 'Disruptive', 'Sent outside', 'Retest', 'No book'];
 const NOTE_KO = { 'Late': '지각', 'Disruptive': '수업 방해', 'Sent outside': '밖으로 내보냄', 'Retest': '재시험', 'No book': '책 없음' };
 // Notes are saved in English; in Korean the quick-note words are shown in Korean (the saved text doesn't change).
 const noteShow = l => window.gsKO ? String(l).replace(/^(.+? )(Late|Disruptive|Sent outside|Retest|No book)$/, (m, d, w) => d + NOTE_KO[w]) : l;
+// Day by day: the lesson's date can be changed right there (a date picker; on iPad the native wheel).
+function mdToIso(c, md) {
+  const m = String(md || '').match(/^(\d{1,2})\/(\d{1,2})$/); if (!m) return '';
+  const now = new Date(), base = c.start ? +c.start.slice(0, 4) : now.getFullYear();
+  let y = base; if (c.start && +m[1] < +c.start.slice(5, 7)) y = base + 1; // a school year that crosses New Year
+  return `${y}-${String(m[1]).padStart(2, '0')}-${String(m[2]).padStart(2, '0')}`;
+}
+function dayDateHTML(c, i) {
+  const d = dateFor(c, i), own = !!(c.dates && c.dates[i]);
+  return ` <label class="daydate" title="${esc(L('Tap to change this lesson\'s date', '눌러서 이 수업 날짜 바꾸기'))}"><span>📅 ${d ? esc(d) : esc(L('Set date', '날짜 정하기'))}</span><input type="date" data-daydate="${i}" value="${esc(mdToIso(c, d))}" aria-label="${esc(L('Date for day ' + (i + 1), (i + 1) + '회차 날짜'))}"></label>${own && autoDates(c)[i] && autoDates(c)[i] !== d ? `<button type="button" class="linkbtn" data-dayreset="${i}" title="${esc(L('Back to the usual date', '원래 날짜로'))}">↺ ${esc(autoDates(c)[i])}</button>` : ''}`;
+}
+document.addEventListener('click', e => {
+  const lb = e.target.closest('.daydate'); if (!lb) return;
+  const inp = lb.querySelector('input'); if (inp && inp.showPicker && e.target !== inp) { e.preventDefault(); try { inp.showPicker(); } catch (x) { inp.focus(); } }
+});
+document.addEventListener('change', e => {
+  const t = e.target.closest && e.target.closest('[data-daydate]'); if (!t) return;
+  const c = cur(); if (!c || !t.value) return; const [, m, d] = t.value.split('-').map(Number);
+  c.dates ||= []; c.dates[+t.dataset.daydate] = `${m}/${d}`; keep(c); render();
+});
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-dayreset]'); if (!b) return;
+  const c = cur(); if (!c) return; c.dates[+b.dataset.dayreset] = ''; keep(c); render();
+});
 const todayMD = () => { const d = new Date(); return `${d.getMonth() + 1}/${d.getDate()}`; };
 function todayIdx(c) { const k = dayAt[c.id]; delete dayAt[c.id]; const t = pickDay(c); if (k === undefined) delete dayAt[c.id]; else dayAt[c.id] = k; return t; }
 function pickDay(c) {
@@ -2584,7 +2609,7 @@ function dayHTML(c, syl) {
   const marked = j => c.students.some(s => c.cats.some(k => val(c, s.id, k.id, j)));
   let h = `<div class="daynav">
       <button type="button" class="big" data-day="${i - 1}" ${i ? '' : 'disabled'} aria-label="Previous lesson">‹</button>
-      <div class="daytitle"><b>Day ${i + 1}</b>${c.start && todayIdx(c) !== i ? `<button type="button" class="linkbtn todaybtn" data-today>Today ↩</button>` : ''}${dateFor(c, i) ? ` <span>${esc(dateFor(c, i))}</span>` : ''}${what ? `<small>${esc(what)}</small>` : ''}</div>
+      <div class="daytitle"><b>Day ${i + 1}</b>${c.start && todayIdx(c) !== i ? `<button type="button" class="linkbtn todaybtn" data-today>Today ↩</button>` : ''}${dayDateHTML(c, i)}${what ? `<small>${esc(what)}</small>` : ''}</div>
       <button type="button" class="big" data-day="${i + 1}" ${i < NDAYS - 1 ? '' : 'disabled'} aria-label="Next lesson">›</button>
     </div>
     <div class="daystrip" aria-label="Jump to a lesson">${[...Array(NDAYS).keys()].map(j => `<button type="button" data-day="${j}" class="m${monthOf(j) + 1}${marked(j) ? ' done' : ''}" aria-current="${j === i}">${j + 1}</button>`).join('')}</div>
