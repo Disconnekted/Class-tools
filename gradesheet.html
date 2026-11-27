@@ -253,6 +253,8 @@ body.padopen .wrap{padding-bottom:62vh}
 .nlist li button{min-width:40px;min-height:36px;justify-content:center;border:0;background:transparent;color:var(--bad);font-size:20px;padding:0}
 .nundo{margin:0;font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .nother{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+.nother .linkbtn{font-size:12.5px;padding:2px 0;min-height:0;text-align:left}
+tr.nflash>td{background:color-mix(in srgb,var(--accent) 14%,transparent);transition:background .6s}
 .nundo button{padding:4px 10px;font-size:13px}
 .nadd{display:flex;gap:6px}
 .nadd input{flex:1;min-width:0;min-height:38px;font-size:14px}
@@ -1978,7 +1980,7 @@ function noteBoxHTML(c, sid) {
     ${open ? '' : `<button type="button" class="small notetog" data-notetog>+ Note</button>`}
     <div class="chips"${open ? '' : ' hidden'} aria-label="Quick notes for ${esc(when)}">${NOTE_CHIPS.map(t => { const on = lines.includes(`${when} ${t}`); return `<button type="button" class="chip-btn" data-chip="${esc(t)}" aria-pressed="${on}">${on ? '✓ ' : '+ '}${esc(L(t, NOTE_KO[t]))}</button>`; }).join('')}</div>
     ${shown.length ? `<ul class="nlist">${shown.map(([l, j]) => `<li><span>${esc(noteShow(l))}</span><button type="button" data-delnote="${j}" aria-label="${L('Delete note: ', '메모 삭제: ')}${esc(noteShow(l))}">×</button></li>`).join('')}</ul>` : ''}
-    ${other ? `<p class="nother">${L(`${other} note${other === 1 ? '' : 's'} on other days (Whole sheet)`, `다른 날 메모 ${other}개 (전체 시트)`)}</p>` : ''}
+    ${other ? `<p class="nother"><button type="button" class="linkbtn" data-gonotes="${esc(sid)}">${L(`${other} note${other === 1 ? '' : 's'} on other days (Whole sheet) ›`, `다른 날 메모 ${other}개 (전체 시트) ›`)}</button></p>` : ''}
     ${undoNote && undoNote.sid === sid ? `<p class="nundo">${L('Deleted', '삭제됨:')} “${esc(noteShow(undoNote.line))}” <button type="button" data-undonote>${L('Undo', '되돌리기')}</button></p>` : ''}
     <form class="nadd" data-nadd${open ? '' : ' hidden'}><input data-newnote enterkeyhint="done" placeholder="Type or dictate a note" aria-label="New note"><button type="submit">Add</button></form>
     ${sheet ? '<button type="button" class="linkbtn nclose" data-noteclose>Done ▴</button>' : ''}
@@ -2809,6 +2811,12 @@ document.addEventListener('keydown', e => {
 
 main.addEventListener('click', e => {
   const c = cur(); if (!c) return;
+  const gn = e.target.closest('[data-gonotes]');
+  if (gn) { // jump to Whole sheet with this student's notes open
+    const sid = gn.dataset.gonotes; view = 'sheet'; closePad(); noteOpen.add(sid); render();
+    const nb = main.querySelector(`[data-nsid="${CSS.escape(sid)}"]`); if (nb) { nb.scrollIntoView({ block: 'center' }); const r = nb.closest('tr'); if (r) { r.classList.add('nflash'); setTimeout(() => r.classList.remove('nflash'), 1600); } }
+    return;
+  }
   const vb = e.target.closest('[data-view]');
   if (vb) { view = vb.dataset.view; closePad(); render(); return; }
   const dj = e.target.closest('[data-day]');
@@ -3325,6 +3333,9 @@ function drawSheet(doc, c, full) {
     }
     doc.setLineWidth(0.15); doc.setDrawColor(...PDF.grid);
     drawChartStrip(doc, c, M, chartY, W, chartH);
+    // Teacher's name, small and grey under the sheet (John 2026-11-27).
+    const tn = clean(c.teacherName || ((typeof teachers !== 'undefined' && teachers.find(t => t.id === (shownT || me))) || {}).name || '');
+    if (tn) { doc.setTextColor(...PDF.muted); if (/[^\x00-\xFF]/.test(tn)) pdfText(doc, 'Teacher: ' + tn, M, bottom + 5.5, 7); else { doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.text('Teacher: ' + tn, M, bottom + 5.5); } doc.setTextColor(...PDF.ink); }
   }
 }
 /* The score chart on every page: one row per total (the usual 35/30/25/20/15 plus this class's own
