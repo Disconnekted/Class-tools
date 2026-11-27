@@ -225,7 +225,7 @@ table.gs td button.cell.sel{outline:2px solid var(--accent);outline-offset:-2px;
 .padhead small{display:block;color:var(--muted);font-size:13px}
 .padhead button{min-height:44px;padding:0 18px}
 .padgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
-.daydate{position:relative;display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px dashed var(--line);border-radius:8px;cursor:pointer;font:inherit}.daydate:hover{border-style:solid}.daydate input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;border:0;padding:0}
+.daydate{position:relative;display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px dashed var(--line);border-radius:8px;cursor:pointer;font:inherit}.daydate:hover{border-style:solid}.daydate input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;border:0;padding:0}@media (pointer:fine){.has-picker .daydate input{pointer-events:none}}
 .padlab{font-size:13px;color:var(--muted);margin:4px 0 3px}.padgrid.tens{grid-template-columns:repeat(11,minmax(0,1fr))}.padgrid.ones{grid-template-columns:repeat(10,minmax(0,1fr))}.padgrid.tens button small{font-size:10.5px}
 .padgrid.dense{grid-template-columns:repeat(auto-fill,minmax(54px,1fr))}
 .padgrid button{min-height:54px;display:grid;place-content:center;gap:0;font:600 21px var(--f-mono);padding:4px;background:var(--paper)}
@@ -1938,9 +1938,11 @@ function dayDateHTML(c, i) {
   const d = dateFor(c, i), own = !!(c.dates && c.dates[i]);
   return ` <label class="daydate" title="${esc(L('Tap to change this lesson\'s date', '눌러서 이 수업 날짜 바꾸기'))}"><span>📅 ${d ? esc(d) : esc(L('Set date', '날짜 정하기'))}</span><input type="date" data-daydate="${i}" value="${esc(mdToIso(c, d))}" aria-label="${esc(L('Date for day ' + (i + 1), (i + 1) + '회차 날짜'))}"></label>${own && autoDates(c)[i] && autoDates(c)[i] !== d ? `<button type="button" class="linkbtn" data-dayreset="${i}" title="${esc(L('Back to the usual date', '원래 날짜로'))}">↺ ${esc(autoDates(c)[i])}</button>` : ''}`;
 }
+/* PC: clicks land on the whole date box (not one number of the hidden date field), which opens the calendar (John 2026-11-27). */
+if ('showPicker' in HTMLInputElement.prototype) document.documentElement.classList.add('has-picker');
 document.addEventListener('click', e => {
   const lb = e.target.closest('.daydate'); if (!lb) return;
-  const inp = lb.querySelector('input'); if (inp && inp.showPicker && e.target !== inp) { e.preventDefault(); try { inp.showPicker(); } catch (x) { inp.focus(); } }
+  const inp = lb.querySelector('input'); if (inp && inp.showPicker && (e.target !== inp || matchMedia('(pointer:fine)').matches)) { e.preventDefault(); try { inp.showPicker(); } catch (x) { inp.focus(); } }
 });
 document.addEventListener('change', e => {
   const t = e.target.closest && e.target.closest('[data-daydate]'); if (!t) return;
@@ -2078,6 +2080,15 @@ function topiaFillBookmarklet(given) {
   if (typeof given === 'string') return run(given);
   if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(run, ask); else ask();
 }
+// iPad/iPhone Home Screen app: TOPIA must open in real Safari, where the TOPIA Helper bookmark lives (bookmarks can't run inside the app).
+function iosApp() { return (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches); }
+function openTopia(url) {
+  if (!iosApp()) return window.open(url, 'gsTopia');
+  location.href = 'x-safari-' + url; // iOS 17+; older iPads: copy the link instead
+  setTimeout(() => { if (document.visibilityState !== 'visible') return; try { navigator.clipboard.writeText(url); } catch (er) {}
+    alert(L("Couldn't open Safari. The link is copied: paste it into Safari's address bar, then tap your TOPIA Helper bookmark.", 'Safari를 열지 못했습니다. 링크를 복사했으니 Safari 주소창에 붙여 넣고 TOPIA Helper 북마크를 누르세요.')); }, 1500);
+  return true;
+}
 const TOPIA_BM = 'javascript:' + encodeURIComponent('(' + topiaFillBookmarklet.toString() + ')()');
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act="topia"]'); if (!b) return;
@@ -2087,7 +2098,7 @@ document.addEventListener('click', async e => {
   touchDay(c, i); keep(c);
   // Opens the Weekly Report with the scores in the link; TOPIA Helper fills them in there (the teacher presses Save).
   const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(t.slice(10)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  const w = window.open('https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report#gs-topia=' + b64, 'gsTopia');
+  const w = openTopia('https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report#gs-topia=' + b64);
   let copied = false; try { await navigator.clipboard.writeText(t); copied = true; } catch (er) {}
   m.innerHTML = (w ? L(`Opened TOPIA's Weekly Report with ${n} student${n > 1 ? 's' : ''}. If the boxes don't fill by themselves, tap your <b>TOPIA Helper</b> bookmark there. Check, then press Save.`, `TOPIA Weekly Report를 학생 ${n}명 점수와 함께 열었습니다. 칸이 저절로 채워지지 않으면 거기서 <b>TOPIA Helper</b> 북마크를 누르세요. 확인한 뒤 Save를 누르세요.`) : L(`Allow pop-ups, or open <a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">TOPIA's Weekly Report ↗</a>.`, `팝업을 허용하거나 <a href="https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report" target="_blank" rel="noopener">TOPIA Weekly Report ↗</a>를 여세요.`));
   m.hidden = false;
@@ -2103,7 +2114,7 @@ document.addEventListener('click', e => {
     return JSON.parse(topiaPayload(c, i, dateFor(c, i) || (meetsToday(c) || markedToday(c) ? t0 : '')).slice(10)); }).filter(x => x.rows.length);
   if (!items.length) { m.hidden = false; m.textContent = L("No scores yet in today's classes.", '오늘 수업 반에 아직 점수가 없습니다.'); return; }
   const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(items)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  const w = window.open('https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report#gs-topia-all=' + b64, 'gsTopia');
+  const w = openTopia('https://www.topiaenglishzone.co.kr/doonsan/class/weekly-report#gs-topia-all=' + b64);
   m.hidden = false;
   m.innerHTML = w ? L(`Opened TOPIA's Weekly Report with ${items.length === 2 ? 'both classes' : items.length + ' classes'} (${items.map(x => esc(x.cls)).join(', ')}). If no list appears there, tap your <b>TOPIA Helper</b> bookmark. Check each one, then press Save.`, `TOPIA Weekly Report를 반 ${items.length}개와 함께 열었습니다 (${items.map(x => esc(x.cls)).join(', ')}). 목록이 안 보이면 <b>TOPIA Helper</b> 북마크를 누르세요. 반마다 확인한 뒤 Save를 누르세요.`) : L('Allow pop-ups for this page, then try again.', '이 페이지의 팝업을 허용한 뒤 다시 시도하세요.');
 });
@@ -2397,6 +2408,7 @@ const GS_SRC = location.protocol === 'file:' ? 'file' : 'web';
 // Links to TOPIA open in one named tab that still knows this gradesheet (so TOPIA Helper can send results straight back here).
 document.addEventListener('click', e => {
   const a = e.target.closest('a[href^="https://www.topiaenglishzone.co.kr"]'); if (!a || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  if (iosApp()) { e.preventDefault(); openTopia(a.href.split('#')[0] + '#gs-src=' + GS_SRC); return; }
   const w = window.open(a.href.split('#')[0] + '#gs-src=' + GS_SRC, 'gsTopia'); if (w) e.preventDefault();
 });
 // TOPIA Helper → Online homework, run in a TOPIA tab this gradesheet opened: it posts the result here.
