@@ -66,6 +66,8 @@ label.f input,label.f select{font:400 15px var(--f-body);text-transform:none;let
 .clist{display:grid;gap:4px}
 .clist button{justify-content:space-between;width:100%;text-align:left;border-color:transparent;background:transparent;font-weight:400;padding:7px 10px}
 .clist button b{font:600 16px var(--f-display);letter-spacing:.02em}
+.cgrp{margin:8px 10px 0;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cgrp:first-child{margin-top:0}
 .clist button small{color:var(--muted);font-size:12px}
 .clist button[aria-current=true]{background:var(--sheet);border-color:var(--line);box-shadow:inset 3px 0 0 var(--band1)}
 .panel{background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:10px;min-width:0}
@@ -438,6 +440,8 @@ details.fold>summary{padding:3px 0;font-size:13.5px}
   .clist{display:flex;gap:6px;overflow-x:auto;flex:1 1 300px;min-width:0;padding-bottom:2px}
   .clist button{width:auto;flex:0 0 auto;gap:8px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--sheet)}
   .clist button b{font-size:15px}
+  .cgrp{flex:0 0 auto;align-self:center;margin:0 0 0 6px;white-space:nowrap}
+  .cgrp:first-child{margin-left:0}
   .clist button[aria-current=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);box-shadow:none}
   .clist button[aria-current=true] small{color:inherit;opacity:.85}
   #addBox{flex:0 0 auto;padding:8px 12px}
@@ -1323,8 +1327,15 @@ function renderList() {
   const ab = document.getElementById('addBox');
   const none = !!me && classes.every(c => c.example);
   if (ab && !uiOpen('add') && ab.open !== none && (none || ab.dataset.was)) { ab.dataset.auto = '1'; ab.open = none; if (none) ab.dataset.was = '1'; else delete ab.dataset.was; }
-  document.getElementById('clist').innerHTML = classes.map(c => `<button type="button" data-cid="${esc(c.id)}" aria-current="${c.id === current}">
-    <span><b>${esc(c.name)}</b><br><small>${esc(SUBJECTS[c.subject] ? subjL(SUBJECTS[c.subject].name) : L('No subject', '과목 없음'))}${c.example ? L(' · example', ' · 예시') : ''}</small></span><small>${c.students.length}</small></button>`).join('');
+  // Grouped by class days (John 2026-11-27): Mon / Wed, then Tues / Thurs, then Fri, then the rest; order kept inside each group.
+  const GRP = [['Mon / Wed', L('Mon / Wed', '월 / 수')], ['Tues / Thurs', L('Tues / Thurs', '화 / 목')], ['Fri', L('Fri', '금')]];
+  const grpOf = c => c.example ? 4 : Math.max(0, GRP.findIndex(g => g[0] === c.days)) + (GRP.some(g => g[0] === c.days) ? 0 : 3);
+  const btn = c => `<button type="button" data-cid="${esc(c.id)}" aria-current="${c.id === current}">
+    <span><b>${esc(c.name)}</b><br><small>${esc(SUBJECTS[c.subject] ? subjL(SUBJECTS[c.subject].name) : L('No subject', '과목 없음'))}${c.example ? L(' · example', ' · 예시') : ''}</small></span><small>${c.students.length}</small></button>`;
+  const groups = [0, 1, 2, 3, 4].map(g => classes.filter(c => grpOf(c) === g)).map((list, g) => [g, list]).filter(([, list]) => list.length);
+  document.getElementById('clist').innerHTML = groups.length > 1 || (groups[0] && groups[0][0] < 3)
+    ? groups.map(([g, list]) => `<p class="cgrp">${g < 3 ? GRP[g][1] : g === 3 ? L('Other days', '기타') : L('Examples', '예시')}</p>` + list.map(btn).join('')).join('')
+    : classes.map(btn).join('');
 }
 document.getElementById('clist').addEventListener('click', e => { const b = e.target.closest('[data-cid]'); if (b) { current = b.dataset.cid; render(); } });
 
